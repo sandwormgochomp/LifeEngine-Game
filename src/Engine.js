@@ -8,9 +8,12 @@ import ColorScheme from './Rendering/ColorScheme';
 const min_render_speed = 60;
 
 class Engine {
-    constructor(){
+    // env_canvas/env_container: the world canvas and its containing element.
+    // The world canvas is always mounted; the editor canvas is attached later
+    // via organism_editor.bindCanvas when its panel mounts.
+    constructor({env_canvas, env_container}){
         this.fps = 60;
-        this.env = new WorldEnvironment(5);
+        this.env = new WorldEnvironment(5, env_canvas, env_container);
         this.organism_editor = new OrganismEditor();
         this.controlpanel = new ControlPanel(this);
         this.colorscheme = new ColorScheme(this.env, this.organism_editor);

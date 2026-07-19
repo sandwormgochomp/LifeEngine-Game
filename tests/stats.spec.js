@@ -7,6 +7,17 @@ test.describe('Stats Panel', () => {
     await expect(page.locator('#chartContainer canvas').first()).toBeVisible();
   });
 
+  test('Chart re-renders after closing and reopening the panel', async ({ page }) => {
+    await openPanel(page, 'stats');
+    await expect(page.locator('#chartContainer canvas').first()).toBeVisible();
+
+    await openPanel(page, 'stats'); // close
+    await expect(page.locator('#chartContainer')).toBeHidden();
+
+    await openPanel(page, 'stats'); // reopen into a fresh container
+    await expect(page.locator('#chartContainer canvas').first()).toBeVisible();
+  });
+
   test('Switching chart type re-renders the chart', async ({ page }) => {
     await openPanel(page, 'stats');
     await page.locator('#chart-option').selectOption('2');

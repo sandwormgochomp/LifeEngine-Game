@@ -2,8 +2,8 @@ import FossilRecord from "../FossilRecord";
 import ChartController from "./ChartController";
 
 class PopulationChart extends ChartController {
-    constructor() {
-        super("Population");
+    constructor(container) {
+        super(container, "Population");
     }
 
     setData() {

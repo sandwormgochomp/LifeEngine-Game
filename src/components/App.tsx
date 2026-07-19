@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/App.module.css';
 import type { EngineAPI } from '../types/engine';
 
@@ -30,21 +30,21 @@ const PANEL_TITLES: Record<string, string> = {
 const App: React.FC = () => {
   const [engine, setEngine] = useState<EngineAPI | null>(null);
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  const envRef = useRef<HTMLDivElement>(null);
+  const envCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    // Wait for the next tick to ensure canvas elements are mounted
-    let newEngine: EngineAPI | null = null;
-    const timer = setTimeout(() => {
-      newEngine = new Engine();
-      (window as any).engine = newEngine;
-      newEngine.start(60);
-      setEngine(newEngine);
-    }, 0);
+    // Refs are populated by the time effects run, so the engine can take the
+    // world canvas directly instead of looking elements up by id.
+    const newEngine: EngineAPI = new Engine({
+      env_canvas: envCanvasRef.current!,
+      env_container: envRef.current!,
+    });
+    (window as any).engine = newEngine;
+    newEngine.start(60);
+    setEngine(newEngine);
 
-    return () => {
-      clearTimeout(timer);
-      if (newEngine) newEngine.dispose();
-    };
+    return () => newEngine.dispose();
   }, []);
 
   // Close panel on Escape key
@@ -62,8 +62,7 @@ const App: React.FC = () => {
     setActivePanel(prev => prev === panel ? null : panel);
   };
 
-  // Render non-persistent panel content (panels that can mount/unmount freely)
-  const renderDynamicPanelContent = () => {
+  const renderPanelContent = () => {
     switch (activePanel) {
       case 'select':
         return (
@@ -84,21 +83,21 @@ const App: React.FC = () => {
         return <EvolutionControlsTab engine={engine} />;
       case 'environment':
         return <WorldControlsTab engine={engine} />;
+      case 'edit':
+        return <EditorTab engine={engine} />;
+      case 'stats':
+        return <StatsTab engine={engine} />;
       default:
         return null;
     }
   };
 
-  // Check if the active panel is one of the "persistent" ones (editor/stats)
-  // that must always stay mounted
-  const isDynamicPanel = activePanel && !['edit', 'stats'].includes(activePanel);
-
   return (
     <div className={styles.appContainer} data-engine-ready={engine ? "true" : "false"}>
-      <div id="env" className={styles.envArea}>
-        <canvas id="env-canvas"></canvas>
+      <div id="env" ref={envRef} className={styles.envArea}>
+        <canvas id="env-canvas" ref={envCanvasRef}></canvas>
       </div>
-      
+
       {/* HUD Regions */}
       <HudTopLeft engine={engine} />
       <HudTopCenter engine={engine} />
@@ -106,35 +105,16 @@ const App: React.FC = () => {
       <HudBottomBar activePanel={activePanel} onPanelToggle={handlePanelToggle} />
       <HudNotifications />
 
-      {/* Dynamic panels (select, print, rules, environment) — mount/unmount */}
-      {isDynamicPanel && (
-        <HudPanel 
-          title={PANEL_TITLES[activePanel!] || activePanel!.toUpperCase()} 
+      {/* All panels mount on open and unmount on close; the editor and stats
+          tabs attach their canvas/chart container to the engine while mounted */}
+      {activePanel && (
+        <HudPanel
+          title={PANEL_TITLES[activePanel] || activePanel.toUpperCase()}
           onClose={() => setActivePanel(null)}
         >
-          {renderDynamicPanelContent()}
+          {renderPanelContent()}
         </HudPanel>
       )}
-
-      {/* 
-        Editor panel — always rendered to keep canvas in DOM for OrganismEditor.
-        Hidden via display:none when not active.
-      */}
-      <div style={{ display: activePanel === 'edit' ? 'block' : 'none' }}>
-        <HudPanel title="EDIT" onClose={() => setActivePanel(null)}>
-          <EditorTab engine={engine} />
-        </HudPanel>
-      </div>
-
-      {/* 
-        Stats panel — always rendered to keep chartContainer in DOM.
-        Hidden via display:none when not active.
-      */}
-      <div style={{ display: activePanel === 'stats' ? 'block' : 'none' }}>
-        <HudPanel title="STATS" onClose={() => setActivePanel(null)}>
-          <StatsTab engine={engine} active={activePanel === 'stats'} />
-        </HudPanel>
-      </div>
     </div>
   );
 };

@@ -1,9 +1,8 @@
 
 
 class CanvasController{
-    constructor(env, canvas) {
+    constructor(env, canvas=null) {
         this.env = env;
-        this.canvas = canvas;
         this.mouse_x;
         this.mouse_y;
         this.mouse_c;
@@ -14,11 +13,23 @@ class CanvasController{
         this.cur_cell = null;
         this.cur_org = null;
         this.highlight_org = true;
-        this.defineEvents();
+        this.setCanvas(canvas);
     }
 
     setControlPanel(panel){
         this.control_panel = panel;
+    }
+
+    // The canvas may be swapped in and out as React mounts/unmounts the panel
+    // that owns it. Listeners don't need explicit removal: they die with the
+    // detached canvas element.
+    setCanvas(canvas) {
+        this.canvas = canvas;
+        this.left_click = false;
+        this.middle_click = false;
+        this.right_click = false;
+        if (canvas)
+            this.defineEvents();
     }
 
     defineEvents() {

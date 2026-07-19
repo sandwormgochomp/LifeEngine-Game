@@ -11,9 +11,9 @@ import SerializeHelper from '../Utils/SerializeHelper';
 import Species from '../Stats/Species';
 
 class WorldEnvironment extends Environment{
-    constructor(cell_size) {
+    constructor(cell_size, canvas, container) {
         super();
-        this.renderer = new Renderer('env-canvas', 'env', cell_size);
+        this.renderer = new Renderer(canvas, container, cell_size);
         this.renderer.env = this;
         this.controller = new EnvironmentController(this, this.renderer.canvas);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
@@ -98,8 +98,10 @@ class WorldEnvironment extends Environment{
             
             if (!hit && proj.ticks < 50) { // Max range 50
                 remaining_projectiles.push(proj);
-                this.renderer.ctx.fillStyle = '#d2691e';
-                this.renderer.ctx.fillRect(proj.col * this.renderer.cell_size + this.renderer.cell_size/4, proj.row * this.renderer.cell_size + this.renderer.cell_size/4, this.renderer.cell_size/2, this.renderer.cell_size/2);
+                if (this.renderer.ctx) {
+                    this.renderer.ctx.fillStyle = '#d2691e';
+                    this.renderer.ctx.fillRect(proj.col * this.renderer.cell_size + this.renderer.cell_size/4, proj.row * this.renderer.cell_size + this.renderer.cell_size/4, this.renderer.cell_size/2, this.renderer.cell_size/2);
+                }
             }
         }
         this.active_projectiles = remaining_projectiles;
@@ -258,7 +260,7 @@ class WorldEnvironment extends Environment{
 
     resizeFillWindow(cell_size) {
         this.renderer.cell_size = cell_size;
-        this.renderer.fillWindow('env');
+        this.renderer.fillWindow();
         this.num_cols = Math.ceil(this.renderer.width / cell_size);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
         this.grid_map.resize(this.num_cols, this.num_rows, cell_size);

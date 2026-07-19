@@ -3,8 +3,8 @@ import FossilRecord from "../FossilRecord";
 import ChartController from "./ChartController";
 
 class CellsChart extends ChartController {
-    constructor() {
-        super("Organism Size / Composition", 
+    constructor(container) {
+        super(container, "Organism Size / Composition", 
             "Avg. Number of Cells per Organism",
             "Note: to maintain efficiency, species with very small populations are discarded when collecting cell statistics.");
     }

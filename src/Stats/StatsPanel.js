@@ -9,15 +9,31 @@ const ChartSelections = [PopulationChart, SpeciesChart, CellsChart, MutationChar
 
 class StatsPanel {
     constructor(env) {
-        this.defineControls();
         this.chart_selection = 0;
-        this.setChart();
+        this.chart_container = null;
+        this.chart_controller = null;
         this.env = env;
         this.last_reset_count=env.reset_count;
     }
 
+    // The chart renders into a container owned by the React stats panel,
+    // attached while that panel is mounted.
+    setContainer(container) {
+        this.chart_container = container;
+        if (!container && this.chart_controller) {
+            this.chart_controller.destroy();
+            this.chart_controller = null;
+        }
+    }
+
     setChart(selection=this.chart_selection) {
-        this.chart_controller = new ChartSelections[selection]();
+        if (this.chart_controller)
+            this.chart_controller.destroy();
+        if (!this.chart_container) {
+            this.chart_controller = null;
+            return;
+        }
+        this.chart_controller = new ChartSelections[selection](this.chart_container);
         this.chart_controller.setData();
         this.chart_controller.render();
     }
@@ -31,10 +47,6 @@ class StatsPanel {
         clearInterval(this.render_loop);
     }
 
-    defineControls() {
-        // Handled by React UI
-    }
-
     updateChart() {
         if (this.last_reset_count < this.env.reset_count){
             this.reset()
@@ -44,10 +56,6 @@ class StatsPanel {
             this.chart_controller.updateData();
             this.chart_controller.render();
         }
-    }
-
-    updateDetails() {
-        // Handled by React UI
     }
 
     reset() {

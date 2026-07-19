@@ -2,8 +2,8 @@ import FossilRecord from "../FossilRecord";
 import ChartController from "./ChartController";
 
 class MutationChart extends ChartController {
-    constructor() {
-        super("Mutation Rate");
+    constructor(container) {
+        super(container, "Mutation Rate");
     }
 
     setData() {

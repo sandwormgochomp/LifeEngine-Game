@@ -2,24 +2,32 @@
 import CellStates from "../Organism/Cell/CellStates";
 import Directions from "../Organism/Directions";
 
-// Renderer controls access to a canvas. There is one renderer for each canvas
+// Renderer controls access to a canvas. There is one renderer for each canvas.
+// The canvas may be bound after construction (and unbound) for canvases owned
+// by React components that mount and unmount; render calls are no-ops while
+// no canvas is bound.
 class Renderer {
-    constructor(canvas_id, container_id, cell_size) {
+    constructor(canvas, container, cell_size) {
         this.cell_size = cell_size;
-        this.canvas = document.getElementById(canvas_id);
-        this.ctx = this.canvas.getContext("2d");
-        this.fillWindow(container_id)
-		this.height = this.canvas.height;
-        this.width = this.canvas.width;
         this.cells_to_render = new Set();
         this.cells_to_highlight = new Set();
         this.highlighted_cells = new Set();
+        this.height = 0;
+        this.width = 0;
+        this.bindCanvas(canvas, container);
     }
 
-    fillWindow(container_id) {
-        const el = document.getElementById(container_id);
-        if (el) {
-            this.fillShape(el.clientHeight || window.innerHeight, el.clientWidth || window.innerWidth);
+    bindCanvas(canvas, container) {
+        this.canvas = canvas;
+        this.container = container;
+        this.ctx = canvas ? canvas.getContext("2d") : null;
+        if (canvas)
+            this.fillWindow();
+    }
+
+    fillWindow() {
+        if (this.container) {
+            this.fillShape(this.container.clientHeight || window.innerHeight, this.container.clientWidth || window.innerWidth);
         } else {
             this.fillShape(window.innerHeight, window.innerWidth);
         }
@@ -38,6 +46,7 @@ class Renderer {
     }
 
     renderFullGrid(grid) {
+        if (!this.ctx) return;
         for (var col of grid) {
             for (var cell of col){
                 this.renderCell(cell);
@@ -46,6 +55,7 @@ class Renderer {
     }
 
     renderCells() {
+        if (!this.ctx) return;
         for (var cell of this.cells_to_render) {
             this.renderCell(cell);
         }
@@ -66,6 +76,7 @@ class Renderer {
     }
 
     renderOrganism(org) {
+        if (!this.ctx) return;
         for(var org_cell of org.anatomy.cells) {
             var cell = org.getRealCell(org_cell);
             this.renderCell(cell);
@@ -80,6 +91,7 @@ class Renderer {
     }
 
     renderHighlights() {
+        if (!this.ctx) return;
         for (var cell of this.cells_to_highlight) {
             this.renderCellHighlight(cell);
             this.highlighted_cells.add(cell);
@@ -109,8 +121,10 @@ class Renderer {
     }
 
     clearAllHighlights(clear_to_highlight=false) {
-        for (var cell of this.highlighted_cells) {
-            this.renderCell(cell);
+        if (this.ctx) {
+            for (var cell of this.highlighted_cells) {
+                this.renderCell(cell);
+            }
         }
         this.highlighted_cells.clear();
         if (clear_to_highlight) {

@@ -48,9 +48,13 @@ Working branch: `update-interface`. One commit per group.
 - [x] Replace `require()` with `import` in `.tsx` files; drop the `@ts-ignore` on the Engine import
       — `npm run build` (`tsc && vite build`) now passes for the first time on this branch; typing also surfaced that `EditorController` never initialized `mode` (fixed to `Modes.None`)
 
-## Deferred (noted, not planned here)
+## Deferred (completed after the original groups)
 
-- Bundle CanvasJS / Font Awesome / fonts instead of CDN + globals (would decouple `ChartController`)
-- Full ESM conversion of the engine (`module.exports` → `export`) and dropping `vite-plugin-commonjs`
-- In-HUD dialogs for remaining user-facing `alert()`s (e.g. "Cannot remove center cell")
-- Pass canvas refs into `Engine`/`Renderer` instead of element ids (removes the `display:none` always-mounted panel hacks in `App.tsx`)
+- [x] Full ESM conversion of the engine (`module.exports` → `export`) and dropping `vite-plugin-commonjs`
+      — The two lazy-`require()` cycle workarounds (`Species`→`FossilRecord`, `PoisonCell`→`Neighbors`) became static imports; both cycles only touch the other module inside methods, so ESM live bindings handle them.
+- [x] Bundle CanvasJS / Font Awesome / fonts instead of CDN + globals (would decouple `ChartController`)
+      — `@canvasjs/charts`, `@fortawesome/fontawesome-free@^6` (matches the icon names written against the 6.1.2 CDN), `@fontsource/press-start-2p`, `@fontsource/vt323`. `index.html` no longer touches any external host. New `tests/stats.spec.js` covers chart rendering.
+- [x] In-HUD dialogs for remaining user-facing `alert()`s (e.g. "Cannot remove center cell")
+      — `Utils/Notifier` pub/sub + `HudNotifications` toasts; `OrganismEditor` was the only remaining `alert()` caller.
+- [x] Pass canvas refs into `Engine`/`Renderer` instead of element ids (removes the `display:none` always-mounted panel hacks in `App.tsx`)
+      — `Renderer`/`CanvasController` now bind/rebind canvas elements; `EditorTab`/`StatsTab` attach their canvas/chart container while mounted, so all HUD panels mount and unmount uniformly. Also removed while in there: the dead `OrganismEditor.toggleFullscreen` (no callers, id-based DOM access) and the engine-construction `setTimeout` hack in `App.tsx` (refs are ready when effects run).

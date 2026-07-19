@@ -39,10 +39,14 @@ export interface OrganismEditorAPI {
   };
   controller: EditorControllerAPI;
   setDefaultOrg(): void;
+  bindCanvas(canvas: HTMLCanvasElement, container: HTMLElement): void;
+  releaseCanvas(): void;
 }
 
 export interface StatsPanelAPI {
   chart_selection: number;
+  chart_controller: { note: string } | null;
+  setContainer(container: HTMLElement | null): void;
   setChart(): void;
   startAutoRender(): void;
   stopAutoRender(): void;

@@ -13,58 +13,23 @@ class OrganismEditor extends Environment{
         super();
         this.is_active = true;
         this.cell_size = 10;
-        this.renderer = new Renderer('editor-canvas', 'editor-env', this.cell_size);
-        this.controller = new EditorController(this, this.renderer.canvas);
+        // The editor canvas lives in a React panel that mounts on demand;
+        // renderer and controller run canvas-less until bindCanvas is called.
+        this.renderer = new Renderer(null, null, this.cell_size);
+        this.controller = new EditorController(this);
         this.grid_map = new GridMap(31, 31, this.cell_size);
-        this.is_fullscreen = false;
         this.setDefaultOrg();
     }
 
-    toggleFullscreen() {
-        this.is_fullscreen = !this.is_fullscreen;
-        var org_data = this.organism.serialize();
-        
-        let envEl = document.getElementById('editor-env');
-        if (this.is_fullscreen) {
-            let w = window.innerWidth - 350; 
-            let h = window.innerHeight - 150;
-            let cols = Math.max(5, Math.floor(w / this.cell_size));
-            let rows = Math.max(5, Math.floor(h / this.cell_size));
-            if (cols % 2 === 0) cols--;
-            if (rows % 2 === 0) rows--;
-            
-            this.grid_map = new GridMap(cols, rows, this.cell_size);
-            if (envEl) {
-                envEl.style.width = (cols * this.cell_size) + 'px';
-                envEl.style.height = (rows * this.cell_size) + 'px';
-                envEl.style.flexShrink = '0';
-                envEl.style.flexGrow = '0';
-                envEl.style.margin = '10px';
-            }
-            this.renderer.canvas.width = cols * this.cell_size;
-            this.renderer.canvas.height = rows * this.cell_size;
-        } else {
-            this.grid_map = new GridMap(31, 31, this.cell_size);
-            if (envEl) {
-                envEl.style.width = '310px';
-                envEl.style.height = '310px';
-            }
-            this.renderer.canvas.width = 310;
-            this.renderer.canvas.height = 310;
-        }
-        
-        this.clear();
-        var center = this.grid_map.getCenter();
-        this.organism = new Organism(center[0], center[1], this);
-        this.organism.loadRaw(org_data);
-        this.organism.c = center[0];
-        this.organism.r = center[1];
-        this.organism.species = new Species(this.organism.anatomy, null, 0);
-        if (org_data.species_name) {
-            this.organism.species.name = org_data.species_name;
-        }
-        this.organism.updateGrid();
+    bindCanvas(canvas, container) {
+        this.renderer.bindCanvas(canvas, container);
+        this.controller.setCanvas(canvas);
         this.renderFull();
+    }
+
+    releaseCanvas() {
+        this.renderer.bindCanvas(null, null);
+        this.controller.setCanvas(null);
     }
 
     update() {
@@ -137,7 +102,6 @@ class OrganismEditor extends Environment{
         var center = this.grid_map.getCenter();
         this.organism = new Organism(center[0], center[1], this, orig_org);
         this.organism.updateGrid();
-        // this.controller.updateDetails();
     }
     
     getCopyOfOrg() {

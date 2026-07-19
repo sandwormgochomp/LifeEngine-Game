@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from '../styles/Hud.module.css';
 import useEngineValue from '../useEngineValue';
 import type { EngineAPI, CellStateAPI } from '../../types/engine';
@@ -13,8 +13,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ engine }) => {
   const [mode, setMode] = useState<number>(Modes.None);
   const [activeCellType, setActiveCellType] = useState<CellStateAPI | null>(null);
   const [customColor, setCustomColor] = useState<string>('#ff00ff');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const editorController = engine?.organism_editor?.controller;
+
+  // Attach the editor canvas to the engine while this panel is mounted
+  useEffect(() => {
+    const editor = engine?.organism_editor;
+    if (!editor || !canvasRef.current) return;
+    editor.bindCanvas(canvasRef.current, containerRef.current!);
+    return () => editor.releaseCanvas();
+  }, [engine]);
   const cellCount = useEngineValue(
     engine,
     e => e.organism_editor.organism?.anatomy?.cells?.length || 0,
@@ -138,10 +148,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ engine }) => {
         </button>
       </div>
 
-      {/* The canvas is rendered here but logic is bound in App.tsx */}
       <div style={{ marginTop: '20px' }}>
-        <div id="editor-env" style={{ width: '310px', height: '310px', position: 'relative', border: '1px solid rgba(0, 255, 65, 0.3)' }}>
-          <canvas id="editor-canvas" width="310" height="310" style={{ position: 'absolute', top: 0, left: 0 }}></canvas>
+        <div id="editor-env" ref={containerRef} style={{ width: '310px', height: '310px', position: 'relative', border: '1px solid rgba(0, 255, 65, 0.3)' }}>
+          <canvas id="editor-canvas" ref={canvasRef} width="310" height="310" style={{ position: 'absolute', top: 0, left: 0 }}></canvas>
         </div>
       </div>
     </div>

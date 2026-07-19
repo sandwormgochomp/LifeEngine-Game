@@ -2,9 +2,10 @@ import CanvasJS from "@canvasjs/charts";
 import FossilRecord from "../FossilRecord";
 
 class ChartController {
-    constructor(title, y_axis="", note="") {
+    constructor(container, title, y_axis="", note="") {
         this.data = [];
-        this.chart = new CanvasJS.Chart("chartContainer", {
+        this.note = note; // rendered by the React stats panel
+        this.chart = new CanvasJS.Chart(container, {
             zoomEnabled: true,
             title:{
                 text: title
@@ -20,8 +21,12 @@ class ChartController {
             data: this.data
         });
         this.chart.render();
-        const noteEl = document.getElementById('chart-note');
-        if (noteEl) noteEl.innerText = note;
+    }
+
+    destroy() {
+        if (this.chart && typeof this.chart.destroy === 'function')
+            this.chart.destroy();
+        this.chart = null;
     }
 
     setData() {
@@ -42,6 +47,7 @@ class ChartController {
     }
 
     render() {
+        if (!this.chart) return;
         this.setMinimum();
         this.chart.render();
     }
@@ -88,7 +94,7 @@ class ChartController {
 
     clear() {
         this.data.length = 0;
-        this.chart.render();
+        if (this.chart) this.chart.render();
     }
 }
 

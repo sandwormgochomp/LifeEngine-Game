@@ -59,6 +59,27 @@ test.describe('Editor Functionality', () => {
     await expect(page.getByTestId('hud-notifications')).toBeHidden({ timeout: 5000 });
   });
 
+  test('Editor keeps working after closing and reopening the panel', async ({ page }) => {
+    const cellCount = page.locator('#edit-organism-details .cell-count');
+
+    await page.locator('#edit.edit-mode-btn').click();
+    await page.locator('.cell-type#common').click();
+    await page.locator('#editor-canvas').click({ position: { x: 165, y: 155 } });
+    await expect(cellCount).toHaveText(/Cell count: 2/);
+
+    // Close and reopen: the panel unmounts, and a fresh canvas is bound
+    await openPanel(page, 'edit');
+    await expect(page.locator('#editor-canvas')).toBeHidden();
+    await openPanel(page, 'edit');
+    await expect(cellCount).toHaveText(/Cell count: 2/);
+
+    // Edit mode and cell type selection live on the engine controller and
+    // survive the remount, so editing works immediately on the rebound canvas
+    await expect(page.locator('.cell-type#common')).toHaveCSS('border-color', 'rgb(255, 255, 0)');
+    await page.locator('#editor-canvas').click({ position: { x: 145, y: 155 } });
+    await expect(cellCount).toHaveText(/Cell count: 3/);
+  });
+
   test('Placing 5 common cells in a row works correctly', async ({ page }) => {
     const cellCount = page.locator('#edit-organism-details .cell-count');
     await expect(cellCount).toHaveText(/Cell count: 1/);
