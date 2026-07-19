@@ -8,7 +8,8 @@
     "build": "webpack --mode=production",
     "build-dev": "webpack --mode=development",
     "build-watch": "webpack --watch --mode=development",
-    "serve": "node serve.js"
+    "serve": "node serve.js",
+    "deploy": "gh-pages -d dist"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
   "homepage": "https://github.com/MaxRobinsonTheGreat/EvolutionSimulatorV2#readme",
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "gh-pages": "^6.3.0",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },
