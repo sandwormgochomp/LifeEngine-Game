@@ -24,7 +24,7 @@ class ChartController {
     }
 
     setData() {
-        alert("Must override updateData!");
+        throw new Error("setData must be overridden");
     }
 
     setMinimum() {
@@ -82,7 +82,7 @@ class ChartController {
     }
 
     addDataPoint(i) {
-        alert("Must override addDataPoint")
+        throw new Error("addDataPoint must be overridden");
     }
 
     clear() {

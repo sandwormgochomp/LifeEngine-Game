@@ -3,9 +3,10 @@ import styles from '../styles/Hud.module.css';
 
 interface StatsTabProps {
   engine: any;
+  active: boolean;
 }
 
-const StatsTab: React.FC<StatsTabProps> = ({ engine }) => {
+const StatsTab: React.FC<StatsTabProps> = ({ engine, active }) => {
   const [chartSelection, setChartSelection] = useState<number>(0);
 
   useEffect(() => {
@@ -14,6 +15,14 @@ const StatsTab: React.FC<StatsTabProps> = ({ engine }) => {
       engine.controlpanel.stats_panel.setChart();
     }
   }, [chartSelection, engine]);
+
+  // Only run the 1s chart update loop while the panel is open
+  useEffect(() => {
+    const statsPanel = engine?.controlpanel?.stats_panel;
+    if (!active || !statsPanel) return;
+    statsPanel.startAutoRender();
+    return () => statsPanel.stopAutoRender();
+  }, [active, engine]);
 
   const stats = engine?.env ? {
     population: engine.env.organisms.length,

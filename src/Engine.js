@@ -89,8 +89,15 @@ class Engine {
 
     necessaryUpdate() {
         this.env.render();
-        this.controlpanel.update(this.ui_delta_time);
         this.organism_editor.update();
+    }
+
+    // Full teardown (unlike stop(), which keeps a ui loop running for rendering while paused)
+    dispose() {
+        clearInterval(this.sim_loop);
+        clearInterval(this.ui_loop);
+        this.ui_loop = null;
+        this.running = false;
     }
 
 }

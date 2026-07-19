@@ -34,15 +34,17 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // Wait for the next tick to ensure canvas elements are mounted
-    setTimeout(() => {
-      const newEngine = new Engine();
+    let newEngine: any = null;
+    const timer = setTimeout(() => {
+      newEngine = new Engine();
       (window as any).engine = newEngine;
       newEngine.start(60);
       setEngine(newEngine);
     }, 0);
 
     return () => {
-      if (engine) engine.stop();
+      clearTimeout(timer);
+      if (newEngine) newEngine.dispose();
     };
   }, []);
 
@@ -130,7 +132,7 @@ const App: React.FC = () => {
       */}
       <div style={{ display: activePanel === 'stats' ? 'block' : 'none' }}>
         <HudPanel title="STATS" onClose={() => setActivePanel(null)}>
-          <StatsTab engine={engine} />
+          <StatsTab engine={engine} active={activePanel === 'stats'} />
         </HudPanel>
       </div>
     </div>

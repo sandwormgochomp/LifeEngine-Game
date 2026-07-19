@@ -5,7 +5,7 @@ class Environment{
     }
 
     update(){
-        alert("Environment.update() must be overriden");
+        throw new Error("Environment.update() must be overridden");
     }
 
     changeCell(c, r, state, owner) {

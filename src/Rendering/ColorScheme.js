@@ -35,14 +35,6 @@ class ColorScheme {
             state.color = color_scheme[state.name];
         }
         CellStates.eye.slit_color=color_scheme['eye-slit']
-        for (var cell_type in color_scheme) {
-            document.querySelectorAll('#' + cell_type + '.cell-type').forEach(el => {
-                el.style.backgroundColor = color_scheme[cell_type];
-            });
-            document.querySelectorAll('#' + cell_type + '.cell-legend-type').forEach(el => {
-                el.style.backgroundColor = color_scheme[cell_type];
-            });
-        }
         this.world_env.renderer.renderFullGrid(this.world_env.grid_map.grid);
         this.editor_env.renderer.renderFullGrid(this.editor_env.grid_map.grid);
     }

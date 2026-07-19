@@ -46,10 +46,8 @@ class ControlPanel {
         }
     }
 
-    update(dt) {
-        if (this.tab_id === 'stats' && this.control_panel_active) {
-            this.stats_panel.update(dt);
-        }
+    setEditorOrganism(org) {
+        this.engine.organism_editor.setOrganismToCopyOf(org);
     }
 }
 

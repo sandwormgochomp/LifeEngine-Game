@@ -16,14 +16,15 @@ Working branch: `update-interface`. One commit per group.
 
 ## Group B — Engine/state bug fixes
 
-- [ ] Fix Select-mode crash: `EnvironmentController` calls `control_panel.setEditorOrganism()`, which no longer exists — restore it on `ControlPanel` (delegate to `organism_editor.setOrganismToCopyOf`)
-- [ ] Fix dead stats path: `ControlPanel.update()` gates on `tab_id`/`control_panel_active` that nothing sets, and calls a nonexistent `StatsPanel.update(dt)` — drive chart updates from the React stats panel's visibility instead (`startAutoRender`/`stopAutoRender`)
-- [ ] Fix engine lifecycle in `App.tsx`: cleanup closes over stale `null` state, so intervals leak on unmount; cancel the pending `setTimeout` too
-- [ ] Guard null `cur_cell` in `CanvasController.updateMouseLocation` (mousemove throws when pointer is outside the grid on a zoomed/dragged canvas)
-- [ ] Fix dangling-else in `WorldEnvironment.removeOrganisms` (`auto_reset` branch is attached to the wrong `if`)
-- [ ] Single owner for pause state: route HUD play/pause through `ControlPanel.setPaused` so `paused` doesn't go stale
-- [ ] Move `confirm()` out of `WorldEnvironment.reset` into the UI layer; replace `alert()` "abstract method" stubs with `throw new Error(...)`
-- [ ] Remove `ColorScheme`'s direct DOM writes to `.cell-type` buttons (React already colors them) and the dead `#override-controls` read in `WorldEnvironment.loadRaw`
+- [x] Fix Select-mode crash: `EnvironmentController` calls `control_panel.setEditorOrganism()`, which no longer exists — restore it on `ControlPanel` (delegate to `organism_editor.setOrganismToCopyOf`)
+- [x] Fix dead stats path: `ControlPanel.update()` gates on `tab_id`/`control_panel_active` that nothing sets, and calls a nonexistent `StatsPanel.update(dt)` — drive chart updates from the React stats panel's visibility instead (`startAutoRender`/`stopAutoRender`)
+- [x] Fix engine lifecycle in `App.tsx`: cleanup closes over stale `null` state, so intervals leak on unmount; cancel the pending `setTimeout` too (added `Engine.dispose()` for full teardown)
+- [x] Guard null `cur_cell` in `CanvasController.updateMouseLocation` (mousemove throws when pointer is outside the grid on a zoomed/dragged canvas)
+- [x] Fix dangling-else in `WorldEnvironment.removeOrganisms` (`auto_reset` branch is attached to the wrong `if`)
+- [x] Single owner for pause state: route HUD play/pause through `ControlPanel.setPaused` so `paused` doesn't go stale
+- [x] Move `confirm()` out of `WorldEnvironment.reset` into the UI layer (`reset(reset_life)` no longer prompts); replace `alert()` "abstract method" stubs with `throw new Error(...)`
+- [x] Remove `ColorScheme`'s direct DOM writes to `.cell-type` buttons (React already colors them) and the dead `#override-controls` read in `WorldEnvironment.loadRaw`
+      — Note: loading a world therefore never applies the world's saved hyperparams; if that feature returns, it needs an opt-in in the React UI. Also fixed while in there: `EnvironmentController` zoom/drag now use `this.canvas` instead of `getElementById`, and the wheel-zoom no longer tracks scale in a stale closure (zoom after Reset View used to jump back)
 
 ## Group C — React state subscription (remove polling)
 

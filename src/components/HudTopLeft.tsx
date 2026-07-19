@@ -10,13 +10,13 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
 
   const handlePlay = () => {
     if (!engine) return;
-    engine.start(engine.fps || 60);
+    engine.controlpanel.setPaused(false);
     forceRender({});
   };
 
   const handlePause = () => {
     if (!engine) return;
-    engine.stop();
+    engine.controlpanel.setPaused(true);
     forceRender({});
   };
 

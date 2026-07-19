@@ -109,11 +109,10 @@ class WorldEnvironment extends Environment{
         if (this.day_timer > 3600) { // 1 minute at 60 ticks per second
             this.day_timer = 0;
             this.is_night = !this.is_night;
-            var overlay = document.getElementById('env-canvas');
             if (this.is_night) {
-                overlay.style.filter = "brightness(0.3) hue-rotate(180deg) saturate(0.5)"; // Blueish dark tint
+                this.renderer.canvas.style.filter = "brightness(0.3) hue-rotate(180deg) saturate(0.5)"; // Blueish dark tint
             } else {
-                overlay.style.filter = "none";
+                this.renderer.canvas.style.filter = "none";
             }
         }
 
@@ -143,13 +142,14 @@ class WorldEnvironment extends Environment{
             this.organisms.splice(i, 1);
         }
         if (this.organisms.length === 0 && start_pop > 0) {
-            if (WorldConfig.auto_pause)
+            if (WorldConfig.auto_pause) {
                 if (this.controller && this.controller.control_panel) {
                     this.controller.control_panel.setPaused(true);
                 }
-            else if(WorldConfig.auto_reset) {
+            }
+            else if (WorldConfig.auto_reset) {
                 this.reset_count++;
-                this.reset(false);
+                this.reset();
             }
         }
     }
@@ -231,10 +231,8 @@ class WorldEnvironment extends Environment{
         }
     }
 
-    reset(confirm_reset=true, reset_life=true) {
-        if (confirm_reset && !confirm('The current environment will be lost. Proceed?'))
-            return false;
-
+    // Destructive: callers are responsible for confirming with the user first
+    reset(reset_life=true) {
         this.organisms = [];
         this.grid_map.fillGrid(CellStates.empty, !WorldConfig.clear_walls_on_reset);
         this.renderer.renderFullGrid(this.grid_map.grid);
@@ -244,8 +242,7 @@ class WorldEnvironment extends Environment{
         this.active_projectiles = [];
         this.day_timer = 0;
         this.is_night = false;
-        var overlay = document.getElementById('env-canvas');
-        if (overlay) overlay.style.filter = "none";
+        this.renderer.canvas.style.filter = "none";
         this.radiation_map.clear();
         FossilRecord.clear_record();
         if (reset_life)
@@ -319,9 +316,6 @@ class WorldEnvironment extends Environment{
             FossilRecord.addSpeciesObj(species[name]);
         FossilRecord.loadRaw(env.fossil_record);
         SerializeHelper.overwriteNonObjects(env, this);
-        var overrideCheckbox = document.getElementById('override-controls');
-        if (overrideCheckbox && overrideCheckbox.checked)
-            Hyperparams.loadJsonObj(env.controls)
         this.renderer.renderFullGrid(this.grid_map.grid);
     }
 }

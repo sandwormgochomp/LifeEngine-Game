@@ -166,8 +166,7 @@ class OrganismEditor extends Environment{
     }
 
     resetWithRandomOrgs(env, numOrganisms=50) {
-        let reset_confirmed = env.reset(true, false);
-        if (!reset_confirmed) return;
+        env.reset(false);
 
         let size = Math.ceil(8);
 

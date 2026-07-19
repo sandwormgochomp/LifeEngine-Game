@@ -87,7 +87,7 @@ class CanvasController{
         this.mouse_c = colRow[0];
         this.mouse_r = colRow[1];
         this.cur_cell = this.env.grid_map.cellAt(this.mouse_c, this.mouse_r);
-        this.cur_org = this.cur_cell.owner;
+        this.cur_org = this.cur_cell ? this.cur_cell.owner : null;
 
         if (this.cur_org != prev_org || this.cur_cell != prev_cell) {
             this.env.renderer.clearAllHighlights(true);
@@ -101,15 +101,15 @@ class CanvasController{
     }
 
     mouseMove() {
-        alert("mouse move must be overridden");
+        throw new Error("mouseMove must be overridden");
     }
 
     mouseDown() {
-        alert("mouse down must be overridden");
+        throw new Error("mouseDown must be overridden");
     }
 
     mouseUp(){
-        alert("mouse up must be overridden")
+        throw new Error("mouseUp must be overridden");
     }
 }
 

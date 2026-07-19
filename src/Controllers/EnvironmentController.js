@@ -12,49 +12,37 @@ class EnvironmentController extends CanvasController{
         super(env, canvas);
         this.mode = Modes.FoodDrop;
         this.org_to_clone = null;
-        this.defineZoomControls();
         this.scale = 1;
+        this.defineZoomControls();
     }
 
     defineZoomControls() {
-          var scale = 1;
-          var zoom_speed = 0.7;
-          const el = document.querySelector('#env-canvas');
-          el.onwheel = function zoom(event) {
+        const zoom_speed = 0.7;
+        const MAX = 32;
+        const MIN = Math.pow(2, -3);
+        this.canvas.onwheel = (event) => {
             event.preventDefault();
 
             var sign = Math.sign(event.deltaY);
-          
-            scale *= Math.pow(zoom_speed, sign);
-          
-            const MAX = 32;
-            const MIN = Math.pow(2, -3);
-            scale = Math.min(MAX, Math.max(MIN, scale));
+            var new_scale = Math.min(MAX, Math.max(MIN, this.scale * Math.pow(zoom_speed, sign)));
 
-            var canvasEl = document.getElementById('env-canvas');
-            var cur_top = parseInt(canvasEl.style.top || '0');
-            var cur_left = parseInt(canvasEl.style.left || '0');
+            var cur_top = parseInt(this.canvas.style.top || '0');
+            var cur_left = parseInt(this.canvas.style.left || '0');
 
-            var diff_x = (this.canvas.width/2  - this.mouse_x) * (scale - this.scale);
-            var diff_y = (this.canvas.height/2 - this.mouse_y) * (scale - this.scale);
+            var diff_x = (this.canvas.width/2  - this.mouse_x) * (new_scale - this.scale);
+            var diff_y = (this.canvas.height/2 - this.mouse_y) * (new_scale - this.scale);
 
-            canvasEl.style.top = (cur_top+diff_y)+'px';
-            canvasEl.style.left = (cur_left+diff_x)+'px';
-          
-            // Apply scale transform
-            el.style.transform = `scale(${scale})`;
-            this.scale = scale;
-
-          }.bind(this);
+            this.canvas.style.top = (cur_top+diff_y)+'px';
+            this.canvas.style.left = (cur_left+diff_x)+'px';
+            this.canvas.style.transform = `scale(${new_scale})`;
+            this.scale = new_scale;
+        };
     }
 
     resetView() {
-        var canvasEl = document.getElementById('env-canvas');
-        if (canvasEl) {
-            canvasEl.style.transform = 'scale(1)';
-            canvasEl.style.top = '0px';
-            canvasEl.style.left = '0px';
-        }
+        this.canvas.style.transform = 'scale(1)';
+        this.canvas.style.top = '0px';
+        this.canvas.style.left = '0px';
         this.scale = 1;
     }
 
@@ -176,23 +164,17 @@ class EnvironmentController extends CanvasController{
     }
 
     dragScreen() {
-        var canvasEl = document.getElementById('env-canvas');
-        if (canvasEl) {
-            var cur_top = parseInt(canvasEl.style.top || '0');
-            var cur_left = parseInt(canvasEl.style.left || '0');
-            
-            var diff_x = (this.mouse_x - this.start_x) * this.scale;
-            var diff_y = (this.mouse_y - this.start_y) * this.scale;
-            
-            var new_top = cur_top + diff_y;
-            var new_left = cur_left + diff_x;
+        var cur_top = parseInt(this.canvas.style.top || '0');
+        var cur_left = parseInt(this.canvas.style.left || '0');
 
-            canvasEl.style.top = new_top+'px';
-            canvasEl.style.left = new_left+'px';
-            
-            this.start_x = this.mouse_x;
-            this.start_y = this.mouse_y;
-        }
+        var diff_x = (this.mouse_x - this.start_x) * this.scale;
+        var diff_y = (this.mouse_y - this.start_y) * this.scale;
+
+        this.canvas.style.top = (cur_top + diff_y)+'px';
+        this.canvas.style.left = (cur_left + diff_x)+'px';
+
+        this.start_x = this.mouse_x;
+        this.start_y = this.mouse_y;
     }
 
     dropOrganism(organism, col, row) {

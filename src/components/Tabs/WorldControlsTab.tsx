@@ -26,7 +26,8 @@ const WorldControlsTab: React.FC<WorldControlsTabProps> = ({ engine }) => {
 
   const handleClearEnv = () => {
     if (engine && engine.env) {
-      engine.env.reset(true, false);
+      if (!window.confirm('The current environment will be lost. Proceed?')) return;
+      engine.env.reset(false);
     }
   };
 
