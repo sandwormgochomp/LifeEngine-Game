@@ -1,6 +1,6 @@
 // const CellTypes = require("../Organism/Cell/CellTypes");
-const CellStates = require("../Organism/Cell/CellStates");
-const Directions = require("../Organism/Directions");
+import CellStates from "../Organism/Cell/CellStates";
+import Directions from "../Organism/Directions";
 
 // Renderer controls access to a canvas. There is one renderer for each canvas
 class Renderer {
@@ -119,4 +119,4 @@ class Renderer {
     }
 }
 
-module.exports = Renderer;
+export default Renderer;

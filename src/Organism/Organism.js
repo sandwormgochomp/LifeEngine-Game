@@ -1,12 +1,12 @@
-const CellStates = require("./Cell/CellStates");
-const Neighbors = require("../Grid/Neighbors");
-const Hyperparams = require("../Hyperparameters");
-const Directions = require("./Directions");
-const Anatomy = require("./Anatomy");
-const Brain = require("./Perception/Brain");
-const FossilRecord = require("../Stats/FossilRecord");
-const SerializeHelper = require("../Utils/SerializeHelper");
-const Observation = require("./Perception/Observation");
+import CellStates from "./Cell/CellStates";
+import Neighbors from "../Grid/Neighbors";
+import Hyperparams from "../Hyperparameters";
+import Directions from "./Directions";
+import Anatomy from "./Anatomy";
+import Brain from "./Perception/Brain";
+import FossilRecord from "../Stats/FossilRecord";
+import SerializeHelper from "../Utils/SerializeHelper";
+import Observation from "./Perception/Observation";
 
 class Organism {
     constructor(col, row, env, parent=null) {
@@ -488,4 +488,4 @@ class Organism {
 
 }
 
-module.exports = Organism;
+export default Organism;

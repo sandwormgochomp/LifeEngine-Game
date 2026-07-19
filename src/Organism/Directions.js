@@ -31,4 +31,4 @@ const Directions = {
     }
 }
 
-module.exports = Directions;
+export default Directions;

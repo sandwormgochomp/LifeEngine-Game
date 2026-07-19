@@ -1,14 +1,14 @@
-const Environment = require('./Environment');
-const Renderer = require('../Rendering/Renderer');
-const GridMap = require('../Grid/GridMap');
-const Organism = require('../Organism/Organism');
-const CellStates = require('../Organism/Cell/CellStates');
-const EnvironmentController = require('../Controllers/EnvironmentController');
-const Hyperparams = require('../Hyperparameters.js');
-const FossilRecord = require('../Stats/FossilRecord');
-const WorldConfig = require('../WorldConfig');
-const SerializeHelper = require('../Utils/SerializeHelper');
-const Species = require('../Stats/Species');
+import Environment from './Environment';
+import Renderer from '../Rendering/Renderer';
+import GridMap from '../Grid/GridMap';
+import Organism from '../Organism/Organism';
+import CellStates from '../Organism/Cell/CellStates';
+import EnvironmentController from '../Controllers/EnvironmentController';
+import Hyperparams from '../Hyperparameters.js';
+import FossilRecord from '../Stats/FossilRecord';
+import WorldConfig from '../WorldConfig';
+import SerializeHelper from '../Utils/SerializeHelper';
+import Species from '../Stats/Species';
 
 class WorldEnvironment extends Environment{
     constructor(cell_size) {
@@ -320,5 +320,5 @@ class WorldEnvironment extends Environment{
     }
 }
 
-module.exports = WorldEnvironment;
+export default WorldEnvironment;
 

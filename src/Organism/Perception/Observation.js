@@ -6,4 +6,4 @@ class Observation {
     }
 }
 
-module.exports = Observation;
+export default Observation;

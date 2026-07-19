@@ -1,4 +1,4 @@
-const Neighbors = require("./Grid/Neighbors");
+import Neighbors from "./Grid/Neighbors";
 
 const Hyperparams = {
     setDefaults: function() {
@@ -46,4 +46,4 @@ const Hyperparams = {
 
 Hyperparams.setDefaults();
 
-module.exports = Hyperparams;
+export default Hyperparams;

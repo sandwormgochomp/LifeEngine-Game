@@ -1,5 +1,5 @@
-const CellStates = require("../CellStates");
-const BodyCell = require("./BodyCell");
+import CellStates from "../CellStates";
+import BodyCell from "./BodyCell";
 
 class MoverCell extends BodyCell{
     constructor(org, loc_col, loc_row){
@@ -8,4 +8,4 @@ class MoverCell extends BodyCell{
     }
 }
 
-module.exports = MoverCell;
+export default MoverCell;

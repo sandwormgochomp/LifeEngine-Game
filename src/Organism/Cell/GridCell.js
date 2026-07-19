@@ -1,5 +1,5 @@
-const CellStates = require("./CellStates");
-const Hyperparams = require("../../Hyperparameters");
+import CellStates from "./CellStates";
+import Hyperparams from "../../Hyperparameters";
 
 // A cell exists in a grid map.
 class Cell{
@@ -23,4 +23,4 @@ class Cell{
     }
 }
 
-module.exports = Cell;
+export default Cell;

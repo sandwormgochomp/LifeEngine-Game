@@ -1,5 +1,5 @@
-const CellStates = require("../CellStates");
-const BodyCell = require("./BodyCell");
+import CellStates from "../CellStates";
+import BodyCell from "./BodyCell";
 
 class HealerCell extends BodyCell {
     constructor(org, loc_col, loc_row) {
@@ -19,4 +19,4 @@ class HealerCell extends BodyCell {
     }
 }
 
-module.exports = HealerCell;
+export default HealerCell;

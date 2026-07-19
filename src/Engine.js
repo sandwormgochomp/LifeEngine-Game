@@ -1,7 +1,7 @@
-const WorldEnvironment = require('./Environments/WorldEnvironment');
-const ControlPanel = require('./Controllers/ControlPanel');
-const OrganismEditor = require('./Environments/OrganismEditor');
-const ColorScheme = require('./Rendering/ColorScheme');
+import WorldEnvironment from './Environments/WorldEnvironment';
+import ControlPanel from './Controllers/ControlPanel';
+import OrganismEditor from './Environments/OrganismEditor';
+import ColorScheme from './Rendering/ColorScheme';
 
 // If the simulation speed is below this value, a new interval will be created to handle ui rendering
 // at a reasonable speed. If it is above, the simulation interval will be used to update the ui.
@@ -124,4 +124,4 @@ class Engine {
 
 }
 
-module.exports = Engine;
+export default Engine;

@@ -173,4 +173,4 @@ const CellStates = {
 
 CellStates.defineLists();
 
-module.exports = CellStates;
+export default CellStates;

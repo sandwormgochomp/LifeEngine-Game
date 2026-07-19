@@ -1,6 +1,6 @@
-const CellStates = require("./Cell/CellStates");
-const Organism = require("./Organism");
-const Brain = require("./Perception/Brain")
+import CellStates from "./Cell/CellStates";
+import Organism from "./Organism";
+import Brain from "./Perception/Brain";
 
 class RandomOrganismGenerator {
 
@@ -65,4 +65,4 @@ class RandomOrganismGenerator {
 RandomOrganismGenerator.organismLayers = 4;
 RandomOrganismGenerator.cellSpawnChance = 0.75;
 
-module.exports = RandomOrganismGenerator;
+export default RandomOrganismGenerator;

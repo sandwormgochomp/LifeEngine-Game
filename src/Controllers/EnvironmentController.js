@@ -1,11 +1,11 @@
-const CanvasController = require("./CanvasController");
-const Organism = require('../Organism/Organism');
-const Modes = require("./ControlModes");
-const CellStates = require("../Organism/Cell/CellStates");
-const Neighbors = require("../Grid/Neighbors");
-const FossilRecord = require("../Stats/FossilRecord");
-const WorldConfig = require("../WorldConfig");
-const Perlin = require("../Utils/Perlin");
+import CanvasController from "./CanvasController";
+import Organism from '../Organism/Organism';
+import Modes from "./ControlModes";
+import CellStates from "../Organism/Cell/CellStates";
+import Neighbors from "../Grid/Neighbors";
+import FossilRecord from "../Stats/FossilRecord";
+import WorldConfig from "../WorldConfig";
+import Perlin from "../Utils/Perlin";
 
 class EnvironmentController extends CanvasController{
     constructor(env, canvas) {
@@ -279,4 +279,4 @@ class EnvironmentController extends CanvasController{
 
 }
 
-module.exports = EnvironmentController;
+export default EnvironmentController;

@@ -12,4 +12,4 @@ const Modes = {
     RadiationDrop: 10,
 }
 
-module.exports = Modes;
+export default Modes;

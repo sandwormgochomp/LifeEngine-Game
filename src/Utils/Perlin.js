@@ -43,4 +43,4 @@ let perlin = {
 }
 perlin.seed();
 
-module.exports = perlin;
+export default perlin;

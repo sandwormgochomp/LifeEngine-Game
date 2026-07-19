@@ -1,10 +1,10 @@
-const CanvasController = require("./CanvasController");
-const Modes = require("./ControlModes");
-const CellStates = require("../Organism/Cell/CellStates");
-const Directions = require("../Organism/Directions");
-const Hyperparams = require("../Hyperparameters");
-const Species = require("../Stats/Species");
-const FossilRecord = require("../Stats/FossilRecord");
+import CanvasController from "./CanvasController";
+import Modes from "./ControlModes";
+import CellStates from "../Organism/Cell/CellStates";
+import Directions from "../Organism/Directions";
+import Hyperparams from "../Hyperparameters";
+import Species from "../Stats/Species";
+import FossilRecord from "../Stats/FossilRecord";
 
 class EditorController extends CanvasController{
     constructor(env, canvas) {
@@ -83,4 +83,4 @@ class EditorController extends CanvasController{
     }
 }
 
-module.exports = EditorController;
+export default EditorController;

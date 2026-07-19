@@ -113,4 +113,4 @@ class CanvasController{
     }
 }
 
-module.exports = CanvasController;
+export default CanvasController;

@@ -32,4 +32,4 @@ const Neighbors = {
     }
 }
 
-module.exports = Neighbors;
+export default Neighbors;

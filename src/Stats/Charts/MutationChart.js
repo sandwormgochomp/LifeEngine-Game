@@ -1,5 +1,5 @@
-const FossilRecord = require("../FossilRecord");
-const ChartController = require("./ChartController");
+import FossilRecord from "../FossilRecord";
+import ChartController from "./ChartController";
 
 class MutationChart extends ChartController {
     constructor() {
@@ -28,4 +28,4 @@ class MutationChart extends ChartController {
     }
 }
 
-module.exports = MutationChart;
+export default MutationChart;

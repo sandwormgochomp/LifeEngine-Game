@@ -1,6 +1,6 @@
-const Hyperparams = require("../../Hyperparameters");
-const Directions = require("../Directions");
-const CellStates = require("../Cell/CellStates");
+import Hyperparams from "../../Hyperparameters";
+import Directions from "../Directions";
+import CellStates from "../Cell/CellStates";
 
 const Decision = {
     neutral: 0,
@@ -256,4 +256,4 @@ class Brain {
 
 Brain.Decision = Decision;
 
-module.exports = Brain;
+export default Brain;

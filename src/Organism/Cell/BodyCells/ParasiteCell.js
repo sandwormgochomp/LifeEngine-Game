@@ -1,7 +1,7 @@
-const CellStates = require("../CellStates");
-const BodyCell = require("./BodyCell");
-const Neighbors = require("../../../Grid/Neighbors");
-const Directions = require("../../Directions");
+import CellStates from "../CellStates";
+import BodyCell from "./BodyCell";
+import Neighbors from "../../../Grid/Neighbors";
+import Directions from "../../Directions";
 
 class ParasiteCell extends BodyCell{
     constructor(org, loc_col, loc_row){
@@ -30,4 +30,4 @@ class ParasiteCell extends BodyCell{
     }
 }
 
-module.exports = ParasiteCell;
+export default ParasiteCell;

@@ -1,6 +1,6 @@
-const CellStates = require("../CellStates");
-const BodyCell = require("./BodyCell");
-const Hyperparams = require("../../../Hyperparameters");
+import CellStates from "../CellStates";
+import BodyCell from "./BodyCell";
+import Hyperparams from "../../../Hyperparameters";
 
 class ProducerCell extends BodyCell{
     constructor(org, loc_col, loc_row){
@@ -28,4 +28,4 @@ class ProducerCell extends BodyCell{
     }
 }
 
-module.exports = ProducerCell;
+export default ProducerCell;

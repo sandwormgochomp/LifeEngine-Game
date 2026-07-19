@@ -17,4 +17,4 @@ const SerializeHelper = {
     }
 }
 
-module.exports = SerializeHelper;
+export default SerializeHelper;

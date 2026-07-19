@@ -1,6 +1,6 @@
-const CellStates = require("../Organism/Cell/CellStates");
-const SerializeHelper = require("../Utils/SerializeHelper");
-const Species = require("./Species");
+import CellStates from "../Organism/Cell/CellStates";
+import SerializeHelper from "../Utils/SerializeHelper";
+import Species from "./Species";
 
 const FossilRecord = {
     init: function(){
@@ -180,4 +180,4 @@ const FossilRecord = {
 
 FossilRecord.init();
 
-module.exports = FossilRecord;
+export default FossilRecord;

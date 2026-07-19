@@ -1,6 +1,6 @@
-const CellStates = require("../../Organism/Cell/CellStates");
-const FossilRecord = require("../FossilRecord");
-const ChartController = require("./ChartController");
+import CellStates from "../../Organism/Cell/CellStates";
+import FossilRecord from "../FossilRecord";
+import ChartController from "./ChartController";
 
 class CellsChart extends ChartController {
     constructor() {
@@ -52,4 +52,4 @@ class CellsChart extends ChartController {
     }
 }
 
-module.exports = CellsChart;
+export default CellsChart;

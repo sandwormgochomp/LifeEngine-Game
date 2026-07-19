@@ -1,18 +1,18 @@
-const MouthCell = require("./MouthCell");
-const ProducerCell = require("./ProducerCell");
-const MoverCell = require("./MoverCell");
-const KillerCell = require("./KillerCell");
-const ArmorCell = require("./ArmorCell");
-const EyeCell = require("./EyeCell");
-const HealerCell = require("./HealerCell");
-const ExplosiveCell = require("./ExplosiveCell");
-const PoisonCell = require("./PoisonCell");
-const PheromoneCell = require("./PheromoneCell");
-const CommonCell = require("./CommonCell");
-const ParasiteCell = require("./ParasiteCell");
-const ChameleonCell = require("./ChameleonCell");
-const ShooterCell = require("./ShooterCell");
-const CellStates = require("../CellStates");
+import MouthCell from "./MouthCell";
+import ProducerCell from "./ProducerCell";
+import MoverCell from "./MoverCell";
+import KillerCell from "./KillerCell";
+import ArmorCell from "./ArmorCell";
+import EyeCell from "./EyeCell";
+import HealerCell from "./HealerCell";
+import ExplosiveCell from "./ExplosiveCell";
+import PoisonCell from "./PoisonCell";
+import PheromoneCell from "./PheromoneCell";
+import CommonCell from "./CommonCell";
+import ParasiteCell from "./ParasiteCell";
+import ChameleonCell from "./ChameleonCell";
+import ShooterCell from "./ShooterCell";
+import CellStates from "../CellStates";
 
 
 const BodyCellFactory = {
@@ -55,4 +55,4 @@ const BodyCellFactory = {
 }
 BodyCellFactory.init();
 
-module.exports = BodyCellFactory;
+export default BodyCellFactory;

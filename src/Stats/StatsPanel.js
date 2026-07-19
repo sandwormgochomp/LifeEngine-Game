@@ -1,8 +1,8 @@
-const PopulationChart = require("./Charts/PopulationChart");
-const SpeciesChart = require("./Charts/SpeciesChart");
-const MutationChart = require("./Charts/MutationChart");
-const CellsChart = require("./Charts/CellsChart");
-const FossilRecord = require("./FossilRecord");
+import PopulationChart from "./Charts/PopulationChart";
+import SpeciesChart from "./Charts/SpeciesChart";
+import MutationChart from "./Charts/MutationChart";
+import CellsChart from "./Charts/CellsChart";
+import FossilRecord from "./FossilRecord";
 
 
 const ChartSelections = [PopulationChart, SpeciesChart, CellsChart, MutationChart];
@@ -56,4 +56,4 @@ class StatsPanel {
     
 }
 
-module.exports = StatsPanel;
+export default StatsPanel;

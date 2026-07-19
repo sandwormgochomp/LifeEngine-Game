@@ -1,5 +1,5 @@
-const CellStates = require("../CellStates");
-const BodyCell = require("./BodyCell");
+import CellStates from "../CellStates";
+import BodyCell from "./BodyCell";
 
 class CommonCell extends BodyCell{
     constructor(org, loc_col, loc_row){
@@ -7,4 +7,4 @@ class CommonCell extends BodyCell{
     }
 }
 
-module.exports = CommonCell;
+export default CommonCell;

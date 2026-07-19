@@ -1,11 +1,11 @@
-const Environment = require('./Environment');
-const Organism = require('../Organism/Organism');
-const GridMap = require('../Grid/GridMap');
-const Renderer = require('../Rendering/Renderer');
-const CellStates = require('../Organism/Cell/CellStates');
-const EditorController = require("../Controllers/EditorController");
-const Species = require('../Stats/Species');
-const RandomOrganismGenerator = require('../Organism/RandomOrganismGenerator')
+import Environment from './Environment';
+import Organism from '../Organism/Organism';
+import GridMap from '../Grid/GridMap';
+import Renderer from '../Rendering/Renderer';
+import CellStates from '../Organism/Cell/CellStates';
+import EditorController from "../Controllers/EditorController";
+import Species from '../Stats/Species';
+import RandomOrganismGenerator from '../Organism/RandomOrganismGenerator';
 
 class OrganismEditor extends Environment{
     constructor() {
@@ -180,4 +180,4 @@ class OrganismEditor extends Environment{
     }
 }
 
-module.exports = OrganismEditor;
+export default OrganismEditor;

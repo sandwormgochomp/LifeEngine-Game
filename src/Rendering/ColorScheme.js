@@ -1,4 +1,4 @@
-const CellStates = require("../Organism/Cell/CellStates");
+import CellStates from "../Organism/Cell/CellStates";
 
 var color_scheme = {
     "empty":"#0E1318",
@@ -40,4 +40,4 @@ class ColorScheme {
     }
 }
 
-module.exports = ColorScheme;
+export default ColorScheme;

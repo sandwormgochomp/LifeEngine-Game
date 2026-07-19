@@ -1,5 +1,6 @@
-const CellStates = require("../CellStates");
-const BodyCell = require("./BodyCell");
+import CellStates from "../CellStates";
+import BodyCell from "./BodyCell";
+import Neighbors from "../../../Grid/Neighbors";
 
 class PoisonCell extends BodyCell {
     constructor(org, loc_col, loc_row) {
@@ -10,7 +11,6 @@ class PoisonCell extends BodyCell {
         var env = this.org.env;
         var c = this.getRealCol();
         var r = this.getRealRow();
-        const Neighbors = require("../../../Grid/Neighbors");
         for (var loc of Neighbors.adjacent) {
             var cell = env.grid_map.cellAt(c+loc[0], r+loc[1]);
             if (cell != null && cell.owner != null && cell.owner !== this.org && cell.owner.living) {
@@ -23,4 +23,4 @@ class PoisonCell extends BodyCell {
     }
 }
 
-module.exports = PoisonCell;
+export default PoisonCell;

@@ -6,4 +6,4 @@ const WorldConfig = {
     brush_size: 2,
 }
 
-module.exports = WorldConfig;
+export default WorldConfig;

@@ -1,5 +1,5 @@
-const CellStates = require("../CellStates");
-const BodyCell = require("./BodyCell");
+import CellStates from "../CellStates";
+import BodyCell from "./BodyCell";
 
 class ChameleonCell extends BodyCell{
     constructor(org, loc_col, loc_row){
@@ -12,4 +12,4 @@ class ChameleonCell extends BodyCell{
     }
 }
 
-module.exports = ChameleonCell;
+export default ChameleonCell;

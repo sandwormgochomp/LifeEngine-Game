@@ -1,6 +1,6 @@
-const CellStates = require("./Cell/CellStates");
-const BodyCellFactory = require("./Cell/BodyCells/BodyCellFactory");
-const SerializeHelper = require("../Utils/SerializeHelper");
+import CellStates from "./Cell/CellStates";
+import BodyCellFactory from "./Cell/BodyCells/BodyCellFactory";
+import SerializeHelper from "../Utils/SerializeHelper";
 
 class Anatomy {
     constructor(owner) {
@@ -170,4 +170,4 @@ class Anatomy {
     }
 }
 
-module.exports = Anatomy;
+export default Anatomy;

@@ -1,4 +1,4 @@
-const FossilRecord = require("../FossilRecord");
+import FossilRecord from "../FossilRecord";
 
 class ChartController {
     constructor(title, y_axis="", note="") {
@@ -91,4 +91,4 @@ class ChartController {
     }
 }
 
-module.exports = ChartController;
+export default ChartController;

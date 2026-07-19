@@ -1,5 +1,5 @@
-const CellStates = require("../CellStates");
-const Directions = require("../../Directions");
+import CellStates from "../CellStates";
+import Directions from "../../Directions";
 
 // A body cell defines the relative location of the cell in it's parent organism. It also defines their functional behavior.
 class BodyCell{
@@ -77,4 +77,4 @@ class BodyCell{
     }
 }
 
-module.exports = BodyCell;
+export default BodyCell;

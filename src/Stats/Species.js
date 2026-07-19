@@ -1,10 +1,7 @@
-const CellStates = require("../Organism/Cell/CellStates");
-let FossilRecord = undefined; // workaround to a circular dependency problem
-const getFossilRecord = () => {
-    if (!FossilRecord)
-        FossilRecord = require("./FossilRecord");
-    return FossilRecord;
-}
+import CellStates from "../Organism/Cell/CellStates";
+// Circular with FossilRecord (which imports Species); safe because both only
+// touch each other inside methods, never during module evaluation.
+import FossilRecord from "./FossilRecord";
 
 class Species {
     constructor(anatomy, ancestor, start_tick) {
@@ -40,7 +37,7 @@ class Species {
         this.population--;
         if (this.population <= 0) {
             this.extinct = true;
-            getFossilRecord().fossilize(this);
+            FossilRecord.fossilize(this);
         }
     }
 
@@ -49,4 +46,4 @@ class Species {
     }
 }
 
-module.exports = Species;
+export default Species;

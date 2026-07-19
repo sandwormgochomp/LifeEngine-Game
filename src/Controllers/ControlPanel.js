@@ -1,7 +1,7 @@
-const Hyperparams = require("../Hyperparameters");
-const Modes = require("./ControlModes");
-const StatsPanel = require("../Stats/StatsPanel");
-const WorldConfig = require("../WorldConfig");
+import Hyperparams from "../Hyperparameters";
+import Modes from "./ControlModes";
+import StatsPanel from "../Stats/StatsPanel";
+import WorldConfig from "../WorldConfig";
 
 class ControlPanel {
     constructor(engine) {
@@ -51,4 +51,4 @@ class ControlPanel {
     }
 }
 
-module.exports = ControlPanel;
+export default ControlPanel;
