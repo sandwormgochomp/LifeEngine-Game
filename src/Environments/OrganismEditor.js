@@ -6,6 +6,7 @@ import CellStates from '../Organism/Cell/CellStates';
 import EditorController from "../Controllers/EditorController";
 import Species from '../Stats/Species';
 import RandomOrganismGenerator from '../Organism/RandomOrganismGenerator';
+import Notifier from '../Utils/Notifier';
 
 class OrganismEditor extends Environment{
     constructor() {
@@ -119,7 +120,7 @@ class OrganismEditor extends Environment{
         var loc_c = c - center[0];
         var loc_r = r - center[1];
         if (loc_c == 0 && loc_r == 0){
-            alert("Cannot remove center cell");
+            Notifier.notify("Cannot remove center cell");
             return;
         }
         var prev_cell = this.organism.anatomy.getLocalCell(loc_c, loc_r)

@@ -43,6 +43,22 @@ test.describe('Editor Functionality', () => {
     await expect(cellCount).toHaveText(/Cell count: 2/);
   });
 
+  test('Removing the center cell shows a HUD notification instead of an alert', async ({ page }) => {
+    const cellCount = page.locator('#edit-organism-details .cell-count');
+    await expect(cellCount).toHaveText(/Cell count: 1/);
+
+    await page.locator('#edit.edit-mode-btn').click();
+
+    // Right-click the center cell (155, 155): removal is refused with a toast
+    await page.locator('#editor-canvas').click({ button: 'right', position: { x: 155, y: 155 } });
+
+    await expect(page.getByTestId('hud-notifications')).toContainText('Cannot remove center cell');
+    await expect(cellCount).toHaveText(/Cell count: 1/);
+
+    // Toast auto-dismisses
+    await expect(page.getByTestId('hud-notifications')).toBeHidden({ timeout: 5000 });
+  });
+
   test('Placing 5 common cells in a row works correctly', async ({ page }) => {
     const cellCount = page.locator('#edit-organism-details .cell-count');
     await expect(cellCount).toHaveText(/Cell count: 1/);

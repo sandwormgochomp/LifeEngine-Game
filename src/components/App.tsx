@@ -10,6 +10,7 @@ import HudTopCenter from './HudTopCenter';
 import HudTopRight from './HudTopRight';
 import HudBottomBar from './HudBottomBar';
 import HudPanel from './HudPanel';
+import HudNotifications from './HudNotifications';
 
 // Tab content
 import EditorTab from './Tabs/EditorTab';
@@ -103,6 +104,7 @@ const App: React.FC = () => {
       <HudTopCenter engine={engine} />
       <HudTopRight engine={engine} />
       <HudBottomBar activePanel={activePanel} onPanelToggle={handlePanelToggle} />
+      <HudNotifications />
 
       {/* Dynamic panels (select, print, rules, environment) — mount/unmount */}
       {isDynamicPanel && (
