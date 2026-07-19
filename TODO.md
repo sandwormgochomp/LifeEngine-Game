@@ -4,14 +4,15 @@ Working branch: `update-interface`. One commit per group.
 
 ## Group A — Dead code & repo hygiene
 
-- [ ] Move source assets (`worlds/`, `organisms/`, `mods/` JSON) from `dist/assets/` to `public/assets/` so they survive a rebuild
-- [ ] Fix `.gitignore` (ignore `dist/`, `test-results/`, `playwright-report/`; remove the invalid `./package-lock.json` pattern) and untrack committed build/test artifacts
+- [x] Move source assets (`worlds/`, `organisms/`, `mods/` JSON) from `dist/assets/` to `public/assets/` so they survive a rebuild
+      — Turned out `public/assets/` already held identical copies; the `dist/assets/` JSONs were duplicates and are simply untracked with the rest of `dist/`.
+- [x] Fix `.gitignore` (ignore `dist/`, `test-results/`, `playwright-report/`; remove the invalid `./package-lock.json` pattern) and untrack committed build/test artifacts
       — Note: untracking `dist/` is safe for GitHub Pages. `gh-pages -d dist` publishes the local `dist/` folder to the separate `gh-pages` branch; Pages never reads `dist/` from the source branch. It just has to be built before deploying (see `predeploy` below).
-- [ ] Add `"predeploy": "npm run build"` to `package.json` so `npm run deploy` always publishes a fresh build
-- [ ] Delete stale test artifacts: `test_output.txt` (UTF-16 log from another machine), `test-failure.png`
-- [ ] Delete dead jQuery layer: `src/index.js`, `src/Controllers/LoadController.js` (and its wiring in `ControlPanel`), `webpack.config.js`
-- [ ] Delete ad-hoc scripts superseded by Playwright: `check_errors.js`, `check_click.js`, `test_factory.js`, `serve.js`
-- [ ] `package.json`: remove unused deps (`puppeteer`, `npm`, `glob-parent`)
+- [x] Add `"predeploy": "npm run build"` to `package.json` so `npm run deploy` always publishes a fresh build
+- [x] Delete stale test artifacts: `test_output.txt` (UTF-16 log from another machine), `test-failure.png`
+- [x] Delete dead jQuery layer: `src/index.js`, `src/Controllers/LoadController.js` (and its wiring in `ControlPanel`/`EditorController`), `webpack.config.js`
+- [x] Delete ad-hoc scripts superseded by Playwright: `check_errors.js`, `check_click.js`, `test_factory.js`, `serve.js`
+- [x] `package.json`: remove unused deps (`puppeteer`, `npm`, `glob-parent`)
 
 ## Group B — Engine/state bug fixes
 

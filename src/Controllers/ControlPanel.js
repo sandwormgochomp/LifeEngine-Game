@@ -2,7 +2,6 @@ const Hyperparams = require("../Hyperparameters");
 const Modes = require("./ControlModes");
 const StatsPanel = require("../Stats/StatsPanel");
 const WorldConfig = require("../WorldConfig");
-const LoadController = require("./LoadController");
 
 class ControlPanel {
     constructor(engine) {
@@ -20,7 +19,6 @@ class ControlPanel {
         
         // Setup hyperparams
         this.setHyperparamDefaults();
-        LoadController.control_panel = this;
     }
 
     setHyperparamDefaults() {

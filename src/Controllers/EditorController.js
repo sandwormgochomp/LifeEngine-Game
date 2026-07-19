@@ -4,7 +4,6 @@ const CellStates = require("../Organism/Cell/CellStates");
 const Directions = require("../Organism/Directions");
 const Hyperparams = require("../Hyperparameters");
 const Species = require("../Stats/Species");
-const LoadController = require("./LoadController");
 const FossilRecord = require("../Stats/FossilRecord");
 
 class EditorController extends CanvasController{
