@@ -25,6 +25,25 @@ class Engine {
 
         this.actual_fps = 0;
         this.running = false;
+
+        this.listeners = new Set();
+        this.last_emit = 0;
+    }
+
+    // UI change notification. Listeners are called at most every 100ms
+    // (use force=true for state changes that should reflect immediately).
+    subscribe(listener) {
+        this.listeners.add(listener);
+        return () => this.listeners.delete(listener);
+    }
+
+    emitChange(force=false) {
+        const now = Date.now();
+        if (!force && now - this.last_emit < 100)
+            return;
+        this.last_emit = now;
+        for (const listener of this.listeners)
+            listener();
     }
 
     start(fps=60) {
@@ -36,6 +55,7 @@ class Engine {
             this.environmentUpdate();
         }, 1000/fps);
         this.running = true;
+        this.emitChange(true);
         if (this.fps >= min_render_speed) {
             if (this.ui_loop != null) {
                 clearInterval(this.ui_loop);
@@ -50,6 +70,7 @@ class Engine {
         clearInterval(this.sim_loop);
         this.running = false;
         this.setUiLoop();
+        this.emitChange(true);
     }
 
     restart(fps) {
@@ -90,6 +111,7 @@ class Engine {
     necessaryUpdate() {
         this.env.render();
         this.organism_editor.update();
+        this.emitChange();
     }
 
     // Full teardown (unlike stop(), which keeps a ui loop running for rendering while paused)

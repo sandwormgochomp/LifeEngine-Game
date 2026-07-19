@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import styles from '../styles/Hud.module.css';
+import useEngineValue from '../useEngineValue';
+
+const FossilRecord = require('../../Stats/FossilRecord');
 
 interface StatsTabProps {
   engine: any;
@@ -24,22 +27,28 @@ const StatsTab: React.FC<StatsTabProps> = ({ engine, active }) => {
     return () => statsPanel.stopAutoRender();
   }, [active, engine]);
 
-  const stats = engine?.env ? {
-    population: engine.env.organisms.length,
-    largest: engine.env.largest_cell_count,
-    avgMut: Math.round(engine.env.averageMutability() * 100) / 100
-  } : { population: 0, largest: 0, avgMut: 0 };
+  const population = useEngineValue(engine, e => e.env.organisms.length, 0);
+  const largest = useEngineValue(engine, e => e.env.largest_cell_count, 0);
+  const avgMut = useEngineValue(engine, e => Math.round(e.env.averageMutability() * 100) / 100, 0);
+  const speciesCount = useEngineValue(engine, () => FossilRecord.numExtantSpecies(), 0);
+  const topSpecies = useEngineValue(engine, () => {
+    let top: any = null;
+    for (const species of Object.values(FossilRecord.extant_species) as any[]) {
+      if (!top || species.population > top.population) top = species;
+    }
+    return top ? `${top.name} (${top.population})` : '—';
+  }, '—');
 
   return (
     <div>
       <h3>Statistics</h3>
-      
+
       <div className={styles.statsDetails}>
-        <p id="org-count">Total Population: {stats.population}</p>
-        <p id="largest-org">Largest Organism Ever: {stats.largest} cells</p>
-        <p id="avg-mut">Average Mutation Rate: {stats.avgMut}</p>
-        <p id="species-count">Number of Species: ...</p>
-        <p id="top-species">Most Populous Species: ...</p>
+        <p id="org-count">Total Population: {population}</p>
+        <p id="largest-org">Largest Organism Ever: {largest} cells</p>
+        <p id="avg-mut">Average Mutation Rate: {avgMut}</p>
+        <p id="species-count">Number of Species: {speciesCount}</p>
+        <p id="top-species">Most Populous Species: {topSpecies}</p>
       </div>
 
       <div className={styles.chartControls}>

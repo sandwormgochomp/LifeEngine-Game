@@ -1,27 +1,24 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styles from './styles/Hud.module.css';
+import useEngineValue from './useEngineValue';
 
 interface HudTopLeftProps {
   engine: any;
 }
 
 const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
-  const [, forceRender] = useState({});
+  const running = useEngineValue(engine, e => e.running, false);
 
   const handlePlay = () => {
-    if (!engine) return;
-    engine.controlpanel.setPaused(false);
-    forceRender({});
+    engine?.controlpanel.setPaused(false);
   };
 
   const handlePause = () => {
-    if (!engine) return;
-    engine.controlpanel.setPaused(true);
-    forceRender({});
+    engine?.controlpanel.setPaused(true);
   };
 
   const handleReset = () => {
-    engine?.env?.resetView();
+    engine?.env?.controller?.resetView();
   };
 
   const handleSave = () => {
@@ -39,14 +36,14 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
           <i className="fa-solid fa-bars" />
         </button>
         <button
-          className={`${styles.playbackBtn} ${engine?.running ? styles.playbackBtnActive : ''}`}
+          className={`${styles.playbackBtn} ${running ? styles.playbackBtnActive : ''}`}
           onClick={handlePlay}
           title="Play"
         >
           <i className="fa-solid fa-play" />
         </button>
         <button
-          className={`${styles.playbackBtn} ${engine && !engine.running ? styles.playbackBtnActive : ''}`}
+          className={`${styles.playbackBtn} ${engine && !running ? styles.playbackBtnActive : ''}`}
           onClick={handlePause}
           title="Pause"
         >

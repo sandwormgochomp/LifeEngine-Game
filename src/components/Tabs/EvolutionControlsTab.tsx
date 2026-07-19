@@ -8,16 +8,16 @@ interface EvolutionControlsTabProps {
 }
 
 const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) => {
-  // Use local state to drive the inputs, initialized from Hyperparams
-  const [mutability, setMutability] = useState(Hyperparams.mutability);
-  const [lifespan, setLifespan] = useState(Hyperparams.lifespan);
-  const [energyDecay, setEnergyDecay] = useState(Hyperparams.energy_decay);
+  // Local state mirrors Hyperparams to drive the inputs
+  const [params, setParams] = useState(() => ({
+    mutability: Hyperparams.mutability,
+    lifespan: Hyperparams.lifespan,
+    energy_decay: Hyperparams.energy_decay,
+  }));
 
-  const updateHyperparam = (key: string, value: number) => {
+  const updateHyperparam = (key: keyof typeof params, value: number) => {
     Hyperparams[key] = value;
-    if (key === 'mutability') setMutability(value);
-    if (key === 'lifespan') setLifespan(value);
-    if (key === 'energy_decay') setEnergyDecay(value);
+    setParams(prev => ({ ...prev, [key]: value }));
   };
 
   return (
@@ -27,11 +27,11 @@ const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) =
 
       <div className={styles.sliderGroup}>
         <label>
-          Mutability: {mutability}
+          Mutability: {params.mutability}
           <input 
             type="range" 
             min="0" max="10" step="0.1" 
-            value={mutability}
+            value={params.mutability}
             onChange={(e) => updateHyperparam('mutability', parseFloat(e.target.value))}
           />
         </label>
@@ -39,11 +39,11 @@ const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) =
 
       <div className={styles.sliderGroup}>
         <label>
-          Base Lifespan: {lifespan}
+          Base Lifespan: {params.lifespan}
           <input 
             type="range" 
             min="10" max="200" step="1" 
-            value={lifespan}
+            value={params.lifespan}
             onChange={(e) => updateHyperparam('lifespan', parseInt(e.target.value))}
           />
         </label>
@@ -51,11 +51,11 @@ const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) =
 
       <div className={styles.sliderGroup}>
         <label>
-          Energy Decay: {energyDecay}
+          Energy Decay: {params.energy_decay}
           <input 
             type="range" 
             min="0" max="2" step="0.05" 
-            value={energyDecay}
+            value={params.energy_decay}
             onChange={(e) => updateHyperparam('energy_decay', parseFloat(e.target.value))}
           />
         </label>

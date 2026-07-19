@@ -1,25 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import styles from './styles/Hud.module.css';
+import useEngineValue from './useEngineValue';
 
 interface HudTopRightProps {
   engine: any;
 }
 
 const HudTopRight: React.FC<HudTopRightProps> = ({ engine }) => {
-  const [, forceRender] = useState({});
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      forceRender({});
-    }, 250);
-    return () => clearInterval(interval);
-  }, []);
-
-  const speed = Math.round((engine?.fps || 60) / 60 * 10) / 10;
-  const zoom = Math.round((engine?.env?.controller?.scale || 1) * 100);
+  const speed = useEngineValue(engine, e => Math.round((e.fps || 60) / 60 * 10) / 10, 1);
+  const zoom = useEngineValue(engine, e => Math.round((e.env.controller.scale || 1) * 100), 100);
 
   const handleResetZoom = () => {
-    engine?.env?.resetView();
+    engine?.env?.controller?.resetView();
   };
 
   return (

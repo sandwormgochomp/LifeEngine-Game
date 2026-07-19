@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../styles/Hud.module.css';
+import useEngineValue from '../useEngineValue';
 
 // We must require these since Vite uses commonjs plugin
 const CellStates = require('../../Organism/Cell/CellStates');
@@ -13,23 +14,20 @@ const EditorTab: React.FC<EditorTabProps> = ({ engine }) => {
   const [mode, setMode] = useState<number>(Modes.None);
   const [activeCellType, setActiveCellType] = useState<any>(null);
   const [customColor, setCustomColor] = useState<string>('#ff00ff');
-  const [, forceRender] = useState({});
 
   const editorController = engine?.organism_editor?.controller;
+  const cellCount = useEngineValue(
+    engine,
+    e => e.organism_editor.organism?.anatomy?.cells?.length || 0,
+    0
+  );
 
   useEffect(() => {
-    let interval: any;
     if (editorController) {
       setMode(editorController.mode);
       setActiveCellType(editorController.edit_cell_type);
       setCustomColor(editorController.custom_color || '#ff00ff');
-      
-      interval = setInterval(() => {
-        // Force re-render to update cell count
-        forceRender({}); 
-      }, 500);
     }
-    return () => clearInterval(interval);
   }, [editorController]);
 
   const handleModeChange = (newMode: number) => {
@@ -128,7 +126,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ engine }) => {
       </div>
 
       <div id="edit-organism-details">
-        <p className="cell-count">Cell count: {engine?.organism_editor?.organism?.anatomy?.cells?.length || 0}</p>
+        <p className="cell-count">Cell count: {cellCount}</p>
       </div>
 
       <div className={styles.editorActions}>

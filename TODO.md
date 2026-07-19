@@ -28,10 +28,11 @@ Working branch: `update-interface`. One commit per group.
 
 ## Group C — React state subscription (remove polling)
 
-- [ ] Add change notification to `Engine` (subscribe/unsubscribe, emitted from `necessaryUpdate`, throttled)
-- [ ] Add `useEngineValue` hook (`useSyncExternalStore`) and replace the `forceRender` + `setInterval` polling in `HudTopCenter`, `HudTopRight`, `EditorTab`, `HudTopLeft`
-- [ ] `StatsTab`: derive live details via the hook; fill in the "Number of Species" / "Most Populous Species" placeholders from `FossilRecord`
-- [ ] `EvolutionControlsTab`: collapse the three mirrored `useState`s + `if` chain into one state object
+- [x] Add change notification to `Engine` (subscribe/unsubscribe, emitted from `necessaryUpdate`, throttled to 100ms; immediate on start/stop)
+- [x] Add `useEngineValue` hook (`useSyncExternalStore`) and replace the `forceRender` + `setInterval` polling in `HudTopCenter`, `HudTopRight`, `EditorTab`, `HudTopLeft`
+      — Also fixed: Reset View buttons called `engine.env.resetView()`, which doesn't exist (`resetView` is on the controller) — both were silent no-op crashes
+- [x] `StatsTab`: derive live details via the hook; fill in the "Number of Species" / "Most Populous Species" placeholders from `FossilRecord`
+- [x] `EvolutionControlsTab`: collapse the three mirrored `useState`s + `if` chain into one state object
 
 ## Group D — Playwright suite
 
