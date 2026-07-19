@@ -2,10 +2,10 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './components/App';
 
-// We need to keep Engine accessible or initialize it properly
-import Engine from './Engine';
-
 // CSS Imports
+import '@fontsource/press-start-2p';
+import '@fontsource/vt323';
+import '@fortawesome/fontawesome-free/css/all.min.css';
 import './components/styles/index.css';
 
 const container = document.getElementById('root');

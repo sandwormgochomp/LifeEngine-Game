@@ -1,3 +1,4 @@
+import CanvasJS from "@canvasjs/charts";
 import FossilRecord from "../FossilRecord";
 
 class ChartController {
