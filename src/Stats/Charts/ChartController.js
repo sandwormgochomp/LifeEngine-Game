@@ -19,7 +19,8 @@ class ChartController {
             data: this.data
         });
         this.chart.render();
-        $('#chart-note').text(note);
+        const noteEl = document.getElementById('chart-note');
+        if (noteEl) noteEl.innerText = note;
     }
 
     setData() {

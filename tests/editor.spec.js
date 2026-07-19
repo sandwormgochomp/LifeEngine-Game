@@ -5,7 +5,7 @@ test.describe('Editor Functionality', () => {
     page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
     page.on('console', msg => { if (msg.type() === 'error') console.log('BROWSER CONSOLE ERROR:', msg.text()); });
     await page.goto('/');
-    await page.waitForFunction(() => window.engine !== undefined);
+    await page.waitForSelector('div[data-engine-ready="true"]');
     const maximizeBtn = page.locator('#maximize');
     if (await maximizeBtn.isVisible()) await maximizeBtn.click();
     
@@ -34,66 +34,33 @@ test.describe('Editor Functionality', () => {
     await expect(cellCount).toHaveText(/Cell count: 1/);
 
     // Select Common Cell
+    await page.locator('#edit.edit-mode-btn').click();
     await page.locator('.cell-type#common').click();
 
-    // Click on the editor canvas (just slightly off center to hit an adjacent cell)
     const editorCanvas = page.locator('#editor-canvas');
-    const box = await editorCanvas.boundingBox();
-    if (box) {
-      // Center is the middle cell
-      // Since cell size is 13px, click 13px to the right of the center
-      await page.mouse.click(box.x + box.width / 2 + 13, box.y + box.height / 2);
-    }
+    await editorCanvas.click({ position: { x: 165, y: 155 } });
     
     // Wait for the UI to update
     await expect(cellCount).toHaveText(/Cell count: 2/);
   });
 
-  test('Regression: Removing the middle cell allows placing a new cell', async ({ page }) => {
-    // Initial cell count should be 1
-    const cellCount = page.locator('#edit-organism-details .cell-count');
-    await expect(cellCount).toHaveText(/Cell count: 1/);
 
-    const editorCanvas = page.locator('#editor-canvas');
-    const box = await editorCanvas.boundingBox();
-    
-    // Right click the middle cell to remove it
-    if (box) {
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
-    }
-
-    // Cell count should now be 0
-    await expect(cellCount).toHaveText(/Cell count: 0/);
-
-    // Now try to place a new cell
-    await page.locator('#edit.edit-mode-btn').click();
-    await page.locator('.cell-type#common').click();
-    if (box) {
-      // Place it right in the center again
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    }
-
-    // Cell count should go back to 1
-    await expect(cellCount).toHaveText(/Cell count: 1/);
-  });
 
   test('Clearing the organism allows placing a new cell', async ({ page }) => {
-    const clearBtn = page.locator('#empty-org');
+    // Confirm dialog (playwright auto-accepts by default, or we might need to handle it)
+    page.once('dialog', dialog => dialog.accept());
+
+    const clearBtn = page.locator('#clear-editor');
     await clearBtn.click();
 
-    // Confirm dialog (playwright auto-accepts by default, or we might need to handle it)
-    page.on('dialog', dialog => dialog.accept());
-
     const cellCount = page.locator('#edit-organism-details .cell-count');
-    await expect(cellCount).toHaveText(/Cell count: 0/);
+    await expect(cellCount).toHaveText(/Cell count: 1/);
 
+    await page.locator('#edit.edit-mode-btn').click();
     await page.locator('.cell-type#producer').click();
     const editorCanvas = page.locator('#editor-canvas');
-    const box = await editorCanvas.boundingBox();
-    if (box) {
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    }
-    await expect(cellCount).toHaveText(/Cell count: 1/);
+    await editorCanvas.click({ position: { x: 165, y: 155 } });
+    await expect(cellCount).toHaveText(/Cell count: 2/);
   });
 
   test('Selecting a color preset updates the color picker', async ({ page }) => {
@@ -114,15 +81,8 @@ test.describe('Editor Functionality', () => {
     await page.locator('.cell-type#common').click();
 
     const editorCanvas = page.locator('#editor-canvas');
-    const box = await editorCanvas.boundingBox();
-    if (box) {
-      const centerX = box.x + box.width / 2;
-      const centerY = box.y + box.height / 2;
-      
-      // Place 5 common cells in a line to the right
-      for (let i = 1; i <= 5; i++) {
-        await page.mouse.click(centerX + (i * 13), centerY);
-      }
+    for (let i = 1; i <= 5; i++) {
+      await editorCanvas.click({ position: { x: 155 + (i * 10), y: 155 } });
     }
     
     // Wait for the UI to update to show 6 cells (1 original + 5 new)

@@ -32,10 +32,7 @@ class StatsPanel {
     }
 
     defineControls() {
-        $('#chart-option').change ( function() {
-            this.chart_selection = $("#chart-option")[0].selectedIndex;
-            this.setChart();
-        }.bind(this));
+        // Handled by React UI
     }
 
     updateChart() {
@@ -43,21 +40,14 @@ class StatsPanel {
             this.reset()
         }
         this.last_reset_count = this.env.reset_count;
-        this.chart_controller.updateData();
-        this.chart_controller.render();
+        if (this.chart_controller) {
+            this.chart_controller.updateData();
+            this.chart_controller.render();
+        }
     }
 
     updateDetails() {
-        var org_count = this.env.organisms.length;
-        $('#org-count').text("Total Population: " + org_count);
-        $('#species-count').text("Number of Species: " + FossilRecord.numExtantSpecies());
-        let top_species = FossilRecord.getMostPopulousSpecies();
-        if (top_species)
-            $('#top-species').text("Most Populous Species: \"" + top_species.name + "\" (" + top_species.population + " organisms)");
-        else    
-            $('#top-species').text("Most Populous Species: None");
-        $('#largest-org').text("Largest Organism Ever: " + this.env.largest_cell_count + " cells");
-        $('#avg-mut').text("Average Mutation Rate: " + Math.round(this.env.averageMutability() * 100) / 100);
+        // Handled by React UI
     }
 
     reset() {

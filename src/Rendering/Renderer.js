@@ -17,7 +17,12 @@ class Renderer {
     }
 
     fillWindow(container_id) {
-        this.fillShape($('#'+container_id).height(), $('#'+container_id).width());
+        const el = document.getElementById(container_id);
+        if (el) {
+            this.fillShape(el.clientHeight || window.innerHeight, el.clientWidth || window.innerWidth);
+        } else {
+            this.fillShape(window.innerHeight, window.innerWidth);
+        }
     }
 
     fillShape(height, width) {

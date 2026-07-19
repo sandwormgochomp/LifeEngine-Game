@@ -144,7 +144,9 @@ class WorldEnvironment extends Environment{
         }
         if (this.organisms.length === 0 && start_pop > 0) {
             if (WorldConfig.auto_pause)
-                $('.pause-button')[0].click();
+                if (this.controller && this.controller.control_panel) {
+                    this.controller.control_panel.setPaused(true);
+                }
             else if(WorldConfig.auto_reset) {
                 this.reset_count++;
                 this.reset(false);
@@ -317,7 +319,8 @@ class WorldEnvironment extends Environment{
             FossilRecord.addSpeciesObj(species[name]);
         FossilRecord.loadRaw(env.fossil_record);
         SerializeHelper.overwriteNonObjects(env, this);
-        if ($('#override-controls').is(':checked'))
+        var overrideCheckbox = document.getElementById('override-controls');
+        if (overrideCheckbox && overrideCheckbox.checked)
             Hyperparams.loadJsonObj(env.controls)
         this.renderer.renderFullGrid(this.grid_map.grid);
     }

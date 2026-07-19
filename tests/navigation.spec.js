@@ -5,6 +5,7 @@ test.describe('Navigation and UI', () => {
     page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
     page.on('console', msg => { if (msg.type() === 'error') console.log('BROWSER CONSOLE ERROR:', msg.text()); });
     await page.goto('/');
+    await page.waitForSelector('div[data-engine-ready="true"]');
     // Check if it's minimized and click maximize if needed
     const maximizeBtn = page.locator('#maximize');
     if (await maximizeBtn.isVisible()) {

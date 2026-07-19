@@ -5,10 +5,9 @@
   "private": true,
   "scripts": {
     "test": "playwright test",
-    "build": "webpack --mode=production",
-    "build-dev": "webpack --mode=development",
-    "build-watch": "webpack --watch --mode=development",
-    "serve": "node serve.js",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "deploy": "gh-pages -d dist"
   },
   "repository": {
@@ -24,15 +23,19 @@
   "homepage": "https://github.com/MaxRobinsonTheGreat/EvolutionSimulatorV2#readme",
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "gh-pages": "^6.3.0",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vite-plugin-commonjs": "^0.10.4"
   },
   "dependencies": {
     "glob-parent": "^6.0.2",
-    "jquery": "^3.6.1",
     "npm": "^10.2.1",
     "puppeteer": "^25.3.0",
-    "watchpack": "^2.4.0"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   }
 }

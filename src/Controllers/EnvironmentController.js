@@ -31,14 +31,15 @@ class EnvironmentController extends CanvasController{
             const MIN = Math.pow(2, -3);
             scale = Math.min(MAX, Math.max(MIN, scale));
 
-            var cur_top = parseInt($('#env-canvas').css('top'));
-            var cur_left = parseInt($('#env-canvas').css('left'));
+            var canvasEl = document.getElementById('env-canvas');
+            var cur_top = parseInt(canvasEl.style.top || '0');
+            var cur_left = parseInt(canvasEl.style.left || '0');
 
             var diff_x = (this.canvas.width/2  - this.mouse_x) * (scale - this.scale);
             var diff_y = (this.canvas.height/2 - this.mouse_y) * (scale - this.scale);
 
-            $('#env-canvas').css('top', (cur_top+diff_y)+'px');
-            $('#env-canvas').css('left', (cur_left+diff_x)+'px');
+            canvasEl.style.top = (cur_top+diff_y)+'px';
+            canvasEl.style.left = (cur_left+diff_x)+'px';
           
             // Apply scale transform
             el.style.transform = `scale(${scale})`;
@@ -48,9 +49,12 @@ class EnvironmentController extends CanvasController{
     }
 
     resetView() {
-        $('#env-canvas').css('transform', 'scale(1)');
-        $('#env-canvas').css('top', '0px');
-        $('#env-canvas').css('left', '0px');
+        var canvasEl = document.getElementById('env-canvas');
+        if (canvasEl) {
+            canvasEl.style.transform = 'scale(1)';
+            canvasEl.style.top = '0px';
+            canvasEl.style.left = '0px';
+        }
         this.scale = 1;
     }
 
@@ -172,12 +176,23 @@ class EnvironmentController extends CanvasController{
     }
 
     dragScreen() {
-        var cur_top = parseInt($('#env-canvas').css('top'));
-        var cur_left = parseInt($('#env-canvas').css('left'));
-        var new_top = cur_top + ((this.mouse_y - this.start_y)*this.scale);
-        var new_left = cur_left + ((this.mouse_x - this.start_x)*this.scale);
-        $('#env-canvas').css('top', new_top+'px');
-        $('#env-canvas').css('left', new_left+'px');
+        var canvasEl = document.getElementById('env-canvas');
+        if (canvasEl) {
+            var cur_top = parseInt(canvasEl.style.top || '0');
+            var cur_left = parseInt(canvasEl.style.left || '0');
+            
+            var diff_x = (this.mouse_x - this.start_x) * this.scale;
+            var diff_y = (this.mouse_y - this.start_y) * this.scale;
+            
+            var new_top = cur_top + diff_y;
+            var new_left = cur_left + diff_x;
+
+            canvasEl.style.top = new_top+'px';
+            canvasEl.style.left = new_left+'px';
+            
+            this.start_x = this.mouse_x;
+            this.start_y = this.mouse_y;
+        }
     }
 
     dropOrganism(organism, col, row) {

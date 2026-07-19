@@ -1,0 +1,588 @@
+/* ======================================
+   HUD STYLES — Matching Pixel Art Concept
+   ====================================== */
+
+/* ---- Shared ---- */
+.hudText {
+  font-family: 'VT323', monospace;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+}
+
+.hudPixelBorder {
+  border: 2px solid rgba(0, 255, 65, 0.5);
+  box-shadow:
+    inset 0 0 6px rgba(0, 255, 65, 0.08),
+    0 0 8px rgba(0, 255, 65, 0.12);
+}
+
+/* ---- Top-Left: Logo + Playback ---- */
+.topLeft {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.logoRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.82);
+  padding: 6px 14px;
+  border: 2px solid rgba(0, 255, 65, 0.5);
+  box-shadow:
+    inset 0 0 6px rgba(0, 255, 65, 0.08),
+    0 0 8px rgba(0, 255, 65, 0.12);
+}
+
+.logoTitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #00FF41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.logoVersion {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(0, 255, 65, 0.55);
+  white-space: nowrap;
+}
+
+.playbackRow {
+  display: flex;
+  gap: 4px;
+}
+
+.playbackBtn {
+  background: rgba(0, 0, 0, 0.82);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-size: 18px;
+  width: 40px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  padding: 0;
+  margin: 0;
+  font-family: 'VT323', monospace;
+  box-shadow: none;
+  border-radius: 0;
+  min-width: unset;
+}
+
+.playbackBtn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+.playbackBtnActive {
+  background: rgba(0, 255, 65, 0.25);
+  border-color: #00FF41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.6);
+}
+
+/* ---- Top-Center: Stats Bar ---- */
+.topCenter {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.statsBar {
+  background: rgba(0, 0, 0, 0.82);
+  padding: 8px 24px;
+  border: 2px solid rgba(0, 255, 65, 0.5);
+  box-shadow:
+    inset 0 0 6px rgba(0, 255, 65, 0.08),
+    0 0 8px rgba(0, 255, 65, 0.12);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.statItem {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+  letter-spacing: 1px;
+}
+
+.statLabel {
+  color: rgba(0, 255, 65, 0.6);
+}
+
+.statValue {
+  color: #00FF41;
+}
+
+.statDivider {
+  color: rgba(0, 255, 65, 0.3);
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  user-select: none;
+}
+
+/* ---- Top-Right: Speed & Zoom ---- */
+.topRight {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.speedZoomBar {
+  background: rgba(0, 0, 0, 0.82);
+  padding: 8px 18px;
+  border: 2px solid rgba(0, 255, 65, 0.5);
+  box-shadow:
+    inset 0 0 6px rgba(0, 255, 65, 0.08),
+    0 0 8px rgba(0, 255, 65, 0.12);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.speedLabel, .zoomLabel {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: rgba(0, 255, 65, 0.6);
+  letter-spacing: 1px;
+}
+
+.speedValue, .zoomValue {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+}
+
+.speedIcon {
+  color: #00FF41;
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.zoomIcon {
+  color: rgba(0, 255, 65, 0.6);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s;
+  margin-left: 4px;
+}
+
+.zoomIcon:hover {
+  color: #00FF41;
+}
+
+/* ---- Bottom-Center: Toolbar ---- */
+.bottomCenter {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.toolbar {
+  background: rgba(0, 0, 0, 0.85);
+  padding: 6px 12px;
+  border: 2px solid rgba(0, 255, 65, 0.5);
+  box-shadow:
+    inset 0 0 6px rgba(0, 255, 65, 0.08),
+    0 0 12px rgba(0, 255, 65, 0.15);
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+}
+
+.toolbarBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 2px solid transparent;
+  color: rgba(0, 255, 65, 0.6);
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 56px;
+  font-family: 'VT323', monospace;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+
+.toolbarBtn:hover {
+  color: #00FF41;
+  background: rgba(0, 255, 65, 0.08);
+  border-color: rgba(0, 255, 65, 0.25);
+}
+
+.toolbarBtnActive {
+  color: #00FF41;
+  background: rgba(0, 255, 65, 0.15);
+  border-color: rgba(0, 255, 65, 0.5);
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+}
+
+.toolbarIcon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.toolbarLabel {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---- Panel (popup from toolbar) ---- */
+.panelOverlay {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99;
+  pointer-events: auto;
+  max-width: 520px;
+  width: 90vw;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid rgba(0, 255, 65, 0.5);
+  box-shadow:
+    inset 0 0 10px rgba(0, 255, 65, 0.05),
+    0 0 20px rgba(0, 255, 65, 0.15);
+  animation: panelSlideUp 0.18s ease-out;
+}
+
+@keyframes panelSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.panelTitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #00FF41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.4);
+  letter-spacing: 1px;
+}
+
+.panelClose {
+  background: transparent;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  color: rgba(0, 255, 65, 0.6);
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+}
+
+.panelClose:hover {
+  color: #00FF41;
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+.panelBody {
+  padding: 14px 16px;
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+}
+
+/* Styles for content inside panels */
+.panelBody h3 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.3);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.panelBody h4 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(0, 255, 65, 0.7);
+  margin-top: 14px;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.panelBody p {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(0, 255, 65, 0.8);
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.panelBody a {
+  color: #00FF41;
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 255, 65, 0.3);
+}
+
+.panelBody a:hover {
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+  text-decoration-color: #00FF41;
+}
+
+.panelBody label {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(0, 255, 65, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panelBody select {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 0;
+  outline: none;
+}
+
+.panelBody select:focus {
+  border-color: #00FF41;
+}
+
+.panelBody input[type="checkbox"] {
+  accent-color: #00FF41;
+  max-width: unset;
+  width: auto;
+}
+
+.panelBody input[type="color"] {
+  max-width: unset;
+  width: 40px;
+  height: 28px;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Button group layout */
+.buttonGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+/* Slider group layout */
+.sliderGroup {
+  margin-bottom: 10px;
+}
+
+.sliderGroup input[type="range"] {
+  width: 100%;
+  accent-color: #00FF41;
+  max-width: unset;
+}
+
+/* Panel buttons */
+.panelBody button {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 2px;
+  min-width: unset;
+}
+
+.panelBody button:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+.active {
+  background: rgba(0, 255, 65, 0.25) !important;
+  border-color: #00FF41 !important;
+}
+
+/* Cell types grid */
+.cellTypesContainer {
+  margin-top: 8px;
+}
+
+.cellTypesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cellTypeBtn {
+  min-width: 60px;
+  font-size: 7px !important;
+  padding: 6px 8px !important;
+}
+
+.activeCellType {
+  box-shadow: 0 0 8px rgba(255, 255, 0, 0.5);
+}
+
+.paintControls {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editorActions {
+  margin-top: 10px;
+}
+
+/* Stats tab */
+.statsDetails {
+  margin-bottom: 10px;
+}
+
+.chartControls {
+  margin-bottom: 8px;
+}
+
+/* Minimize button (when HUD is minimized) */
+.minimizeBtn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid rgba(0, 255, 65, 0.5);
+  color: #00FF41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.15);
+  border-radius: 0;
+  min-width: unset;
+  margin: 0;
+}
+
+.minimizeBtn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+/* Speed slider in panel - compact horizontal layout */
+.speedSliderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.speedSliderRow input[type="range"] {
+  flex: 1;
+  accent-color: #00FF41;
+  max-width: unset;
+}
+
+.speedSliderRow span {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(0, 255, 65, 0.7);
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .statsBar {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+
+  .statItem {
+    font-size: 8px;
+  }
+
+  .toolbarBtn {
+    padding: 6px 8px;
+    min-width: 44px;
+  }
+
+  .toolbarIcon {
+    font-size: 18px;
+  }
+
+  .toolbarLabel {
+    font-size: 6px;
+  }
+
+  .panelOverlay {
+    max-width: 95vw;
+  }
+
+  .logoTitle {
+    font-size: 12px;
+  }
+}

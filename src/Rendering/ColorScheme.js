@@ -17,6 +17,9 @@ var color_scheme = {
     "poison":"#C2FF00",
     "common":"#808080",
     "pheromone":"#FF00FF",
+    "parasite":"#800080",
+    "chameleon":"#20B2AA",
+    "shooter":"#D2691E",
     "eye-slit": "#0E1318"
 }
 
@@ -33,9 +36,12 @@ class ColorScheme {
         }
         CellStates.eye.slit_color=color_scheme['eye-slit']
         for (var cell_type in color_scheme) {
-            $('#'+cell_type+'.cell-type ').css('background-color', color_scheme[cell_type]);
-            $('#'+cell_type+'.cell-legend-type').css('background-color', color_scheme[cell_type]);
-            
+            document.querySelectorAll('#' + cell_type + '.cell-type').forEach(el => {
+                el.style.backgroundColor = color_scheme[cell_type];
+            });
+            document.querySelectorAll('#' + cell_type + '.cell-legend-type').forEach(el => {
+                el.style.backgroundColor = color_scheme[cell_type];
+            });
         }
         this.world_env.renderer.renderFullGrid(this.world_env.grid_map.grid);
         this.editor_env.renderer.renderFullGrid(this.editor_env.grid_map.grid);

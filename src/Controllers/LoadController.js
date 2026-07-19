@@ -102,8 +102,8 @@ const LoadController = {
     }
 }
 
-$(document).ready(() => {
-    LoadController.init();
-});
+// $(document).ready(() => {
+//     LoadController.init();
+// });
 
 module.exports = LoadController;

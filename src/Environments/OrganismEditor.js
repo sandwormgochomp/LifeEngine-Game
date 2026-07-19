@@ -21,12 +21,10 @@ class OrganismEditor extends Environment{
 
     toggleFullscreen() {
         this.is_fullscreen = !this.is_fullscreen;
-        let editor_tab = $('div.tab#editor');
-        
         var org_data = this.organism.serialize();
         
+        let envEl = document.getElementById('editor-env');
         if (this.is_fullscreen) {
-            editor_tab.addClass('fullscreen-editor-mode');
             let w = window.innerWidth - 350; 
             let h = window.innerHeight - 150;
             let cols = Math.max(5, Math.floor(w / this.cell_size));
@@ -35,19 +33,21 @@ class OrganismEditor extends Environment{
             if (rows % 2 === 0) rows--;
             
             this.grid_map = new GridMap(cols, rows, this.cell_size);
-            $('#editor-env').css({
-                width: (cols * this.cell_size) + 'px', 
-                height: (rows * this.cell_size) + 'px',
-                'flex-shrink': '0',
-                'flex-grow': '0',
-                'margin': '10px'
-            });
+            if (envEl) {
+                envEl.style.width = (cols * this.cell_size) + 'px';
+                envEl.style.height = (rows * this.cell_size) + 'px';
+                envEl.style.flexShrink = '0';
+                envEl.style.flexGrow = '0';
+                envEl.style.margin = '10px';
+            }
             this.renderer.canvas.width = cols * this.cell_size;
             this.renderer.canvas.height = rows * this.cell_size;
         } else {
-            editor_tab.removeClass('fullscreen-editor-mode');
             this.grid_map = new GridMap(31, 31, this.cell_size);
-            $('#editor-env').css({width: '310px', height: '310px'});
+            if (envEl) {
+                envEl.style.width = '310px';
+                envEl.style.height = '310px';
+            }
             this.renderer.canvas.width = 310;
             this.renderer.canvas.height = 310;
         }
@@ -87,7 +87,7 @@ class OrganismEditor extends Environment{
         var loc_r = r - center[1];
         var prev_cell = this.organism.anatomy.getLocalCell(loc_c, loc_r)
         
-        var color_val = applyColor ? $('#cell-color-picker').val() : null;
+        var color_val = applyColor ? this.controller.custom_color : null;
 
         if (prev_cell != null) {
             var new_cell = this.organism.anatomy.replaceCell(state, prev_cell.loc_col, prev_cell.loc_row, false);
@@ -136,7 +136,7 @@ class OrganismEditor extends Environment{
         var center = this.grid_map.getCenter();
         this.organism = new Organism(center[0], center[1], this, orig_org);
         this.organism.updateGrid();
-        this.controller.updateDetails();
+        // this.controller.updateDetails();
     }
     
     getCopyOfOrg() {
@@ -165,10 +165,9 @@ class OrganismEditor extends Environment{
         this.organism.species = new Species(this.organism.anatomy, null, 0);
     }
 
-    resetWithRandomOrgs(env) {
+    resetWithRandomOrgs(env, numOrganisms=50) {
         let reset_confirmed = env.reset(true, false);
         if (!reset_confirmed) return;
-        let numOrganisms = parseInt($('#num-random-orgs').val());
 
         let size = Math.ceil(8);
 

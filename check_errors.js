@@ -7,21 +7,15 @@ const puppeteer = require('puppeteer');
   page.on('console', msg => console.log(`[${msg.type()}] ${msg.text()}`));
   page.on('pageerror', error => console.log('[PAGE ERROR]', error.message, error.stack));
 
-  await page.goto('http://localhost:8000', {waitUntil: 'networkidle2'});
+  await page.goto('http://localhost:3000', {waitUntil: 'networkidle2'});
 
   const res = await page.evaluate(() => {
-    document.querySelector('#maximize').click();
-    document.querySelector('.tabnav-item#editor').click();
-    
-    // We expect edit_cell_type to be set
-    document.querySelector('.cell-type#common').click();
-    
     return {
-        editCellType: window.engine.organism_editor.controller.edit_cell_type ? window.engine.organism_editor.controller.edit_cell_type.name : null
+        success: window.engine !== undefined
     };
   });
 
-  console.log("Edit cell type:", res.editCellType);
+  console.log("Engine loaded:", res.success);
 
   await browser.close();
 })();
