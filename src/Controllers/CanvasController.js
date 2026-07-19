@@ -32,15 +32,24 @@ class CanvasController{
             this.defineEvents();
     }
 
+    // offsetX/offsetY are relative to the canvas, so they stay put when the
+    // canvas itself is panned under a stationary cursor. Anything comparing
+    // pointer positions *across* events must use the client (screen) coords.
+    setPointer(evt) {
+        this.client_x = evt.clientX;
+        this.client_y = evt.clientY;
+        this.updateMouseLocation(evt.offsetX, evt.offsetY);
+    }
+
     defineEvents() {
         this.canvas.addEventListener('mousemove', e => {
-            this.updateMouseLocation(e.offsetX, e.offsetY)
+            this.setPointer(e);
             this.mouseMove();
         });
 
         this.canvas.addEventListener('mouseup', function(evt) {
             evt.preventDefault();
-            this.updateMouseLocation(evt.offsetX, evt.offsetY)
+            this.setPointer(evt);
             this.mouseUp();
             if (evt.button == 0) 
                 this.left_click = false;
@@ -52,8 +61,8 @@ class CanvasController{
 
         this.canvas.addEventListener('mousedown', function(evt) {
             evt.preventDefault();
-            this.updateMouseLocation(evt.offsetX, evt.offsetY)
-            if (evt.button == 0) 
+            this.setPointer(evt);
+            if (evt.button == 0)
                 this.left_click = true;
             if (evt.button == 1) 
                 this.middle_click = true;
@@ -79,11 +88,9 @@ class CanvasController{
             this.right_click  = !!(evt.buttons & 2);
             this.middle_click = !!(evt.buttons & 4);
 
-            this.updateMouseLocation(evt.offsetX, evt.offsetY);
-            this.start_x = this.mouse_x;
-            this.start_y = this.mouse_y;
-
-
+            this.setPointer(evt);
+            this.drag_anchor_x = this.client_x;
+            this.drag_anchor_y = this.client_y;
         }.bind(this))
 
     }

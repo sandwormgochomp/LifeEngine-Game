@@ -13,7 +13,17 @@ class EnvironmentController extends CanvasController{
         this.mode = Modes.FoodDrop;
         this.org_to_clone = null;
         this.scale = 1;
+        this.pan_x = 0;
+        this.pan_y = 0;
         this.defineZoomControls();
+    }
+
+    // Pan and zoom are kept as numbers and written as a single transform.
+    // Reading them back off the element instead would lose sub-pixel precision
+    // to parseInt, and animating transform avoids the per-frame relayout that
+    // top/left forces.
+    applyView() {
+        this.canvas.style.transform = `translate(${this.pan_x}px, ${this.pan_y}px) scale(${this.scale})`;
     }
 
     defineZoomControls() {
@@ -26,24 +36,23 @@ class EnvironmentController extends CanvasController{
             var sign = Math.sign(event.deltaY);
             var new_scale = Math.min(MAX, Math.max(MIN, this.scale * Math.pow(zoom_speed, sign)));
 
-            var cur_top = parseInt(this.canvas.style.top || '0');
-            var cur_left = parseInt(this.canvas.style.left || '0');
+            // Keep the point under the cursor fixed. offsetX/offsetY come off
+            // the event rather than this.mouse_x so that consecutive wheel
+            // ticks without an intervening mousemove don't zoom toward a stale
+            // point (the canvas moves under the cursor on every tick).
+            this.pan_x += (this.canvas.width/2  - event.offsetX) * (new_scale - this.scale);
+            this.pan_y += (this.canvas.height/2 - event.offsetY) * (new_scale - this.scale);
 
-            var diff_x = (this.canvas.width/2  - this.mouse_x) * (new_scale - this.scale);
-            var diff_y = (this.canvas.height/2 - this.mouse_y) * (new_scale - this.scale);
-
-            this.canvas.style.top = (cur_top+diff_y)+'px';
-            this.canvas.style.left = (cur_left+diff_x)+'px';
-            this.canvas.style.transform = `scale(${new_scale})`;
             this.scale = new_scale;
+            this.applyView();
         };
     }
 
     resetView() {
-        this.canvas.style.transform = 'scale(1)';
-        this.canvas.style.top = '0px';
-        this.canvas.style.left = '0px';
         this.scale = 1;
+        this.pan_x = 0;
+        this.pan_y = 0;
+        this.applyView();
     }
 
     /*
@@ -82,8 +91,8 @@ class EnvironmentController extends CanvasController{
     }
 
     mouseDown() {
-        this.start_x = this.mouse_x;
-        this.start_y = this.mouse_y;
+        this.drag_anchor_x = this.client_x;
+        this.drag_anchor_y = this.client_y;
         this.performModeAction();
     }
 
@@ -164,17 +173,15 @@ class EnvironmentController extends CanvasController{
     }
 
     dragScreen() {
-        var cur_top = parseInt(this.canvas.style.top || '0');
-        var cur_left = parseInt(this.canvas.style.left || '0');
+        // Both the anchor and the current position are screen coords, so the
+        // delta is the true mouse movement and the pan tracks it 1:1.
+        this.pan_x += this.client_x - this.drag_anchor_x;
+        this.pan_y += this.client_y - this.drag_anchor_y;
 
-        var diff_x = (this.mouse_x - this.start_x) * this.scale;
-        var diff_y = (this.mouse_y - this.start_y) * this.scale;
+        this.drag_anchor_x = this.client_x;
+        this.drag_anchor_y = this.client_y;
 
-        this.canvas.style.top = (cur_top + diff_y)+'px';
-        this.canvas.style.left = (cur_left + diff_x)+'px';
-
-        this.start_x = this.mouse_x;
-        this.start_y = this.mouse_y;
+        this.applyView();
     }
 
     dropOrganism(organism, col, row) {
