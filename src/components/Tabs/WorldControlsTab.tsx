@@ -1,10 +1,10 @@
 import React from 'react';
 import styles from '../styles/Hud.module.css';
-
-const Modes = require('../../Controllers/ControlModes');
+import type { EngineAPI } from '../../types/engine';
+import Modes from '../../Controllers/ControlModes';
 
 interface WorldControlsTabProps {
-  engine: any;
+  engine: EngineAPI | null;
 }
 
 const WorldControlsTab: React.FC<WorldControlsTabProps> = ({ engine }) => {

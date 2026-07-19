@@ -1,9 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './styles/App.module.css';
-import hudStyles from './styles/Hud.module.css';
+import type { EngineAPI } from '../types/engine';
 
-// Using @ts-ignore for now since Engine is JS
-// @ts-ignore
 import Engine from '../Engine';
 
 // HUD regions
@@ -29,12 +27,12 @@ const PANEL_TITLES: Record<string, string> = {
 };
 
 const App: React.FC = () => {
-  const [engine, setEngine] = useState<any>(null);
+  const [engine, setEngine] = useState<EngineAPI | null>(null);
   const [activePanel, setActivePanel] = useState<string | null>(null);
 
   useEffect(() => {
     // Wait for the next tick to ensure canvas elements are mounted
-    let newEngine: any = null;
+    let newEngine: EngineAPI | null = null;
     const timer = setTimeout(() => {
       newEngine = new Engine();
       (window as any).engine = newEngine;

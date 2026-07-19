@@ -44,8 +44,9 @@ Working branch: `update-interface`. One commit per group.
 
 ## Group E — Type the React/engine seam
 
-- [ ] Add a minimal `EngineAPI` type (d.ts) and use it instead of `engine: any` in components
-- [ ] Replace `require()` with `import` in `.tsx` files; drop the `@ts-ignore` on the Engine import
+- [x] Add a minimal `EngineAPI` type (`src/types/engine.ts`) and use it instead of `engine: any` in components; add CSS-module declarations so `tsc` passes
+- [x] Replace `require()` with `import` in `.tsx` files; drop the `@ts-ignore` on the Engine import
+      — `npm run build` (`tsc && vite build`) now passes for the first time on this branch; typing also surfaced that `EditorController` never initialized `mode` (fixed to `Modes.None`)
 
 ## Deferred (noted, not planned here)
 

@@ -7,8 +7,9 @@ const Species = require("../Stats/Species");
 const FossilRecord = require("../Stats/FossilRecord");
 
 class EditorController extends CanvasController{
-    constructor(env, mode) {
-        super(env, mode);
+    constructor(env, canvas) {
+        super(env, canvas);
+        this.mode = Modes.None;
         this.edit_cell_type = null;
         this.highlight_org = false;
         this.editing_state_index = 0;

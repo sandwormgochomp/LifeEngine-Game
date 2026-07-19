@@ -1,4 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
+import type { EngineAPI } from '../types/engine';
 
 const noopSubscribe = () => () => {};
 
@@ -8,8 +9,8 @@ const noopSubscribe = () => () => {};
  * so getValue should return a primitive (number/string/boolean).
  */
 export default function useEngineValue<T>(
-  engine: any,
-  getValue: (engine: any) => T,
+  engine: EngineAPI | null,
+  getValue: (engine: EngineAPI) => T,
   fallback: T
 ): T {
   const subscribe = useMemo(

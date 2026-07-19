@@ -1,9 +1,10 @@
 import React from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
+import type { EngineAPI } from '../types/engine';
 
 interface HudTopRightProps {
-  engine: any;
+  engine: EngineAPI | null;
 }
 
 const HudTopRight: React.FC<HudTopRightProps> = ({ engine }) => {

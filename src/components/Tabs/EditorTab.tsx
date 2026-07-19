@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../styles/Hud.module.css';
 import useEngineValue from '../useEngineValue';
-
-// We must require these since Vite uses commonjs plugin
-const CellStates = require('../../Organism/Cell/CellStates');
-const Modes = require('../../Controllers/ControlModes');
+import type { EngineAPI, CellStateAPI } from '../../types/engine';
+import CellStates from '../../Organism/Cell/CellStates';
+import Modes from '../../Controllers/ControlModes';
 
 interface EditorTabProps {
-  engine: any;
+  engine: EngineAPI | null;
 }
 
 const EditorTab: React.FC<EditorTabProps> = ({ engine }) => {
   const [mode, setMode] = useState<number>(Modes.None);
-  const [activeCellType, setActiveCellType] = useState<any>(null);
+  const [activeCellType, setActiveCellType] = useState<CellStateAPI | null>(null);
   const [customColor, setCustomColor] = useState<string>('#ff00ff');
 
   const editorController = engine?.organism_editor?.controller;

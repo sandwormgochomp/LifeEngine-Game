@@ -1,11 +1,11 @@
 import React from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
-
-const FossilRecord = require('../Stats/FossilRecord');
+import type { EngineAPI } from '../types/engine';
+import FossilRecord from '../Stats/FossilRecord';
 
 interface HudTopCenterProps {
-  engine: any;
+  engine: EngineAPI | null;
 }
 
 const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine }) => {

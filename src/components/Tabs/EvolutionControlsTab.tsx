@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import styles from '../styles/Hud.module.css';
-
-const Hyperparams = require('../../Hyperparameters');
+import type { EngineAPI } from '../../types/engine';
+import Hyperparams from '../../Hyperparameters';
 
 interface EvolutionControlsTabProps {
-  engine: any;
+  engine: EngineAPI | null;
 }
 
 const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) => {
