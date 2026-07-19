@@ -1,46 +1,31 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect, openPanel } = require('./helpers/fixtures');
 
 test.describe('Navigation and UI', () => {
-  test.beforeEach(async ({ page }) => {
-    page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
-    page.on('console', msg => { if (msg.type() === 'error') console.log('BROWSER CONSOLE ERROR:', msg.text()); });
-    await page.goto('/');
-    await page.waitForSelector('div[data-engine-ready="true"]');
-    // Check if it's minimized and click maximize if needed
-    const maximizeBtn = page.locator('#maximize');
-    if (await maximizeBtn.isVisible()) {
-      await maximizeBtn.click();
-    }
-  });
-
   test('Page loads and displays title', async ({ page }) => {
     await expect(page).toHaveTitle(/Life Engine/);
-    const canvas = page.locator('#env-canvas');
-    await expect(canvas).toBeVisible();
+    await expect(page.locator('#env-canvas')).toBeVisible();
   });
 
-  test('Tab switching works correctly', async ({ page }) => {
-    // Default is Editor because we want users to start there?
-    // Wait, initially #editor might not be the default, but we can click them.
-    
-    // Switch to World Controls
-    await page.locator('#world-controls.tabnav-item').click();
-    await expect(page.locator('div#world-controls.tab')).toBeVisible();
-    await expect(page.locator('div#editor.tab')).toBeHidden();
+  test('Toolbar buttons open and close their panels', async ({ page }) => {
+    // Open the environment panel
+    await openPanel(page, 'environment');
+    await expect(page.locator('#reset-env')).toBeVisible();
 
-    // Switch back to Editor
-    await page.locator('#editor.tabnav-item').click();
-    await expect(page.locator('div#editor.tab')).toBeVisible();
-    await expect(page.locator('div#world-controls.tab')).toBeHidden();
+    // Switch to the editor panel
+    await openPanel(page, 'edit');
+    await expect(page.locator('#editor-canvas')).toBeVisible();
+    await expect(page.locator('#reset-env')).toBeHidden();
+
+    // Clicking the active tool again closes the panel
+    await openPanel(page, 'edit');
+    await expect(page.locator('#editor-canvas')).toBeHidden();
   });
 
-  test('Minimize and maximize panel works', async ({ page }) => {
-    const minimizeBtn = page.locator('#minimize');
-    await minimizeBtn.click();
-    await expect(page.locator('.tabnav-item').first()).toBeHidden();
-    
-    const maximizeBtn = page.locator('#maximize');
-    await maximizeBtn.click();
-    await expect(page.locator('.tabnav-item').first()).toBeVisible();
+  test('Escape key closes the active panel', async ({ page }) => {
+    await openPanel(page, 'environment');
+    await expect(page.locator('#reset-env')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#reset-env')).toBeHidden();
   });
 });

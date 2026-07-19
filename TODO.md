@@ -36,11 +36,11 @@ Working branch: `update-interface`. One commit per group.
 
 ## Group D — Playwright suite
 
-- [ ] Add `webServer` to `playwright.config.js` so `npm test` is self-contained
-- [ ] Extract shared `beforeEach` boilerplate (error logging, goto, engine-ready wait) into a fixture; drop the dead `#maximize` guard
-- [ ] Rewrite specs against the React HUD (`#tool-edit`, `#tool-environment`, …) — current selectors (`.tabnav-item`, `.pause-button`, `#maximize`, `div#editor.tab`) target the deleted jQuery UI
-- [ ] Drop obsolete tests (minimize/maximize, color presets); replace `getImageData` pixel probing with anatomy-model assertions
-- [ ] Run the suite green
+- [x] Add `webServer` to `playwright.config.js` so `npm test` is self-contained (also: `list` reporter + html `open: 'never'` so runs don't hang serving the report)
+- [x] Extract shared `beforeEach` boilerplate (error logging, goto, engine-ready wait) into a fixture; drop the dead `#maximize` guard
+- [x] Rewrite specs against the React HUD (`#tool-edit`, `#tool-environment`, …) — current selectors (`.tabnav-item`, `.pause-button`, `#maximize`, `div#editor.tab`) target the deleted jQuery UI
+- [x] Drop obsolete tests (minimize/maximize, color presets); replace `getImageData` pixel probing with anatomy-model assertions
+- [x] Run the suite green — 21/21 passing
 
 ## Group E — Type the React/engine seam
 
