@@ -220,7 +220,10 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
   return (
     <div className={styles.dock} data-testid="editor-dock">
       <div className={styles.panelHeader}>
-        <span className={styles.panelTitle}>ORGANISM LAB</span>
+        <span className={styles.panelTitle}>
+          <i className="fa-solid fa-flask" style={{ marginRight: '8px' }}></i>
+          ORGANISM LAB
+        </span>
         <button className={styles.panelClose} onClick={onClose} title="Close (Esc)">
           <i className="fa-solid fa-xmark"></i>
         </button>

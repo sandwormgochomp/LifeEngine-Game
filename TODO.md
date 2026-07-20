@@ -9,7 +9,7 @@ Organism Lab
 - [ ] Experiment with ways to overlay this on the editor - make sure developer approves the design before implementing
 - [ ] Save / Load / Presets selector - maybe a toolbar at the top? Experiment with this
 - [ ] Cell scroll is small. Maybe these cells should be on the side of the menu. Give options and experiment
-- [ ] Add a little lab beaker svg icon beside the "Organism Lab" title. In fact, maybe the "Edit" button on the bottom bar should use a beaker icon too?
+- [x] Add a little lab beaker svg icon beside the "Organism Lab" title. In fact, maybe the "Edit" button on the bottom bar should use a beaker icon too?
 
 Top-right bar
 - [ ] Fix speed adjustment interface - doesn't appear to function. Need to go lower and higher than 1x
