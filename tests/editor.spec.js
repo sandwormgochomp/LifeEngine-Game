@@ -263,6 +263,49 @@ test.describe('Select from world', () => {
     await expect(page.locator('#edit-organism-details .cell-count')).toHaveText(/Cell count: [1-9]/);
   });
 
+  test('Lifeforms list updates live as species appear and die', async ({ page }) => {
+    await page.locator('#lifeforms-stat').click();
+    await expect(page.getByTestId('lifeforms-modal')).toBeVisible();
+
+    const cards = page.locator('.lifeform-card');
+    const original = await cards.first().locator('.lifeform-name').textContent();
+    expect(await cards.count()).toBeGreaterThan(0);
+
+    // Wipe out all life. Auto-reset seeds a brand new species, so the list
+    // should swap over on its own with the modal still open.
+    await page.evaluate(() => {
+      window.engine.controlpanel.setPaused(false);
+      window.engine.env.organisms.forEach(o => o.die());
+    });
+
+    await expect
+      .poll(async () => cards.first().isVisible().then(v => (v ? cards.first().locator('.lifeform-name').textContent() : null)))
+      .not.toBe(original);
+  });
+
+  test('A species that dies under the cursor is held in place, then pruned', async ({ page }) => {
+    await pauseEngine(page);
+    await page.locator('#lifeforms-stat').click();
+    const card = page.locator('.lifeform-card').first();
+    await expect(card).toBeVisible();
+
+    // Hover the grid, then kill everything: the card stays put so a click in
+    // flight can't land on whatever would have shifted into its place
+    await card.hover();
+    await page.evaluate(() => {
+      window.engine.env.organisms.forEach(o => o.die());
+      window.engine.env.removeOrganisms([...window.engine.env.organisms.keys()]);
+      window.engine.emitChange(true);
+    });
+    await expect(card).toHaveAttribute('data-extinct', 'true');
+    await expect(card).toContainText('extinct');
+
+    // Moving off the grid prunes it. Auto-reset seeds a fresh species in the
+    // meantime, so assert on the extinct card rather than the total.
+    await page.getByTestId('lifeforms-modal').getByText('LIFEFORMS', { exact: false }).hover();
+    await expect(page.locator('.lifeform-card[data-extinct="true"]')).toHaveCount(0);
+  });
+
   test('Right-click cancels select mode without picking', async ({ page }) => {
     await pauseEngine(page);
     await page.locator('#tool-select').click();

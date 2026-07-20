@@ -1140,6 +1140,17 @@
   white-space: nowrap;
 }
 
+/* A species that died while the cursor was over the grid: held in place so
+   nothing shifts mid-click, then pruned once the pointer leaves */
+.pickerCardExtinct {
+  opacity: 0.45;
+  border-color: rgba(255, 120, 120, 0.35) !important;
+}
+
+.pickerCardExtinct .pickerMeta {
+  color: rgba(255, 140, 140, 0.8);
+}
+
 .pickerThumbPending {
   width: 72px;
   height: 72px;
