@@ -49,18 +49,18 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
       </div>
       <div className={styles.playbackRow}>
         <button
-          className={`${styles.playbackBtn} ${running ? styles.playbackBtnActive : ''}`}
-          onClick={handlePlay}
-          title="Play"
-        >
-          <i className="fa-solid fa-play" />
-        </button>
-        <button
           className={`${styles.playbackBtn} ${engine && !running ? styles.playbackBtnActive : ''}`}
           onClick={handlePause}
           title="Pause"
         >
           <i className="fa-solid fa-pause" />
+        </button>
+        <button
+          className={`${styles.playbackBtn} ${running ? styles.playbackBtnActive : ''}`}
+          onClick={handlePlay}
+          title="Play"
+        >
+          <i className="fa-solid fa-play" />
         </button>
         <button className={styles.playbackBtn} onClick={handleRestart} title="Restart Simulation">
           <i className="fa-solid fa-rotate" />
