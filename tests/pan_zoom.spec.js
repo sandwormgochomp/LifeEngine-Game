@@ -115,7 +115,7 @@ test.describe('Panning and zooming the world canvas', () => {
     await page.mouse.wheel(0, -120);
     await dragBy(page, { from: { x: 400, y: 300 }, dx: 100, dy: 60 });
 
-    await page.getByTitle('Reset View').click();
+    await page.getByTitle('Reset Zoom').click();
 
     const reset = await canvasBox(page);
     expect(reset.x).toBeCloseTo(original.x, 0);

@@ -14,6 +14,7 @@ class Engine {
     constructor({env_canvas, env_container}){
         this.fps = 60;
         this.env = new WorldEnvironment(5, env_canvas, env_container);
+        this.env.engine = this;
         this.organism_editor = new OrganismEditor();
         this.controlpanel = new ControlPanel(this);
         this.colorscheme = new ColorScheme(this.env, this.organism_editor);

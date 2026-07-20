@@ -1,40 +1,35 @@
-const { test, expect, openPanel } = require('./helpers/fixtures');
+const { test, expect, openEditor, pauseEngine, clickEditorCell, localCellState } = require('./helpers/fixtures');
 
-test.describe('New Cell Types Functionality', () => {
-  test.beforeEach(async ({ page }) => {
-    await openPanel(page, 'edit');
-    await page.locator('#edit.edit-mode-btn').click();
-  });
+// Every placeable cell type; one page load for the whole sweep.
+const cellTypes = [
+  'mouth', 'producer', 'mover', 'killer', 'armor', 'eye', 'healer',
+  'explosive', 'poison', 'pheromone', 'common', 'parasite', 'chameleon', 'shooter',
+];
 
-  const cellTypes = [
-    { id: 'armor', name: 'Armor' },
-    { id: 'chameleon', name: 'Chameleon' },
-    { id: 'explosive', name: 'Explosive' },
-    { id: 'healer', name: 'Healer' },
-    { id: 'killer', name: 'Killer' },
-    { id: 'poison', name: 'Poison' },
-    { id: 'shooter', name: 'Shooter' },
-    { id: 'parasite', name: 'Parasite' },
-    { id: 'pheromone', name: 'Pheromone' }
-  ];
+test.describe('Cell type palette', () => {
+  test('Each cell type can be drawn onto the organism', async ({ page }) => {
+    await pauseEngine(page);
+    await openEditor(page);
+    const cellCount = page.locator('#edit-organism-details .cell-count');
 
-  for (const cellType of cellTypes) {
-    test(`Placing a ${cellType.name} cell on the editor canvas works`, async ({ page }) => {
-      const cellCount = page.locator('#edit-organism-details .cell-count');
-      await expect(cellCount).toHaveText(/Cell count: 1/);
-
-      await page.locator(`.cell-type#${cellType.id}`).click();
-
-      // Click one cell to the right of the organism's center cell
-      await page.locator('#editor-canvas').click({ position: { x: 165, y: 155 } });
-
+    for (const type of cellTypes) {
+      await page.locator(`.cell-type#${type}`).click();
+      await clickEditorCell(page, 1, 0);
+      expect(await localCellState(page, 1, 0), `placing ${type}`).toBe(type);
       await expect(cellCount).toHaveText(/Cell count: 2/);
 
-      const newCellState = await page.evaluate(() => {
-        const cell = window.engine.organism_editor.organism.anatomy.getLocalCell(1, 0);
-        return cell?.state?.name ?? null;
-      });
-      expect(newCellState).toBe(cellType.id);
-    });
-  }
+      // Right-click erase resets the slot for the next type
+      await clickEditorCell(page, 1, 0, 'right');
+      await expect(cellCount).toHaveText(/Cell count: 1/);
+    }
+  });
+
+  test('Palette buttons show readable names and tooltips', async ({ page }) => {
+    await openEditor(page);
+    for (const type of ['mouth', 'parasite', 'chameleon']) {
+      const btn = page.locator(`.cell-type#${type}`);
+      await expect(btn).toContainText(type);
+      await expect(btn).toHaveAttribute('title', /.+/);
+    }
+  });
 });

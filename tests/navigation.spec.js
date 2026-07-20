@@ -1,4 +1,4 @@
-const { test, expect, openPanel } = require('./helpers/fixtures');
+const { test, expect, openPanel, openEditor } = require('./helpers/fixtures');
 
 test.describe('Navigation and UI', () => {
   test('Page loads and displays title', async ({ page }) => {
@@ -6,26 +6,41 @@ test.describe('Navigation and UI', () => {
     await expect(page.locator('#env-canvas')).toBeVisible();
   });
 
-  test('Toolbar buttons open and close their panels', async ({ page }) => {
-    // Open the environment panel
+  test('Toolbar popups toggle; opening the editor dock closes the popup', async ({ page }) => {
     await openPanel(page, 'environment');
     await expect(page.locator('#reset-env')).toBeVisible();
 
-    // Switch to the editor panel
-    await openPanel(page, 'edit');
-    await expect(page.locator('#editor-canvas')).toBeVisible();
+    // Switching to another popup swaps the content
+    await openPanel(page, 'save');
+    await expect(page.locator('#save-world-btn')).toBeVisible();
     await expect(page.locator('#reset-env')).toBeHidden();
 
-    // Clicking the active tool again closes the panel
-    await openPanel(page, 'edit');
-    await expect(page.locator('#editor-canvas')).toBeHidden();
-  });
+    // Opening the editor dock closes the popup
+    await openEditor(page);
+    await expect(page.getByTestId('editor-dock')).toBeVisible();
+    await expect(page.locator('#save-world-btn')).toBeHidden();
 
-  test('Escape key closes the active panel', async ({ page }) => {
+    // A popup can sit alongside the open dock
     await openPanel(page, 'environment');
     await expect(page.locator('#reset-env')).toBeVisible();
+    await expect(page.getByTestId('editor-dock')).toBeVisible();
+
+    // Clicking the active tool again closes it
+    await openPanel(page, 'environment');
+    await expect(page.locator('#reset-env')).toBeHidden();
+    await openEditor(page);
+    await expect(page.getByTestId('editor-dock')).toBeHidden();
+  });
+
+  test('Escape closes the popup first, then the editor dock', async ({ page }) => {
+    await openEditor(page);
+    await openPanel(page, 'environment');
 
     await page.keyboard.press('Escape');
     await expect(page.locator('#reset-env')).toBeHidden();
+    await expect(page.getByTestId('editor-dock')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('editor-dock')).toBeHidden();
   });
 });

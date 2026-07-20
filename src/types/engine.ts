@@ -26,9 +26,12 @@ export interface WorldEnvAPI {
   organisms: unknown[];
   largest_cell_count: number;
   radiation_map: Set<string>;
+  is_night: boolean;
   controller: EnvControllerAPI;
   averageMutability(): number;
   reset(reset_life?: boolean): boolean;
+  serialize(): unknown;
+  loadRaw(raw: unknown): void;
 }
 
 export interface EditorAnatomyAPI {
@@ -44,6 +47,7 @@ export interface EditorOrganismAPI {
 export interface OrganismEditorAPI {
   organism: EditorOrganismAPI;
   controller: EditorControllerAPI;
+  cell_size: number;
   bindCanvas(canvas: HTMLCanvasElement, container: HTMLElement): void;
   releaseCanvas(): void;
   setDefaultOrg(): void;
@@ -76,6 +80,7 @@ export interface StatsPanelAPI {
 export interface ControlPanelAPI {
   stats_panel: StatsPanelAPI;
   setPaused(paused: boolean): void;
+  changeEngineSpeed(fps: number): void;
 }
 
 export interface EngineAPI {

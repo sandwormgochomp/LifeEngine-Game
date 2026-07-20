@@ -57,6 +57,7 @@ const App: React.FC = () => {
       const envController = engine?.env?.controller;
       if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select)) {
         envController.mode = Modes.None;
+        envController.org_to_clone = null;
         engine.emitChange(true);
       } else if (activePanel) {
         setActivePanel(null);

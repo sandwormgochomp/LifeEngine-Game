@@ -1,4 +1,4 @@
-const { test, expect, openPanel, pauseEngine } = require('./helpers/fixtures');
+const { test, expect, openPanel } = require('./helpers/fixtures');
 
 test.describe('Simulation Controls', () => {
   test('Play/Pause buttons toggle simulation state', async ({ page }) => {
@@ -10,6 +10,19 @@ test.describe('Simulation Controls', () => {
 
     await page.getByTitle('Play').click();
     expect(await page.evaluate(() => window.engine.running)).toBe(true);
+  });
+
+  test('Speed controls step the engine fps', async ({ page }) => {
+    await expect(page.locator('span[title="Click to cycle speed"]')).toHaveText('1x');
+
+    await page.getByTitle('Increase Speed').click();
+    await expect(page.locator('span[title="Click to cycle speed"]')).toHaveText('2x');
+    expect(await page.evaluate(() => window.engine.fps)).toBe(120);
+
+    await page.getByTitle('Decrease Speed').click();
+    await page.getByTitle('Decrease Speed').click();
+    await expect(page.locator('span[title="Click to cycle speed"]')).toHaveText('0.5x');
+    expect(await page.evaluate(() => window.engine.fps)).toBe(30);
   });
 
   test('Clear environment button clears all organisms', async ({ page }) => {
@@ -24,17 +37,12 @@ test.describe('Simulation Controls', () => {
     expect(newOrgCount).toBe(0);
   });
 
-  test('Drop Organism populates the environment', async ({ page }) => {
-    await pauseEngine(page);
-    const before = await page.evaluate(() => window.engine.env.organisms.length);
-
-    await openPanel(page, 'environment');
-    await page.locator('#drop-org').click();
-
-    // Click an empty area away from the HUD panel (bottom center) and the origin organism
-    await page.locator('#env-canvas').click({ position: { x: 300, y: 200 } });
-
-    const after = await page.evaluate(() => window.engine.env.organisms.length);
-    expect(after).toBe(before + 1);
+  test('Save panel downloads a world snapshot', async ({ page }) => {
+    await openPanel(page, 'save');
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#save-world-btn').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^life_engine_world_\d+\.json$/);
+    await expect(page.getByTestId('hud-notifications')).toContainText('World saved successfully');
   });
 });

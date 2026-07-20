@@ -144,21 +144,38 @@ class EnvironmentController extends CanvasController{
                         }
                         break;
                 case Modes.ClickKill:
-                    this.killNearOrganisms();
+                    if (left_click) {
+                        this.killNearOrganisms();
+                    }
                     break;
 
                 case Modes.Select:
-                    if (this.cur_org == null) {
-                        this.cur_org = this.findNearOrganism();
-                    }
-                    if (this.cur_org != null){
-                        this.control_panel.setEditorOrganism(this.cur_org);
+                    if (right_click) {
+                        this.mode = Modes.None;
+                        if (this.env && this.env.engine) {
+                            this.env.engine.emitChange(true);
+                        }
+                    } else if (left_click) {
+                        if (this.cur_org == null) {
+                            this.cur_org = this.findNearOrganism();
+                        }
+                        if (this.cur_org != null){
+                            this.control_panel.setEditorOrganism(this.cur_org);
+                        }
                     }
                     break;
 
                 case Modes.Clone:
-                    if (this.org_to_clone != null){
-                        this.dropOrganism(this.org_to_clone, this.mouse_c, this.mouse_r);
+                    if (right_click) {
+                        this.mode = Modes.None;
+                        this.org_to_clone = null;
+                        if (this.env && this.env.engine) {
+                            this.env.engine.emitChange(true);
+                        }
+                    } else if (left_click) {
+                        if (this.org_to_clone != null){
+                            this.dropOrganism(this.org_to_clone, this.mouse_c, this.mouse_r);
+                        }
                     }
                     break;
                 case Modes.Drag:
