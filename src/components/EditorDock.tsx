@@ -62,10 +62,32 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
 
   // Attach the editor canvas to the engine while the dock is mounted
   useEffect(() => {
-    if (!editor || !canvasRef.current) return;
-    editor.bindCanvas(canvasRef.current, containerRef.current!);
-    return () => editor.releaseCanvas();
-  }, [editor]);
+    const container = containerRef.current;
+    if (!editor || !canvasRef.current || !container) return;
+    editor.bindCanvas(canvasRef.current, container);
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        if (editor.canZoomIn()) {
+          editor.zoomIn();
+          engine?.emitChange(true);
+        }
+      } else if (e.deltaY > 0) {
+        if (editor.canZoomOut()) {
+          editor.zoomOut();
+          engine?.emitChange(true);
+        }
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      editor.releaseCanvas();
+    };
+  }, [editor, engine]);
 
   // Load the preset manifest once (same assets dir user creations go in)
   useEffect(() => {

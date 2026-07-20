@@ -4,7 +4,7 @@ Working branch: `update-interface`
 
 Organism Lab
 - [ ] Fix the "Bob" preset organism from freezing the game
-- [ ] Add scroll to zoom in the organism lab
+- [x] Add scroll to zoom in the organism lab
 - [ ] Fix zoom buttons so they actually fit the interface and/or display pixel dimensions
 - [ ] Experiment with ways to overlay this on the editor - make sure developer approves the design before implementing
 - [ ] Save / Load / Presets selector - maybe a toolbar at the top? Experiment with this
