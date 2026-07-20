@@ -26,7 +26,7 @@ General
 - [ ] Add basic click function hint in the game (middle click = pan, click = place [item] or select depending on mode, right click = ? if anything)
 - [ ] Implement or remove the hamburger menu icon. Maybe remove the reset view icon too or make it restart? 
 - [ ] The hud somehow turned out green and squarish instead of pixel-y like the concept art - fix the colors and style
-- [ ] Day / Night indicator with hud hover that explains the effects of day and night
+- [x] Day / Night indicator with hud hover that explains the effects of day and night
 - [ ] Add a life form modal (opened by clicking "Lifeforms" at the top) where you see every life form and its design. Click to open in Organism Lab
 - [ ] Display brush size so you can know what you are putting down or erasing
 - [ ] Erase mode = erase cursor?

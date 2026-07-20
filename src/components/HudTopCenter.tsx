@@ -12,6 +12,7 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine }) => {
   const gen = useEngineValue(engine, e => e.env.total_ticks, 0);
   const pop = useEngineValue(engine, e => e.env.organisms.length, 0);
   const lifeforms = useEngineValue(engine, () => FossilRecord.numExtantSpecies(), 0);
+  const isNight = useEngineValue(engine, e => Boolean(e.env?.is_night), false);
 
   return (
     <div className={styles.topCenter}>
@@ -29,6 +30,28 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine }) => {
         <span className={styles.statItem}>
           <span className={styles.statLabel}>LIFEFORMS:</span>
           <span className={styles.statValue}>{lifeforms.toLocaleString()}</span>
+        </span>
+        <span className={styles.statDivider}>|</span>
+        <span
+          className={styles.statItem}
+          title={
+            isNight
+              ? 'NIGHT TIME: Darkness lowers visibility and reduces food production from sunlight'
+              : 'DAY TIME: Sunlight allows producer cells to grow food and provides full visibility'
+          }
+          style={{ cursor: 'help' }}
+        >
+          {isNight ? (
+            <span className={styles.statValue} style={{ color: '#87ceeb' }}>
+              <i className="fa-solid fa-moon" style={{ marginRight: '5px' }} />
+              NIGHT
+            </span>
+          ) : (
+            <span className={styles.statValue} style={{ color: '#ffd700' }}>
+              <i className="fa-solid fa-sun" style={{ marginRight: '5px' }} />
+              DAY
+            </span>
+          )}
         </span>
       </div>
     </div>
