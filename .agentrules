@@ -2,4 +2,5 @@ When working on this repository, you MUST follow these instructions:
 1. Write tests for all new changes.
 2. Verify the user has validated the changes.
 3. Commit and push the new changes.
-4. Run `npm run deploy` to publish the new changes to GitHub Pages.
+4. NEVER claim or state that tests pass unless you have explicitly run the test command and verified the complete test run output yourself.
+5. Run `npm run deploy` to publish the new changes to GitHub Pages.
