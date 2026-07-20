@@ -7,9 +7,10 @@ import Notifier from '../Utils/Notifier';
 
 interface HudTopLeftProps {
   engine: EngineAPI | null;
+  onOpenMenu?: () => void;
 }
 
-const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
+const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, onOpenMenu }) => {
   const running = useEngineValue(engine, e => e.running, false);
 
   const handlePlay = () => {
@@ -20,8 +21,12 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
     engine?.controlpanel.setPaused(true);
   };
 
-  const handleReset = () => {
-    engine?.env?.controller?.resetView();
+  const handleRestart = () => {
+    if (!engine?.env) return;
+    if (!window.confirm('Restart simulation and reset the world environment?')) return;
+    engine.env.reset(true);
+    engine.emitChange(true);
+    Notifier.notify('Simulation restarted');
   };
 
   const handleSave = () => {
@@ -44,7 +49,7 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
         <span className={styles.logoVersion}>v1.2</span>
       </div>
       <div className={styles.playbackRow}>
-        <button className={styles.playbackBtn} title="Menu">
+        <button className={styles.playbackBtn} onClick={onOpenMenu} title="Rules & Menu">
           <i className="fa-solid fa-bars" />
         </button>
         <button
@@ -61,7 +66,7 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
         >
           <i className="fa-solid fa-pause" />
         </button>
-        <button className={styles.playbackBtn} onClick={handleReset} title="Reset View">
+        <button className={styles.playbackBtn} onClick={handleRestart} title="Restart Simulation">
           <i className="fa-solid fa-rotate" />
         </button>
         <button className={styles.playbackBtn} onClick={handleSave} title="Save">

@@ -24,7 +24,7 @@ Stats window
 General
 - [ ] Add hover text to explain the purpose of most buttons or information that is specific to game mechanics, or where the exact function could use detail
 - [ ] Add basic click function hint in the game (middle click = pan, click = place [item] or select depending on mode, right click = ? if anything)
-- [ ] Implement or remove the hamburger menu icon. Maybe remove the reset view icon too or make it restart? 
+- [x] Implement or remove the hamburger menu icon. Maybe remove the reset view icon too or make it restart? 
 - [ ] The hud somehow turned out green and squarish instead of pixel-y like the concept art - fix the colors and style
 - [x] Day / Night indicator with hud hover that explains the effects of day and night
 - [ ] Add a life form modal (opened by clicking "Lifeforms" at the top) where you see every life form and its design. Click to open in Organism Lab
