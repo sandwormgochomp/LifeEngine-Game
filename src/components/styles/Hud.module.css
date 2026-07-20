@@ -172,6 +172,16 @@
   font-size: 11px;
   color: #00FF41;
   text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+  display: inline-block;
+  text-align: center;
+}
+
+.speedValue {
+  min-width: 62px;
+}
+
+.zoomValue {
+  min-width: 52px;
 }
 
 .speedBtn {
