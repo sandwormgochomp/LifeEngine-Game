@@ -1,6 +1,19 @@
 /* Global styles: page reset and the always-mounted canvases.
    Everything HUD-related lives in the CSS modules. */
 
+:root {
+    /* CRT palette: matrix green for data, cyan accent for chrome (concept art) */
+    --crt-green: #00FF41;
+    --crt-cyan: #43e8e0;
+    /* Chamfered corners shared by HUD surfaces for the pixel-art look */
+    --pixel-corners: polygon(
+        0 6px, 6px 6px, 6px 0,
+        calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
+        100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
+        6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
+    );
+}
+
 body{
     margin: 0;
     padding: 0;
@@ -27,9 +40,55 @@ body{
     position: relative;
 }
 
+/* Organism glow overlay: sits exactly over the world canvas and receives the
+   same pan/zoom transform from the controller; never intercepts clicks */
+#env-glow-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+/* Microscope-lens vignette over the world (fixed to the viewport, like the
+   eyepiece: it deliberately does not pan with the specimen) */
+#env::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 58%, rgba(0, 8, 6, 0.6) 100%);
+}
+
 #editor-env {
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+}
+
+/* uPlot renders its legend/cursor chrome as global-class HTML; theme it to
+   match the CRT HUD here since CSS modules can't reach it. */
+.u-legend {
+    font-family: 'VT323', monospace !important;
+    font-size: 14px !important;
+    color: rgba(0, 255, 65, 0.85);
+    text-align: left !important;
+}
+
+.u-legend .u-label {
+    color: rgba(0, 255, 65, 0.85);
+}
+
+.u-legend th::after {
+    color: rgba(0, 255, 65, 0.85);
+}
+
+.u-legend .u-marker {
+    border-radius: 0;
+    width: 10px;
+    height: 10px;
+}
+
+.u-select {
+    background: rgba(0, 255, 65, 0.12);
 }

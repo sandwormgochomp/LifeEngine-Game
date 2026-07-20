@@ -1,7 +1,7 @@
 const { test, expect, openPanel } = require('./helpers/fixtures');
 
 test.describe('Stats Panel', () => {
-  test('Opening the stats panel renders a CanvasJS chart', async ({ page }) => {
+  test('Opening the stats panel renders a chart', async ({ page }) => {
     await openPanel(page, 'stats');
     await expect(page.locator('#org-count')).toBeVisible();
     await expect(page.locator('#chartContainer canvas').first()).toBeVisible();

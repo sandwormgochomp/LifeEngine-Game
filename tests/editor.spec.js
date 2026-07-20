@@ -138,6 +138,19 @@ test.describe('Organism Lab dock', () => {
     expect(name).toBe('Testosaurus');
   });
 
+  test('The giant Bob preset loads without freezing and stays editable', async ({ page }) => {
+    // Bob is ~10k cells; loading used to hard-freeze the tab (O(n²) anatomy rebuild)
+    const start = Date.now();
+    await page.locator('#preset-select').selectOption('Bob');
+    await expect(cellCountText(page)).toHaveText(/Cell count: 10783/);
+    expect(Date.now() - start).toBeLessThan(5000);
+
+    // The editor is still responsive: place one more cell at the center's edge
+    await page.locator('.cell-type#common').click();
+    await clickEditorCell(page, 0, 0, 'left');
+    expect(await localCellState(page, 0, 0)).toBe('common');
+  });
+
   test('Presets load and Save downloads the organism as JSON', async ({ page }) => {
     await page.locator('#preset-select').selectOption('hunter');
     await expect(page.locator('#species-name')).toHaveValue('Hunter');
@@ -157,12 +170,13 @@ test.describe('Organism Lab dock', () => {
     await page.locator('#deploy-org').click();
     await expect(page.locator('#deploy-org')).toHaveClass(/active/);
 
-    await page.locator('#env-canvas').click({ position: { x: 300, y: 200 } });
+    // Target a clear spot inside the petri dish, away from the origin organism
+    await page.locator('#env-canvas').click({ position: { x: 600, y: 300 } });
     const after = await page.evaluate(() => window.engine.env.organisms.length);
     expect(after).toBe(before + 1);
 
     // Right-click in the world cancels placement
-    await page.locator('#env-canvas').click({ button: 'right', position: { x: 300, y: 250 } });
+    await page.locator('#env-canvas').click({ button: 'right', position: { x: 500, y: 300 } });
     await expect(page.locator('#deploy-org')).not.toHaveClass(/active/);
 
     // Escape also disarms (without closing the dock)
@@ -216,6 +230,22 @@ test.describe('Select from world', () => {
       editor: window.engine.organism_editor.organism.anatomy.cells.length,
     }));
     expect(counts.editor).toBe(counts.world);
+  });
+
+  test('Lifeforms modal lists living species and opens one in the lab', async ({ page }) => {
+    await pauseEngine(page);
+    await page.locator('#lifeforms-stat').click();
+    await expect(page.getByTestId('lifeforms-modal')).toBeVisible();
+
+    const cards = page.locator('.lifeform-card');
+    expect(await cards.count()).toBeGreaterThan(0);
+    const cardName = await cards.first().locator('.lifeform-name').textContent();
+
+    await cards.first().click();
+    await expect(page.getByTestId('lifeforms-modal')).toBeHidden();
+    await expect(page.getByTestId('editor-dock')).toBeVisible();
+    await expect(page.locator('#species-name')).toHaveValue(cardName);
+    await expect(page.locator('#edit-organism-details .cell-count')).toHaveText(/Cell count: [1-9]/);
   });
 
   test('Right-click cancels select mode without picking', async ({ page }) => {

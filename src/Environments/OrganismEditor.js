@@ -14,6 +14,9 @@ import Notifier from '../Utils/Notifier';
 const ZOOM_LEVELS = [8, 11, 14, 18, 24];
 const DEFAULT_ZOOM = 2;
 const HISTORY_LIMIT = 100;
+// Snapshots are JSON strings; giant organisms (Bob is ~10k cells) make each
+// one megabytes, so the stack is also bounded by total size, not just count.
+const HISTORY_CHAR_LIMIT = 8_000_000;
 
 class OrganismEditor extends Environment{
     constructor() {
@@ -98,16 +101,22 @@ class OrganismEditor extends Environment{
 
     update() {
         if (this.is_active){
+            if (this.needs_render)
+                this.renderFull();
             this.renderer.renderHighlights();
         }
     }
 
+    // Deferred to the next frame: updateGrid() calls this once per organism
+    // cell, and rendering inline froze the tab for huge organisms (the ~10k
+    // cell Bob preset meant ~10k full-canvas redraws).
     changeCell(c, r, state, owner) {
         super.changeCell(c, r, state, owner);
-        this.renderFull();
+        this.needs_render = true;
     }
 
     renderFull() {
+        this.needs_render = false;
         if (!this.renderer.ctx) return;
         this.renderer.renderFullGrid(this.grid_map.grid);
         this.renderDecorations();
@@ -152,7 +161,13 @@ class OrganismEditor extends Environment{
     commitStroke() {
         if (this.pending_snapshot == null) return;
         this.history.push(this.pending_snapshot);
-        if (this.history.length > HISTORY_LIMIT) this.history.shift();
+        var total = 0;
+        for (var snap of this.history) total += snap.length;
+        while (this.history.length > HISTORY_LIMIT ||
+               (this.history.length > 1 && total > HISTORY_CHAR_LIMIT)) {
+            total -= this.history[0].length;
+            this.history.shift();
+        }
         this.redo_stack.length = 0;
         this.pending_snapshot = null;
     }

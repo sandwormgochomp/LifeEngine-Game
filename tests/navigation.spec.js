@@ -32,6 +32,15 @@ test.describe('Navigation and UI', () => {
     await expect(page.getByTestId('editor-dock')).toBeHidden();
   });
 
+  test('Hint bar shows the mode actions and brush size', async ({ page }) => {
+    await openPanel(page, 'environment');
+    await page.locator('#wall').click();
+    await expect(page.getByText(/place wall .* brush 5×5/)).toBeVisible();
+
+    await page.locator('#kill').click();
+    await expect(page.getByText(/kill organism .* brush 5×5/)).toBeVisible();
+  });
+
   test('Escape closes the popup first, then the editor dock', async ({ page }) => {
     await openEditor(page);
     await openPanel(page, 'environment');

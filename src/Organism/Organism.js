@@ -46,11 +46,12 @@ class Organism {
             //deep copy parent cells
             if (c.state === CellStates.pheromone) {
                 let dummy_c = { state: CellStates.common, loc_col: c.loc_col, loc_row: c.loc_row, custom_color: c.custom_color };
-                this.anatomy.addInheritCell(dummy_c);
+                this.anatomy.addInheritCell(dummy_c, false);
             } else {
-                this.anatomy.addInheritCell(c);
+                this.anatomy.addInheritCell(c, false);
             }
         }
+        this.anatomy.checkTypeChange();
         if(parent.anatomy.is_mover && parent.anatomy.has_eyes) {
             this.brain.copy(parent.brain);
         }

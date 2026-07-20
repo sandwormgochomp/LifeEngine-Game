@@ -48,10 +48,14 @@ class Anatomy {
         return new_cell;
     }
 
-    addInheritCell(parent_cell) {
+    // check=false skips the whole-anatomy type scan so bulk loaders can run
+    // it once at the end instead of per cell (O(n) instead of O(n²) — large
+    // organisms like the 10k-cell Bob preset froze the game otherwise).
+    addInheritCell(parent_cell, check = true) {
         var new_cell = BodyCellFactory.createInherited(this.owner, parent_cell);
         this.cells.push(new_cell);
-        this.checkTypeChange();
+        if (check)
+            this.checkTypeChange();
         return new_cell;
     }
 
@@ -165,8 +169,9 @@ class Anatomy {
     loadRaw(anatomy) {
         this.clear();
         for (let cell of anatomy.cells){
-            this.addInheritCell(cell);
+            this.addInheritCell(cell, false);
         }
+        this.checkTypeChange();
     }
 }
 

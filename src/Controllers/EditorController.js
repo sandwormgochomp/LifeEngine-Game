@@ -41,6 +41,17 @@ class EditorController extends CanvasController{
         // the editor draws its own ghost preview instead of the generic
         // yellow cell highlight
         this.env.renderer.cells_to_highlight.clear();
+        this.applyCursor();
+    }
+
+    applyCursor() {
+        if (!this.canvas) return;
+        var cursor = this.mode === Modes.Erase
+            // little eraser block so erase mode reads instantly at the cursor
+            ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect x='2' y='5' width='12' height='9' fill='%23ff5555' stroke='%23ffffff' stroke-width='1.5'/></svg>") 8 10, not-allowed`
+            : 'crosshair';
+        if (this.canvas.style.cursor !== cursor)
+            this.canvas.style.cursor = cursor;
     }
 
     getCurLocalCell(){

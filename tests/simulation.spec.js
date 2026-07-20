@@ -37,6 +37,29 @@ test.describe('Simulation Controls', () => {
     expect(newOrgCount).toBe(0);
   });
 
+  test('World is a circular petri dish by default, and it can be toggled off', async ({ page }) => {
+    const states = await page.evaluate(() => {
+      const env = window.engine.env;
+      const center = env.grid_map.getCenter();
+      return {
+        corner: env.grid_map.cellAt(0, 0).state.name,
+        inside: env.grid_map.cellAt(center[0] + 5, center[1]).state.name,
+      };
+    });
+    expect(states.corner).toBe('invincible_wall');
+    expect(states.inside).not.toBe('invincible_wall');
+
+    // The dish must survive a world reset (fillGrid preserves invincible walls)
+    await page.evaluate(() => window.engine.env.reset(true));
+    const cornerAfterReset = await page.evaluate(() => window.engine.env.grid_map.cellAt(0, 0).state.name);
+    expect(cornerAfterReset).toBe('invincible_wall');
+
+    await openPanel(page, 'environment');
+    await page.locator('#petri-dish-toggle').uncheck();
+    const corner = await page.evaluate(() => window.engine.env.grid_map.cellAt(0, 0).state.name);
+    expect(corner).toBe('empty');
+  });
+
   test('Save panel downloads a world snapshot', async ({ page }) => {
     await openPanel(page, 'save');
     const downloadPromise = page.waitForEvent('download');

@@ -68,7 +68,7 @@ class Renderer {
         }
         cell.state.render(this.ctx, cell, this.cell_size);
         this.ctx.globalAlpha = 1;
-        
+
         if (this.env && this.env.radiation_map && this.env.radiation_map.has(cell.col + "," + cell.row)) {
             this.ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
             this.ctx.fillRect(cell.x, cell.y, this.cell_size, this.cell_size);

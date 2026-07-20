@@ -48,21 +48,30 @@ const StatsTab: React.FC<StatsTabProps> = ({ engine }) => {
 
   return (
     <div>
-      <h3>Statistics</h3>
-
-      <div className={styles.statsDetails}>
-        <p id="org-count">Total Population: {population}</p>
-        <p id="largest-org">Largest Organism Ever: {largest} cells</p>
-        <p id="avg-mut">Average Mutation Rate: {avgMut}</p>
-        <p id="species-count">Number of Species: {speciesCount}</p>
-        <p id="top-species">Most Populous Species: {topSpecies}</p>
+      <div className={styles.statsGrid}>
+        <p id="org-count" title="Living organisms in the world right now">
+          <span>Population</span><b>{population}</b>
+        </p>
+        <p id="species-count" title="Distinct living species">
+          <span>Species</span><b>{speciesCount}</b>
+        </p>
+        <p id="largest-org" title="Cell count of the largest organism that has ever lived">
+          <span>Largest ever</span><b>{largest} cells</b>
+        </p>
+        <p id="avg-mut" title="Average mutation rate across all living organisms">
+          <span>Avg. mutation</span><b>{avgMut}</b>
+        </p>
+        <p id="top-species" className={styles.statsWide} title="Species with the highest population (name and count)">
+          <span>Top species</span><b>{topSpecies}</b>
+        </p>
       </div>
 
       <div className={styles.chartControls}>
-        <select 
-          id="chart-option" 
-          value={chartSelection} 
+        <select
+          id="chart-option"
+          value={chartSelection}
           onChange={(e) => setChartSelection(parseInt(e.target.value))}
+          title="Choose which statistic to chart over time"
         >
           <option value={0}>Population vs Time</option>
           <option value={1}>Species Population vs Time</option>
@@ -71,8 +80,8 @@ const StatsTab: React.FC<StatsTabProps> = ({ engine }) => {
         </select>
       </div>
 
-      <p id="chart-note" style={{ fontStyle: 'italic', fontSize: '0.9em', marginTop: '10px' }}>{chartNote}</p>
-      <div id="chartContainer" ref={chartContainerRef} style={{ height: '300px', width: '100%', marginTop: '10px' }}></div>
+      <div id="chartContainer" ref={chartContainerRef} style={{ width: '100%', marginTop: '8px' }}></div>
+      {chartNote && <p id="chart-note" style={{ fontStyle: 'italic', fontSize: '0.85em', marginTop: '6px' }}>{chartNote}</p>}
     </div>
   );
 };

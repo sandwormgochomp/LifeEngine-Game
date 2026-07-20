@@ -32,6 +32,8 @@ export interface WorldEnvAPI {
   reset(reset_life?: boolean): boolean;
   serialize(): unknown;
   loadRaw(raw: unknown): void;
+  buildPetriDish(): void;
+  clearWalls(): void;
 }
 
 export interface EditorAnatomyAPI {

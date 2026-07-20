@@ -15,6 +15,8 @@ import HudBottomBar from './HudBottomBar';
 import HudPanel from './HudPanel';
 import HudNotifications from './HudNotifications';
 import EditorDock from './EditorDock';
+import LifeformsModal from './LifeformsModal';
+import Floaties from './Floaties';
 
 // Tab content
 import SaveTab from './Tabs/SaveTab';
@@ -33,8 +35,10 @@ const App: React.FC = () => {
   const [engine, setEngine] = useState<EngineAPI | null>(null);
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [lifeformsOpen, setLifeformsOpen] = useState(false);
   const envRef = useRef<HTMLDivElement>(null);
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
+  const glowCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     // Refs are populated by the time effects run, so the engine can take the
@@ -42,6 +46,7 @@ const App: React.FC = () => {
     const newEngine: EngineAPI = new Engine({
       env_canvas: envCanvasRef.current!,
       env_container: envRef.current!,
+      glow_canvas: glowCanvasRef.current!,
     });
     (window as any).engine = newEngine;
     newEngine.start(60);
@@ -55,7 +60,9 @@ const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const envController = engine?.env?.controller;
-      if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select)) {
+      if (lifeformsOpen) {
+        setLifeformsOpen(false);
+      } else if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select)) {
         envController.mode = Modes.None;
         envController.org_to_clone = null;
         engine.emitChange(true);
@@ -67,7 +74,16 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine, activePanel, editorOpen]);
+  }, [engine, activePanel, editorOpen, lifeformsOpen]);
+
+  const handleOpenInLab = (raw: unknown, name: string) => {
+    if (!engine) return;
+    engine.organism_editor.loadRawOrg(raw);
+    engine.emitChange(true);
+    setLifeformsOpen(false);
+    setEditorOpen(true);
+    Notifier.notify(`Loaded ${name} into the lab`);
+  };
 
   // When an organism is picked from the world in Select mode, drop it into
   // the editor: open the dock and disarm the tool. The organism reference
@@ -120,11 +136,13 @@ const App: React.FC = () => {
     <div className={styles.appContainer} data-engine-ready={engine ? "true" : "false"}>
       <div id="env" ref={envRef} className={styles.envArea}>
         <canvas id="env-canvas" ref={envCanvasRef}></canvas>
+        <canvas id="env-glow-canvas" ref={glowCanvasRef}></canvas>
       </div>
+      <Floaties />
 
       {/* HUD Regions */}
       <HudTopLeft engine={engine} />
-      <HudTopCenter engine={engine} />
+      <HudTopCenter engine={engine} onLifeformsClick={() => setLifeformsOpen(open => !open)} />
       <HudTopRight engine={engine} />
       <HudBottomBar
         engine={engine}
@@ -147,6 +165,14 @@ const App: React.FC = () => {
 
       {/* The organism editor lives in a side dock so the world stays visible */}
       {editorOpen && <EditorDock engine={engine} onClose={() => setEditorOpen(false)} />}
+
+      {lifeformsOpen && (
+        <LifeformsModal
+          engine={engine}
+          onClose={() => setLifeformsOpen(false)}
+          onOpenInLab={handleOpenInLab}
+        />
+      )}
     </div>
   );
 };

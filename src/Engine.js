@@ -2,6 +2,7 @@ import WorldEnvironment from './Environments/WorldEnvironment';
 import ControlPanel from './Controllers/ControlPanel';
 import OrganismEditor from './Environments/OrganismEditor';
 import ColorScheme from './Rendering/ColorScheme';
+import WorldConfig from './WorldConfig';
 
 // If the simulation speed is below this value, a new interval will be created to handle ui rendering
 // at a reasonable speed. If it is above, the simulation interval will be used to update the ui.
@@ -9,17 +10,20 @@ const min_render_speed = 60;
 
 class Engine {
     // env_canvas/env_container: the world canvas and its containing element.
+    // glow_canvas: overlay the world environment composites organism glow onto.
     // The world canvas is always mounted; the editor canvas is attached later
     // via organism_editor.bindCanvas when its panel mounts.
-    constructor({env_canvas, env_container}){
+    constructor({env_canvas, env_container, glow_canvas}){
         this.fps = 60;
-        this.env = new WorldEnvironment(5, env_canvas, env_container);
+        this.env = new WorldEnvironment(5, env_canvas, env_container, glow_canvas);
         this.env.engine = this;
         this.organism_editor = new OrganismEditor();
         this.controlpanel = new ControlPanel(this);
         this.colorscheme = new ColorScheme(this.env, this.organism_editor);
         this.colorscheme.loadColorScheme();
         this.env.OriginOfLife();
+        if (WorldConfig.petri_dish)
+            this.env.buildPetriDish();
         
         this.sim_last_update = Date.now();
         this.sim_delta_time = 0;

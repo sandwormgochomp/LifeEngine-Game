@@ -34,17 +34,17 @@
   gap: 6px;
   background: rgba(0, 0, 0, 0.82);
   padding: 6px 14px;
-  border: 2px solid rgba(0, 255, 65, 0.5);
+  border: none;
   box-shadow:
-    inset 0 0 6px rgba(0, 255, 65, 0.08),
-    0 0 8px rgba(0, 255, 65, 0.12);
+    0 -2px 0 0 rgba(67, 232, 224, 0.55), 0 2px 0 0 rgba(67, 232, 224, 0.55), -2px 0 0 0 rgba(67, 232, 224, 0.55), 2px 0 0 0 rgba(67, 232, 224, 0.55),
+    inset 0 0 6px rgba(67, 232, 224, 0.1), 0 0 8px rgba(67, 232, 224, 0.14);
 }
 
 .logoTitle {
   font-family: 'Press Start 2P', monospace;
   font-size: 16px;
-  color: #00FF41;
-  text-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
+  color: var(--crt-cyan);
+  text-shadow: 0 0 6px rgba(67, 232, 224, 0.55);
   letter-spacing: 2px;
   white-space: nowrap;
 }
@@ -52,7 +52,7 @@
 .logoVersion {
   font-family: 'VT323', monospace;
   font-size: 16px;
-  color: rgba(0, 255, 65, 0.55);
+  color: rgba(67, 232, 224, 0.55);
   white-space: nowrap;
 }
 
@@ -63,8 +63,8 @@
 
 .playbackBtn {
   background: rgba(0, 0, 0, 0.82);
-  border: 2px solid rgba(0, 255, 65, 0.4);
-  color: #00FF41;
+  border: 2px solid rgba(67, 232, 224, 0.45);
+  color: var(--crt-cyan);
   font-size: 18px;
   width: 40px;
   height: 36px;
@@ -82,14 +82,14 @@
 }
 
 .playbackBtn:hover {
-  background: rgba(0, 255, 65, 0.15);
-  border-color: #00FF41;
+  background: rgba(67, 232, 224, 0.15);
+  border-color: var(--crt-cyan);
 }
 
 .playbackBtnActive {
-  background: rgba(0, 255, 65, 0.25);
-  border-color: #00FF41;
-  text-shadow: 0 0 6px rgba(0, 255, 65, 0.6);
+  background: rgba(67, 232, 224, 0.25);
+  border-color: var(--crt-cyan);
+  text-shadow: 0 0 6px rgba(67, 232, 224, 0.6);
 }
 
 /* ---- Top-Center: Stats Bar ---- */
@@ -105,10 +105,10 @@
 .statsBar {
   background: rgba(0, 0, 0, 0.82);
   padding: 8px 24px;
-  border: 2px solid rgba(0, 255, 65, 0.5);
+  border: none;
   box-shadow:
-    inset 0 0 6px rgba(0, 255, 65, 0.08),
-    0 0 8px rgba(0, 255, 65, 0.12);
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 8px rgba(0, 255, 65, 0.12);
   display: flex;
   gap: 16px;
   align-items: center;
@@ -150,10 +150,10 @@
 .speedZoomBar {
   background: rgba(0, 0, 0, 0.82);
   padding: 8px 18px;
-  border: 2px solid rgba(0, 255, 65, 0.5);
+  border: none;
   box-shadow:
-    inset 0 0 6px rgba(0, 255, 65, 0.08),
-    0 0 8px rgba(0, 255, 65, 0.12);
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 8px rgba(0, 255, 65, 0.12);
   display: flex;
   gap: 12px;
   align-items: center;
@@ -237,11 +237,17 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  pointer-events: auto;
+  /* The container spans the width of its widest child; keep the empty parts
+     click-transparent so it can't shadow the editor dock's cell rail. */
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+}
+
+.bottomCenter > * {
+  pointer-events: auto;
 }
 
 .gameHintBar {
@@ -249,20 +255,22 @@
   font-size: 15px;
   color: #00FF41;
   background: rgba(0, 0, 0, 0.85);
-  border: 1px solid rgba(0, 255, 65, 0.4);
+  border: none;
   padding: 3px 14px;
   white-space: nowrap;
-  box-shadow: 0 0 8px rgba(0, 255, 65, 0.12);
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.4), 0 2px 0 0 rgba(0, 255, 65, 0.4), -2px 0 0 0 rgba(0, 255, 65, 0.4), 2px 0 0 0 rgba(0, 255, 65, 0.4),
+    0 0 8px rgba(0, 255, 65, 0.12);
   text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
 }
 
 .toolbar {
   background: rgba(0, 0, 0, 0.85);
   padding: 6px 12px;
-  border: 2px solid rgba(0, 255, 65, 0.5);
+  border: none;
   box-shadow:
-    inset 0 0 6px rgba(0, 255, 65, 0.08),
-    0 0 12px rgba(0, 255, 65, 0.15);
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 12px rgba(0, 255, 65, 0.15);
   display: flex;
   gap: 2px;
   align-items: stretch;
@@ -327,10 +335,10 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: rgba(0, 0, 0, 0.9);
-  border: 2px solid rgba(0, 255, 65, 0.5);
+  border: none;
   box-shadow:
-    inset 0 0 10px rgba(0, 255, 65, 0.05),
-    0 0 20px rgba(0, 255, 65, 0.15);
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 10px rgba(0, 255, 65, 0.05), 0 0 20px rgba(0, 255, 65, 0.15);
   animation: panelSlideUp 0.18s ease-out;
 }
 
@@ -550,8 +558,39 @@
 }
 
 /* Stats tab */
-.statsDetails {
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 18px;
   margin-bottom: 10px;
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  padding: 8px 10px;
+}
+
+.statsGrid p {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  cursor: help;
+}
+
+.statsGrid p span {
+  color: rgba(0, 255, 65, 0.55);
+}
+
+.statsGrid p b {
+  color: #00FF41;
+  font-weight: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statsWide {
+  grid-column: 1 / -1;
 }
 
 .chartControls {
@@ -605,22 +644,127 @@
 }
 
 /* ---- Editor dock (Organism Lab) ---- */
-.dock {
+.dockWrap {
   position: fixed;
   top: 64px;
   right: 12px;
   bottom: 76px;
-  width: 348px;
   z-index: 98;
   pointer-events: auto;
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+  animation: dockSlideIn 0.18s ease-out;
+}
+
+/* Cell palette rail attached to the dock's left edge */
+.dockRail {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: rgba(0, 0, 0, 0.9);
+  border: none;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 10px rgba(0, 255, 65, 0.05), 0 0 20px rgba(0, 255, 65, 0.15);
+}
+
+.dockRailBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 1px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.2);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  min-width: unset;
+  flex-shrink: 0;
+}
+
+.dockRailBtn:hover {
+  border-color: rgba(0, 255, 65, 0.7);
+  background: rgba(0, 255, 65, 0.08);
+}
+
+.dock {
+  width: 348px;
+  display: flex;
   flex-direction: column;
   background: rgba(0, 0, 0, 0.9);
-  border: 2px solid rgba(0, 255, 65, 0.5);
+  border: none;
   box-shadow:
-    inset 0 0 10px rgba(0, 255, 65, 0.05),
-    0 0 20px rgba(0, 255, 65, 0.15);
-  animation: dockSlideIn 0.18s ease-out;
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 10px rgba(0, 255, 65, 0.05), 0 0 20px rgba(0, 255, 65, 0.15);
+}
+
+.dockTitle {
+  font-size: 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* File controls living in the dock header */
+.dockHeaderTools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.dockHeaderBtn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.35);
+  color: rgba(0, 255, 65, 0.8);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  transition: all 0.12s;
+}
+
+.dockHeaderBtn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+  color: #00FF41;
+}
+
+.dockPresetSelect {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.35);
+  color: rgba(0, 255, 65, 0.8);
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  height: 26px;
+  max-width: 92px;
+  padding: 0 2px;
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.dockPresetSelect:hover,
+.dockPresetSelect:focus {
+  border-color: #00FF41;
+  color: #00FF41;
 }
 
 @keyframes dockSlideIn {
@@ -661,18 +805,25 @@
 .dockCanvasBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
   margin-top: 6px;
 }
 
-.dockZoom {
+/* Zoom cluster floating over the canvas corner */
+.dockZoomOverlay {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 255, 65, 0.25);
 }
 
-.dockZoom button {
+.dockZoomOverlay button {
   font-family: 'Press Start 2P', monospace !important;
   font-size: 10px !important;
   width: 24px !important;
@@ -690,12 +841,12 @@
   box-shadow: none !important;
 }
 
-.dockZoom button:hover:not(:disabled) {
+.dockZoomOverlay button:hover:not(:disabled) {
   background: rgba(0, 255, 65, 0.2) !important;
   border-color: #00FF41 !important;
 }
 
-.dockZoom button:disabled {
+.dockZoomOverlay button:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
@@ -724,21 +875,6 @@
   gap: 4px;
 }
 
-.dockCellBtn {
-  display: flex !important;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 2px !important;
-  margin: 0 !important;
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(0, 255, 65, 0.25) !important;
-}
-
-.dockCellBtn:hover {
-  border-color: rgba(0, 255, 65, 0.7) !important;
-}
-
 .dockCellBtnActive {
   border-color: #00FF41 !important;
   background: rgba(0, 255, 65, 0.15) !important;
@@ -753,7 +889,7 @@
 
 .dockCellName {
   font-family: 'VT323', monospace;
-  font-size: 13px;
+  font-size: 11px;
   color: rgba(0, 255, 65, 0.85);
   text-transform: lowercase;
   letter-spacing: 0;
@@ -831,6 +967,114 @@
   border-color: #00FF41;
 }
 
+/* ---- Lifeforms modal ---- */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.lifeformsModal {
+  width: min(680px, 92vw);
+  max-height: 76vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.92);
+  border: none;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 10px rgba(0, 255, 65, 0.05), 0 0 24px rgba(0, 255, 65, 0.2);
+  animation: modalFadeIn 0.15s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lifeformsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+.lifeformsEmpty {
+  grid-column: 1 / -1;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: rgba(0, 255, 65, 0.7);
+}
+
+.lifeformCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.2);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  min-width: unset;
+}
+
+.lifeformCard:hover {
+  border-color: #00FF41;
+  background: rgba(0, 255, 65, 0.08);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+.lifeformThumb {
+  image-rendering: pixelated;
+  background: rgba(0, 255, 65, 0.03);
+  border: 1px solid rgba(0, 255, 65, 0.15);
+}
+
+.lifeformName {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #00FF41;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifeformMeta {
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  color: rgba(0, 255, 65, 0.55);
+}
+
+/* The LIFEFORMS stat doubles as the modal trigger */
+.statButton {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  transition: text-shadow 0.12s;
+}
+
+.statButton:hover .statValue,
+.statButton:hover .statLabel {
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.9);
+}
+
 /* ---- Toast notifications ---- */
 .notifications {
   position: fixed;
@@ -852,10 +1096,10 @@
   text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
   background: rgba(0, 0, 0, 0.85);
   padding: 8px 18px;
-  border: 2px solid rgba(0, 255, 65, 0.5);
+  border: none;
   box-shadow:
-    inset 0 0 6px rgba(0, 255, 65, 0.08),
-    0 0 8px rgba(0, 255, 65, 0.12);
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 8px rgba(0, 255, 65, 0.12);
   animation: notificationIn 0.15s ease-out;
 }
 

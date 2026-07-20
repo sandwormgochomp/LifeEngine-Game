@@ -74,6 +74,17 @@ class InvincibleWall extends CellState {
     constructor() {
         super('invincible_wall');
     }
+    render(ctx, cell, size) {
+        // Petri-dish glass (flagged by WorldEnvironment.buildPetriDish):
+        // blends into the page background so the rectangular canvas
+        // disappears, with a lit rim ring marking the dish edge.
+        if (cell.dish_glass) {
+            ctx.fillStyle = cell.dish_rim ? '#1d403b' : '#05050A';
+            ctx.fillRect(cell.x, cell.y, size, size);
+            return;
+        }
+        super.render(ctx, cell, size);
+    }
 }
 class Eye extends CellState {
     constructor() {

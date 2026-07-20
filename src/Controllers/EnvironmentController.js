@@ -5,7 +5,19 @@ import CellStates from "../Organism/Cell/CellStates";
 import Neighbors from "../Grid/Neighbors";
 import FossilRecord from "../Stats/FossilRecord";
 import WorldConfig from "../WorldConfig";
+import Hyperparams from "../Hyperparameters";
 import Perlin from "../Utils/Perlin";
+
+// Modes where the click affects a brush_size-radius area
+const BRUSH_MODES = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill];
+
+const MODE_CURSORS = {
+    [Modes.Drag]: 'grab',
+    [Modes.ClickKill]: 'not-allowed',
+    [Modes.Select]: 'pointer',
+    [Modes.Clone]: 'copy',
+    [Modes.None]: 'default',
+};
 
 class EnvironmentController extends CanvasController{
     constructor(env, canvas) {
@@ -15,7 +27,17 @@ class EnvironmentController extends CanvasController{
         this.scale = 1;
         this.pan_x = 0;
         this.pan_y = 0;
+        this.overlay_cells = new Set();
         this.defineZoomControls();
+    }
+
+    setCanvas(canvas) {
+        super.setCanvas(canvas);
+        this.pointer_inside = false;
+        if (canvas) {
+            canvas.addEventListener('mouseenter', () => this.pointer_inside = true);
+            canvas.addEventListener('mouseleave', () => this.pointer_inside = false);
+        }
     }
 
     // Pan and zoom are kept as numbers and written as a single transform.
@@ -23,7 +45,11 @@ class EnvironmentController extends CanvasController{
     // to parseInt, and animating transform avoids the per-frame relayout that
     // top/left forces.
     applyView() {
-        this.canvas.style.transform = `translate(${this.pan_x}px, ${this.pan_y}px) scale(${this.scale})`;
+        var transform = `translate(${this.pan_x}px, ${this.pan_y}px) scale(${this.scale})`;
+        this.canvas.style.transform = transform;
+        // the glow overlay canvas mirrors the world's pan/zoom
+        if (this.env.glow_canvas)
+            this.env.glow_canvas.style.transform = transform;
     }
 
     defineZoomControls() {
@@ -199,6 +225,71 @@ class EnvironmentController extends CanvasController{
         this.drag_anchor_y = this.client_y;
 
         this.applyView();
+    }
+
+    applyCursor() {
+        if (!this.canvas) return;
+        var cursor = MODE_CURSORS[this.mode] || 'crosshair';
+        if (this.canvas.style.cursor !== cursor)
+            this.canvas.style.cursor = cursor;
+    }
+
+    // Immediate-mode cursor feedback, drawn every frame after the cell pass:
+    // brush modes show their exact footprint, clone mode shows a ghost of the
+    // organism (red-tinted when the spot is blocked). Cells painted over are
+    // re-rendered at the start of the next pass, so nothing smears.
+    renderCursorOverlay() {
+        var renderer = this.env.renderer;
+        if (!renderer.ctx || WorldConfig.headless) return;
+        this.applyCursor();
+        for (var cell of this.overlay_cells)
+            renderer.renderCell(cell);
+        this.overlay_cells.clear();
+        if (!this.pointer_inside || this.mouse_c == null)
+            return;
+
+        var ctx = renderer.ctx;
+        var cs = renderer.cell_size;
+
+        if (BRUSH_MODES.includes(this.mode)) {
+            var is_kill = this.mode === Modes.ClickKill;
+            ctx.fillStyle = is_kill ? 'rgba(255, 60, 60, 0.22)' : 'rgba(0, 255, 65, 0.14)';
+            for (var loc of Neighbors.inRange(WorldConfig.brush_size)) {
+                var brush_cell = this.env.grid_map.cellAt(this.mouse_c + loc[0], this.mouse_r + loc[1]);
+                if (brush_cell == null) continue;
+                ctx.fillRect(brush_cell.x, brush_cell.y, cs, cs);
+                this.overlay_cells.add(brush_cell);
+            }
+            var b = WorldConfig.brush_size;
+            ctx.strokeStyle = is_kill ? 'rgba(255, 60, 60, 0.7)' : 'rgba(0, 255, 65, 0.55)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect((this.mouse_c - b) * cs + 0.5, (this.mouse_r - b) * cs + 0.5, (b * 2 + 1) * cs - 1, (b * 2 + 1) * cs - 1);
+        }
+        else if (this.mode === Modes.Clone && this.org_to_clone != null) {
+            // Mirrors Organism.isClear for a fresh (rotation: up) copy
+            var valid = true;
+            for (var body_cell of this.org_to_clone.anatomy.cells) {
+                var target = this.env.grid_map.cellAt(this.mouse_c + body_cell.loc_col, this.mouse_r + body_cell.loc_row);
+                if (target == null ||
+                    !(target.state === CellStates.empty || (!Hyperparams.foodBlocksReproduction && target.state === CellStates.food))) {
+                    valid = false;
+                    break;
+                }
+            }
+            ctx.globalAlpha = 0.55;
+            for (var body_cell of this.org_to_clone.anatomy.cells) {
+                var target = this.env.grid_map.cellAt(this.mouse_c + body_cell.loc_col, this.mouse_r + body_cell.loc_row);
+                if (target == null) continue;
+                ctx.fillStyle = body_cell.custom_color || body_cell.state.color;
+                ctx.fillRect(target.x, target.y, cs, cs);
+                if (!valid) {
+                    ctx.fillStyle = 'rgba(255, 60, 60, 0.6)';
+                    ctx.fillRect(target.x, target.y, cs, cs);
+                }
+                this.overlay_cells.add(target);
+            }
+            ctx.globalAlpha = 1;
+        }
     }
 
     dropOrganism(organism, col, row) {

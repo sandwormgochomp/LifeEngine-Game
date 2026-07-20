@@ -26,7 +26,7 @@ const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) =
       <p>Adjust hyperparameters governing the simulation.</p>
 
       <div className={styles.sliderGroup}>
-        <label>
+        <label title="How often offspring mutate: higher values change anatomy more per generation">
           Mutability: {params.mutability}
           <input 
             type="range" 
@@ -38,7 +38,7 @@ const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) =
       </div>
 
       <div className={styles.sliderGroup}>
-        <label>
+        <label title="Ticks an organism lives per body cell before dying of old age">
           Base Lifespan: {params.lifespan}
           <input 
             type="range" 
@@ -50,7 +50,7 @@ const EvolutionControlsTab: React.FC<EvolutionControlsTabProps> = ({ engine }) =
       </div>
 
       <div className={styles.sliderGroup}>
-        <label>
+        <label title="Food drained per tick just to stay alive: higher values starve organisms faster">
           Energy Decay: {params.energy_decay}
           <input 
             type="range" 

@@ -1,100 +1,67 @@
-import CanvasJS from "@canvasjs/charts";
-import FossilRecord from "../FossilRecord";
+import uPlot from 'uplot';
+import 'uplot/dist/uPlot.min.css';
+import FossilRecord from '../FossilRecord';
 
+// Thin wrapper around uPlot (open source, themeable) driven by a spec from
+// ChartSpecs.js. Data is rebuilt wholesale on each update; at the fossil
+// record's 500-point cap that is far cheaper than incremental bookkeeping.
 class ChartController {
-    constructor(container, title, y_axis="", note="") {
-        this.data = [];
-        this.note = note; // rendered by the React stats panel
-        this.chart = new CanvasJS.Chart(container, {
-            zoomEnabled: true,
-            title:{
-                text: title
-            },
-            axisX:{
-                title: "Ticks",
-                minimum: 0,
-            },
-            axisY:{
-                title: y_axis,
-                minimum: 0,
-            },
-            data: this.data
-        });
-        this.chart.render();
+    constructor(container, spec) {
+        this.spec = spec;
+        this.note = spec.note || '';
+        // spec.series may be a lazy getter; resolve once per chart instance
+        this.series_defs = spec.series;
+
+        const axisTheme = {
+            stroke: 'rgba(0, 255, 65, 0.8)',
+            grid: { stroke: 'rgba(0, 255, 65, 0.08)' },
+            ticks: { stroke: 'rgba(0, 255, 65, 0.25)' },
+            font: '13px VT323',
+            labelFont: '13px VT323',
+        };
+
+        this.plot = new uPlot({
+            width: Math.max(container.clientWidth || 460, 240),
+            height: 250,
+            series: [
+                { label: 'Tick' },
+                ...this.series_defs.map(s => ({
+                    label: s.label,
+                    stroke: s.color,
+                    width: 1.5,
+                    points: { show: false },
+                })),
+            ],
+            axes: [
+                { ...axisTheme },
+                { ...axisTheme, label: this.spec.y_label || '', size: 56 },
+            ],
+            scales: { x: { time: false } },
+            legend: { live: false },
+            cursor: { drag: { x: true, y: false } },
+        }, this.buildData(), container);
     }
 
-    destroy() {
-        if (this.chart && typeof this.chart.destroy === 'function')
-            this.chart.destroy();
-        this.chart = null;
+    buildData() {
+        const xs = FossilRecord.tick_record.slice();
+        return [xs, ...this.series_defs.map(s => xs.map((_, i) => s.get(i) ?? null))];
     }
 
     setData() {
-        throw new Error("setData must be overridden");
-    }
-
-    setMinimum() {
-        var min = 0;
-        if (this.data[0].dataPoints != [])
-            min = this.data[0].dataPoints[0].x;
-        this.chart.options.axisX.minimum = min;
-    }
-
-    addAllDataPoints(){
-        for (var i in FossilRecord.tick_record) {
-            this.addDataPoint(i)
-        }
-    }
-
-    render() {
-        if (!this.chart) return;
-        this.setMinimum();
-        this.chart.render();
+        if (this.plot) this.plot.setData(this.buildData());
     }
 
     updateData() {
-        let record_size = FossilRecord.tick_record.length;
-        let data_points = this.data[0].dataPoints;
-        let newest_t = -1;
-        if (data_points.length>0) {
-            newest_t = this.data[0].dataPoints[data_points.length-1].x;
-        }
-        let to_add = 0;
-        let cur_t = FossilRecord.tick_record[record_size-1];
-        // first count up the number of new datapoints the chart is missing
-        while (cur_t !== newest_t) {
-            to_add++;
-            cur_t = FossilRecord.tick_record[record_size-to_add-1]
-        }
-        // then add them in order
-        this.addNewest(to_add)
-
-        // remove oldest datapoints until the chart is the same size as the saved records
-        while (data_points.length > FossilRecord.tick_record.length) {
-            this.removeOldest();
-        }
+        this.setData();
     }
 
-    addNewest(to_add) {
-        for (let i=to_add; i>0; i--) {
-            let j = FossilRecord.tick_record.length-i;
-            this.addDataPoint(j);
-        }
+    render() {
+        // uPlot repaints on setData; nothing extra to do
     }
 
-    removeOldest() {
-        for (var dps of this.data) {
-            dps.dataPoints.shift();
-        }
-    }
-
-    addDataPoint(i) {
-        throw new Error("addDataPoint must be overridden");
-    }
-
-    clear() {
-        this.data.length = 0;
-        if (this.chart) this.chart.render();
+    destroy() {
+        if (this.plot) this.plot.destroy();
+        this.plot = null;
     }
 }
 

@@ -6,9 +6,10 @@ import FossilRecord from '../Stats/FossilRecord';
 
 interface HudTopCenterProps {
   engine: EngineAPI | null;
+  onLifeformsClick?: () => void;
 }
 
-const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine }) => {
+const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine, onLifeformsClick }) => {
   const gen = useEngineValue(engine, e => e.env.total_ticks, 0);
   const pop = useEngineValue(engine, e => e.env.organisms.length, 0);
   const lifeforms = useEngineValue(engine, () => FossilRecord.numExtantSpecies(), 0);
@@ -27,10 +28,15 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine }) => {
           <span className={styles.statValue}>{pop.toLocaleString()}</span>
         </span>
         <span className={styles.statDivider}>|</span>
-        <span className={styles.statItem}>
+        <button
+          id="lifeforms-stat"
+          className={`${styles.statItem} ${styles.statButton}`}
+          title="Browse all living species and open one in the Organism Lab"
+          onClick={onLifeformsClick}
+        >
           <span className={styles.statLabel}>LIFEFORMS:</span>
           <span className={styles.statValue}>{lifeforms.toLocaleString()}</span>
-        </span>
+        </button>
         <span className={styles.statDivider}>|</span>
         <span
           className={styles.statItem}

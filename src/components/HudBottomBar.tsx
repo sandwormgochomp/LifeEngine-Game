@@ -3,6 +3,7 @@ import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type { EngineAPI } from '../types/engine';
 import Modes from '../Controllers/ControlModes';
+import WorldConfig from '../WorldConfig';
 
 interface HudBottomBarProps {
   engine: EngineAPI | null;
@@ -13,12 +14,12 @@ interface HudBottomBarProps {
 }
 
 const toolbarItems = [
-  { id: 'tool-select', iconClass: 'fa-arrow-pointer', label: 'SELECT', item: 'select' },
-  { id: 'tool-save', iconClass: 'fa-floppy-disk', label: 'SAVE', item: 'save' },
-  { id: 'tool-edit', iconClass: 'fa-flask', label: 'EDIT', item: 'edit' },
-  { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', item: 'rules' },
-  { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', item: 'environment' },
-  { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats' },
+  { id: 'tool-select', iconClass: 'fa-arrow-pointer', label: 'SELECT', item: 'select', title: 'Pick an organism from the world to inspect it in the Organism Lab' },
+  { id: 'tool-save', iconClass: 'fa-floppy-disk', label: 'SAVE', item: 'save', title: 'Save or load a snapshot of the whole world' },
+  { id: 'tool-edit', iconClass: 'fa-flask', label: 'EDIT', item: 'edit', title: 'Open the Organism Lab: design, edit, and deploy life forms' },
+  { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
+  { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', item: 'environment', title: 'World tools: food, walls, radiation, and terrain generation' },
+  { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats', title: 'Population, species, and evolution charts over time' },
 ];
 
 const MouseLeftIcon: React.FC = () => (
@@ -48,6 +49,8 @@ const MouseRightIcon: React.FC = () => (
 );
 
 function renderClickHint(mode: number) {
+  const b = WorldConfig.brush_size * 2 + 1;
+  const brush = `${b}×${b}`;
   switch (mode) {
     case Modes.Clone:
       return (
@@ -64,31 +67,31 @@ function renderClickHint(mode: number) {
     case Modes.FoodDrop:
       return (
         <span>
-          <MouseLeftIcon /> place food · <MouseRightIcon /> erase food · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> place food · <MouseRightIcon /> erase food · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.WallDrop:
       return (
         <span>
-          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.InvincibleWallDrop:
       return (
         <span>
-          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.RadiationDrop:
       return (
         <span>
-          <MouseLeftIcon /> add radiation · <MouseRightIcon /> remove radiation · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> add radiation · <MouseRightIcon /> remove radiation · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.ClickKill:
       return (
         <span>
-          <MouseLeftIcon /> kill organism · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> kill organism · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.Drag:
@@ -121,10 +124,11 @@ const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, select
         {renderClickHint(envMode)}
       </div>
       <div className={styles.toolbar}>
-        {toolbarItems.map(({ id, iconClass, label, item }) => (
+        {toolbarItems.map(({ id, iconClass, label, item, title }) => (
           <button
             key={id}
             id={id}
+            title={title}
             className={`${styles.toolbarBtn} ${isActive(item) ? styles.toolbarBtnActive : ''}`}
             onClick={() => onItemClick(item)}
           >

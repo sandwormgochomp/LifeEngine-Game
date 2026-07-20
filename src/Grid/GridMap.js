@@ -24,7 +24,7 @@ class GridMap {
     fillGrid(state, ignore_walls=false) {
         for (var col of this.grid) {
             for (var cell of col) {
-                if (ignore_walls && cell.state===CellStates.wall) continue;
+                if (ignore_walls && (cell.state===CellStates.wall || cell.state===CellStates.invincible_wall)) continue;
                 cell.setType(state);
                 cell.owner = null;
                 cell.cell_owner = null;

@@ -10,11 +10,28 @@ import WorldConfig from '../WorldConfig';
 import SerializeHelper from '../Utils/SerializeHelper';
 import Species from '../Stats/Species';
 
+// Glow overlay tuning. The scratch canvas renders at 1/DOWNSCALE resolution
+// and is upscaled with smoothing, so a bigger divisor diffuses the halo more.
+// SPREAD widens each cell before that blur; ALPHA sets peak intensity.
+const GLOW_DOWNSCALE = 6;
+const GLOW_SPREAD = 1.5;
+const GLOW_ALPHA = 0.1;
+
 class WorldEnvironment extends Environment{
-    constructor(cell_size, canvas, container) {
+    constructor(cell_size, canvas, container, glow_canvas=null) {
         super();
         this.renderer = new Renderer(canvas, container, cell_size);
         this.renderer.env = this;
+        // Glow is a separate compositing pass: organisms are drawn flat onto a
+        // scratch canvas, then blitted once with a blur filter onto an overlay
+        // canvas that shares the world's pan/zoom transform. Per-cell canvas
+        // shadows don't work here: neighboring cells overpaint each other's
+        // spill, and incremental rendering leaves trails.
+        this.glow_canvas = glow_canvas;
+        this.glow_ctx = glow_canvas ? glow_canvas.getContext('2d') : null;
+        this.glow_scratch = document.createElement('canvas');
+        this.glow_scratch_ctx = this.glow_scratch.getContext('2d');
+        this.syncGlowSize();
         this.controller = new EnvironmentController(this, this.renderer.canvas);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
         this.num_cols = Math.ceil(this.renderer.width / cell_size);
@@ -131,6 +148,56 @@ class WorldEnvironment extends Environment{
         }
         this.renderer.renderCells();
         this.renderer.renderHighlights();
+        this.controller.renderCursorOverlay();
+        this.renderGlow();
+    }
+
+    syncGlowSize() {
+        if (!this.glow_canvas) return;
+        this.glow_canvas.width = this.renderer.width;
+        this.glow_canvas.height = this.renderer.height;
+        // The scratch is rendered small: upscaling it with image smoothing
+        // produces the soft halo for free, where a per-frame blur() filter at
+        // full resolution dragged the whole app down.
+        this.glow_scratch.width = Math.max(1, Math.ceil(this.renderer.width / GLOW_DOWNSCALE));
+        this.glow_scratch.height = Math.max(1, Math.ceil(this.renderer.height / GLOW_DOWNSCALE));
+        this.glow_dirty = true;
+    }
+
+    renderGlow() {
+        if (!this.glow_ctx || WorldConfig.headless) return;
+        // Only re-composite when the world changed (changeCell/addOrganism);
+        // pan and zoom move the overlay via its CSS transform instead.
+        if (!this.glow_dirty) return;
+        this.glow_dirty = false;
+
+        var w = this.renderer.width;
+        var h = this.renderer.height;
+        var cs = this.renderer.cell_size / GLOW_DOWNSCALE;
+        var margin = cs * (GLOW_SPREAD - 1) / 2;
+
+        var sctx = this.glow_scratch_ctx;
+        sctx.clearRect(0, 0, this.glow_scratch.width, this.glow_scratch.height);
+        for (var org of this.organisms) {
+            for (var body_cell of org.anatomy.cells) {
+                var cell = org.getRealCell(body_cell);
+                if (cell == null) continue;
+                sctx.fillStyle = body_cell.custom_color || body_cell.state.color;
+                sctx.fillRect(
+                    cell.x / GLOW_DOWNSCALE - margin,
+                    cell.y / GLOW_DOWNSCALE - margin,
+                    cs * GLOW_SPREAD,
+                    cs * GLOW_SPREAD
+                );
+            }
+        }
+
+        var gctx = this.glow_ctx;
+        gctx.clearRect(0, 0, w, h);
+        gctx.globalAlpha = GLOW_ALPHA;
+        gctx.imageSmoothingEnabled = true;
+        gctx.drawImage(this.glow_scratch, 0, 0, this.glow_scratch.width, this.glow_scratch.height, 0, 0, w, h);
+        gctx.globalAlpha = 1;
     }
 
     renderFull() {
@@ -190,16 +257,50 @@ class WorldEnvironment extends Environment{
     changeCell(c, r, state, owner) {
         super.changeCell(c, r, state, owner);
         this.renderer.addToRender(this.grid_map.cellAt(c, r));
+        this.glow_dirty = true;
         if(state == CellStates.wall || state == CellStates.invincible_wall)
             this.walls.push(this.grid_map.cellAt(c, r));
+    }
+
+    // Enclose the world in a circular dish of invincible wall: life lives
+    // inside the circle, everything outside is dead "glass". Survives resets
+    // because fillGrid preserves walls unless clear_walls_on_reset is set.
+    // Cells are flagged so the renderer can draw the glass as page-background
+    // (hiding the rectangular canvas) with a lit rim ring at the dish edge.
+    buildPetriDish() {
+        var cx = (this.grid_map.cols - 1) / 2;
+        var cy = (this.grid_map.rows - 1) / 2;
+        var radius = Math.min(this.grid_map.cols, this.grid_map.rows) / 2 - 1;
+        for (var c = 0; c < this.grid_map.cols; c++) {
+            for (var r = 0; r < this.grid_map.rows; r++) {
+                var cell = this.grid_map.cellAt(c, r);
+                var dist = Math.hypot(c - cx, r - cy);
+                if (dist < radius) {
+                    cell.dish_glass = false;
+                    cell.dish_rim = false;
+                    continue;
+                }
+                cell.dish_glass = true;
+                cell.dish_rim = dist < radius + 1.8;
+                if (cell.owner != null)
+                    cell.owner.die();
+                if (cell.state !== CellStates.invincible_wall)
+                    this.changeCell(c, r, CellStates.invincible_wall, null);
+            }
+        }
+        this.renderFull();
     }
 
     clearWalls() {
         for(var wall of this.walls){
             let wcell = this.grid_map.cellAt(wall.col, wall.row);
-            if (wcell && (wcell.state == CellStates.wall || wcell.state == CellStates.invincible_wall))
+            if (wcell && (wcell.state == CellStates.wall || wcell.state == CellStates.invincible_wall)) {
+                wcell.dish_glass = false;
+                wcell.dish_rim = false;
                 this.changeCell(wall.col, wall.row, CellStates.empty, null);
+            }
         }
+        this.renderFull();
     }
 
     clearOrganisms() {
@@ -256,11 +357,13 @@ class WorldEnvironment extends Environment{
         this.renderer.cell_size = cell_size;
         this.renderer.fillShape(rows*cell_size, cols*cell_size);
         this.grid_map.resize(cols, rows, cell_size);
+        this.syncGlowSize();
     }
 
     resizeFillWindow(cell_size) {
         this.renderer.cell_size = cell_size;
         this.renderer.fillWindow();
+        this.syncGlowSize();
         this.num_cols = Math.ceil(this.renderer.width / cell_size);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
         this.grid_map.resize(this.num_cols, this.num_rows, cell_size);
@@ -288,6 +391,9 @@ class WorldEnvironment extends Environment{
         for (let wall of env.grid.walls) {
             this.walls.push(this.grid_map.cellAt(wall.c, wall.r));
         }
+        // Saved worlds carry dish walls but not the glass flags; re-flag them
+        if (WorldConfig.petri_dish)
+            this.buildPetriDish();
 
         // create species map
         let species = {};

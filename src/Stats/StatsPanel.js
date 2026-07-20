@@ -1,11 +1,8 @@
-import PopulationChart from "./Charts/PopulationChart";
-import SpeciesChart from "./Charts/SpeciesChart";
-import MutationChart from "./Charts/MutationChart";
-import CellsChart from "./Charts/CellsChart";
-import FossilRecord from "./FossilRecord";
+import ChartController from "./Charts/ChartController";
+import ChartSpecs from "./Charts/ChartSpecs";
 
-
-const ChartSelections = [PopulationChart, SpeciesChart, CellsChart, MutationChart];
+// Selection order matches the dropdown: population, species, cells, mutation
+const ChartSelections = [ChartSpecs[0], ChartSpecs[1], ChartSpecs[2], ChartSpecs[3]];
 
 class StatsPanel {
     constructor(env) {
@@ -33,7 +30,7 @@ class StatsPanel {
             this.chart_controller = null;
             return;
         }
-        this.chart_controller = new ChartSelections[selection](this.chart_container);
+        this.chart_controller = new ChartController(this.chart_container, ChartSelections[selection]);
         this.chart_controller.setData();
         this.chart_controller.render();
     }

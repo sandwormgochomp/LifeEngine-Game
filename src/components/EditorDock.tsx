@@ -259,11 +259,55 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
   };
 
   return (
-    <div className={styles.dock} data-testid="editor-dock">
+    <div className={styles.dockWrap} data-testid="editor-dock">
+      {/* Cell palette rail: every type visible at once, no scrolling */}
+      <div className={styles.dockRail}>
+        {CellStates.living.map((cellState: CellStateAPI) => (
+          <button
+            key={cellState.name}
+            id={cellState.name}
+            className={`cell-type ${styles.dockRailBtn} ${tool === Modes.Edit && cellTypeName === cellState.name ? styles.dockCellBtnActive : ''}`}
+            title={CELL_INFO[cellState.name] || cellState.name}
+            onClick={() => selectCellType(cellState)}
+          >
+            <span className={styles.dockCellSwatch} style={{ backgroundColor: cellState.color }}></span>
+            <span className={styles.dockCellName}>{cellState.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.dock}>
       <div className={styles.panelHeader}>
-        <span className={styles.panelTitle}>
-          <i className="fa-solid fa-flask" style={{ marginRight: '8px' }}></i>
+        <span className={`${styles.panelTitle} ${styles.dockTitle}`}>
+          <i className="fa-solid fa-flask" style={{ marginRight: '6px' }}></i>
           ORGANISM LAB
+        </span>
+        <span className={styles.dockHeaderTools}>
+          <button className={styles.dockHeaderBtn} id="save-org" title="Save organism as JSON" onClick={handleSave}>
+            <i className="fa-solid fa-download"></i>
+          </button>
+          <button className={styles.dockHeaderBtn} id="load-org" title="Load organism from a JSON file" onClick={() => fileInputRef.current?.click()}>
+            <i className="fa-solid fa-upload"></i>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            style={{ display: 'none' }}
+            onChange={handleFileChosen}
+          />
+          <select
+            id="preset-select"
+            className={styles.dockPresetSelect}
+            defaultValue=""
+            onChange={handlePresetChosen}
+            title="Load a bundled preset organism"
+          >
+            <option value="" disabled>Presets…</option>
+            {presets.map(p => (
+              <option key={p.value} value={p.value}>{p.name}</option>
+            ))}
+          </select>
         </span>
         <button className={styles.panelClose} onClick={onClose} title="Close (Esc)">
           <i className="fa-solid fa-xmark"></i>
@@ -274,15 +318,15 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
       <div className={styles.dockCanvasSection}>
         <div id="editor-env" ref={containerRef} className={styles.dockCanvasBox}>
           <canvas id="editor-canvas" ref={canvasRef}></canvas>
-        </div>
-
-        <div className={styles.dockCanvasBar}>
-          <div className={styles.dockZoom}>
+          <div className={styles.dockZoomOverlay}>
             <button id="zoom-out" title="Zoom out" onClick={run(editor?.zoomOut.bind(editor))} disabled={!canZoomOut}>−</button>
             <span className={styles.zoomPixelLabel} title="Cell pixel size">{cellSize}px</span>
             <button id="zoom-in" title="Zoom in" onClick={run(editor?.zoomIn.bind(editor))} disabled={!canZoomIn}>+</button>
             <button id="zoom-fit" title="Fit organism to view" onClick={run(editor?.zoomToFit.bind(editor))}>▣</button>
           </div>
+        </div>
+
+        <div className={styles.dockCanvasBar}>
           <span className={styles.dockHint}>
             <MouseLeftIcon /> apply · <MouseRightIcon /> erase
           </span>
@@ -298,7 +342,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
             title="Place the selected cell type"
             onClick={() => setTool(Modes.Edit)}
           >
-            <i className="fa-solid fa-pen"></i> Draw
+            <i className="fa-solid fa-pen"></i> Draw{cellTypeName ? ` · ${cellTypeName}` : ''}
           </button>
           <button
             id="erase-tool"
@@ -323,22 +367,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
             value={paintColor}
             onChange={handleColorChange}
           />
-        </div>
-
-        <h4>Cells</h4>
-        <div className={styles.dockCellGrid}>
-          {CellStates.living.map((cellState: CellStateAPI) => (
-            <button
-              key={cellState.name}
-              id={cellState.name}
-              className={`cell-type ${styles.dockCellBtn} ${tool === Modes.Edit && cellTypeName === cellState.name ? styles.dockCellBtnActive : ''}`}
-              title={CELL_INFO[cellState.name] || cellState.name}
-              onClick={() => selectCellType(cellState)}
-            >
-              <span className={styles.dockCellSwatch} style={{ backgroundColor: cellState.color }}></span>
-              <span className={styles.dockCellName}>{cellState.name}</span>
-            </button>
-          ))}
         </div>
 
         <h4>Actions</h4>
@@ -381,29 +409,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
             ))}
           </div>
         </div>
-
-        <h4>File</h4>
-        <div className={styles.buttonGroup}>
-          <button id="save-org" title="Download as JSON" onClick={handleSave}>
-            <i className="fa-solid fa-download"></i> Save
-          </button>
-          <button id="load-org" title="Load organism from a JSON file" onClick={() => fileInputRef.current?.click()}>
-            <i className="fa-solid fa-upload"></i> Load
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            style={{ display: 'none' }}
-            onChange={handleFileChosen}
-          />
-          <select id="preset-select" defaultValue="" onChange={handlePresetChosen} title="Load a bundled organism">
-            <option value="" disabled>Presets…</option>
-            {presets.map(p => (
-              <option key={p.value} value={p.value}>{p.name}</option>
-            ))}
-          </select>
-        </div>
       </div>
 
       <div className={styles.dockDeployRow}>
@@ -423,6 +428,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
           >
             <i className="fa-solid fa-circle-down"></i> {deployArmed ? 'Click to place…' : 'Deploy to world'}
           </button>
+      </div>
       </div>
     </div>
   );
