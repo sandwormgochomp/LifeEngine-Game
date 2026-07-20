@@ -212,6 +212,14 @@
   cursor: default;
 }
 
+.fpsActual {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.6);
+  min-width: 52px;
+  text-align: right;
+}
+
 .speedIcon {
   color: #00FF41;
   font-size: 12px;
@@ -236,6 +244,8 @@
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
+  /* below .modalBackdrop (200): the toolbar must never cover modal content,
+     and clicking through the backdrop closes the modal anyway */
   z-index: 100;
   /* The container spans the width of its widest child; keep the empty parts
      click-transparent so it can't shadow the editor dock's cell rail. */
@@ -922,6 +932,14 @@
   border-color: #00FF41;
 }
 
+.dockWarning {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #ff9f43;
+  margin: 4px 0;
+  cursor: help;
+}
+
 .dockBadges {
   display: flex;
   flex-wrap: wrap;
@@ -967,7 +985,7 @@
   border-color: #00FF41;
 }
 
-/* ---- Lifeforms modal ---- */
+/* ---- Centered picker modals (lifeforms, presets) ---- */
 .modalBackdrop {
   position: fixed;
   inset: 0;
@@ -980,7 +998,7 @@
   pointer-events: auto;
 }
 
-.lifeformsModal {
+.pickerModal {
   width: min(680px, 92vw);
   max-height: 76vh;
   display: flex;
@@ -998,7 +1016,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.lifeformsGrid {
+.pickerGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   gap: 8px;
@@ -1006,14 +1024,14 @@
   overflow-y: auto;
 }
 
-.lifeformsEmpty {
+.pickerEmpty {
   grid-column: 1 / -1;
   font-family: 'VT323', monospace;
   font-size: 17px;
   color: rgba(0, 255, 65, 0.7);
 }
 
-.lifeformCard {
+.pickerCard {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1029,19 +1047,107 @@
   min-width: unset;
 }
 
-.lifeformCard:hover {
+.pickerCard:hover {
   border-color: #00FF41;
   background: rgba(0, 255, 65, 0.08);
   box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
 }
 
-.lifeformThumb {
+.pickerThumb {
   image-rendering: pixelated;
   background: rgba(0, 255, 65, 0.03);
   border: 1px solid rgba(0, 255, 65, 0.15);
 }
 
-.lifeformName {
+.legendGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+}
+
+.legendSwatch {
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.legendName {
+  color: #00FF41;
+  width: 76px;
+  flex-shrink: 0;
+}
+
+.legendDesc {
+  color: rgba(0, 255, 65, 0.65);
+}
+
+.hotkey {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #00FF41;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  padding: 3px 5px;
+  min-width: 34px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.worldsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+.worldCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.2);
+  color: rgba(0, 255, 65, 0.85);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: unset;
+  text-align: left;
+}
+
+.worldCard:hover {
+  border-color: #00FF41;
+  background: rgba(0, 255, 65, 0.08);
+}
+
+.worldName {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickerThumbPending {
+  width: 72px;
+  height: 72px;
+  background: rgba(0, 255, 65, 0.03);
+  border: 1px solid rgba(0, 255, 65, 0.15);
+}
+
+.pickerName {
   font-family: 'VT323', monospace;
   font-size: 14px;
   color: #00FF41;
@@ -1051,10 +1157,275 @@
   white-space: nowrap;
 }
 
-.lifeformMeta {
+.pickerMeta {
   font-family: 'VT323', monospace;
   font-size: 12px;
   color: rgba(0, 255, 65, 0.55);
+}
+
+/* ---- Control modals (evolution rules, world controls) ---- */
+.ctrlBody {
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 4px 22px;
+  align-content: start;
+}
+
+.ctrlGroup {
+  break-inside: avoid;
+  margin-bottom: 10px;
+}
+
+.ctrlGroup h4 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(0, 255, 65, 0.7);
+  letter-spacing: 1px;
+  margin: 8px 0 6px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+  padding-bottom: 5px;
+}
+
+.ctrlRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(0, 255, 65, 0.85);
+  cursor: help;
+}
+
+.ctrlLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+/* .panelBody label stacks its children; control rows inside the dock stay
+   on one line (label left, input right) */
+.panelBody .ctrlRow {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.ctrlRow input[type="checkbox"] {
+  accent-color: #00FF41;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ctrlNumber {
+  width: 78px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 0;
+  outline: none;
+  text-align: right;
+}
+
+.ctrlNumber:focus {
+  border-color: #00FF41;
+}
+
+.ctrlValue {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.7);
+  min-width: 46px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ctrlNote {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.6);
+  margin: 4px 0 0;
+}
+
+.ctrlRow input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+  accent-color: #00FF41;
+}
+
+.ctrlBtn {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-width: unset;
+  transition: all 0.12s;
+}
+
+.ctrlBtn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+/* ---- Brain editor ---- */
+.brainBody {
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+}
+
+.brainHeading {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(0, 255, 65, 0.7);
+  letter-spacing: 1px;
+  margin: 14px 0 6px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+  padding-bottom: 5px;
+}
+
+.brainStateTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.brainStateTab {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.3);
+  color: rgba(0, 255, 65, 0.8);
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 3px 12px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-width: unset;
+}
+
+.brainStateTab:hover {
+  border-color: rgba(0, 255, 65, 0.7);
+}
+
+.brainTransition {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.8);
+  padding: 4px 0;
+}
+
+.brainSelect {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  padding: 2px 4px;
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.brainRemove {
+  background: transparent;
+  border: 1px solid rgba(255, 90, 90, 0.4);
+  color: rgba(255, 120, 120, 0.9);
+  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+}
+
+.brainRemove:hover {
+  background: rgba(255, 90, 90, 0.18);
+}
+
+.brainRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.brainSwatch {
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.brainCellName {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.85);
+  width: 78px;
+  flex-shrink: 0;
+}
+
+.brainSlider {
+  flex: 1;
+  min-width: 90px;
+  accent-color: #00FF41;
+}
+
+.brainWeight {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #00FF41;
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ctrlFooter {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.ctrlFooter button {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-width: unset;
+  transition: all 0.12s;
+}
+
+.ctrlFooter button:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
 }
 
 /* The LIFEFORMS stat doubles as the modal trigger */

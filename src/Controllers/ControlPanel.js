@@ -21,15 +21,18 @@ class ControlPanel {
         this.setHyperparamDefaults();
     }
 
+    // This game's deliberate deviations from Hyperparams.setDefaults(). Only
+    // keys the engine actually reads belong here — a previous version set
+    // mutability/lifespan/energy_decay/radiation/minFood/sunlight_direction,
+    // none of which exist in the engine, so the UI bound to them did nothing.
     setHyperparamDefaults() {
-        Hyperparams.useGlobalMutability = true;
-        Hyperparams.mutability = 3;
-        Hyperparams.lifespan = 50;
-        Hyperparams.energy_decay = 0.5;
-        Hyperparams.radiation = 0.2;
-        Hyperparams.foodDropProb = 0.5;
-        Hyperparams.minFood = 500;
-        Hyperparams.sunlight_direction = 0;
+        Hyperparams.foodDropProb = 0.5; // food rains down; producers aren't the only source
+    }
+
+    // Restore everything to the state the app boots with
+    resetHyperparams() {
+        Hyperparams.setDefaults();
+        this.setHyperparamDefaults();
     }
 
     changeEngineSpeed(fps) {

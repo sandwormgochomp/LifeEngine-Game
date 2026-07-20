@@ -5,9 +5,10 @@ import Notifier from '../../Utils/Notifier';
 
 interface SaveTabProps {
   engine: EngineAPI | null;
+  onBrowseWorlds: () => void;
 }
 
-const SaveTab: React.FC<SaveTabProps> = ({ engine }) => {
+const SaveTab: React.FC<SaveTabProps> = ({ engine, onBrowseWorlds }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSaveWorld = () => {
@@ -65,6 +66,10 @@ const SaveTab: React.FC<SaveTabProps> = ({ engine }) => {
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
+        <button id="browse-worlds-btn" title="Browse the worlds bundled with the game" onClick={onBrowseWorlds}>
+          <i className="fa-solid fa-globe" style={{ marginRight: '6px' }}></i>
+          Browse Worlds
+        </button>
       </div>
     </div>
   );

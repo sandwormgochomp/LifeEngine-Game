@@ -13,6 +13,9 @@ const HudTopRight: React.FC<HudTopRightProps> = ({ engine }) => {
   const currentFps = useEngineValue(engine, e => e.fps || 60, 60);
   const speed = Math.round((currentFps / 60) * 100) / 100;
   const zoom = useEngineValue(engine, e => Math.round((e.env.controller.scale || 1) * 100), 100);
+  // Measured tick rate, which falls below the target when the world is busy
+  const running = useEngineValue(engine, e => e.running, false);
+  const actualFps = useEngineValue(engine, e => Math.round(e.actual_fps || 0), 0);
 
   const changeSpeedIndex = (delta: number) => {
     if (!engine) return;
@@ -63,6 +66,9 @@ const HudTopRight: React.FC<HudTopRightProps> = ({ engine }) => {
         >
           <i className="fa-solid fa-plus" />
         </button>
+        <span id="fps-actual" className={styles.fpsActual} title="Actual simulation ticks per second">
+          {running && Number.isFinite(actualFps) ? `${actualFps} fps` : '—'}
+        </span>
         <span className={styles.statDivider}>|</span>
         <span className={styles.zoomLabel}>ZOOM:</span>
         <span className={styles.zoomValue}>{zoom}%</span>

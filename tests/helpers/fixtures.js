@@ -13,8 +13,8 @@ const test = base.test.extend({
   },
 });
 
-// Open a HUD popup panel from the bottom toolbar (print|rules|environment|stats).
-// The editor is a dock, not a popup — use openEditor for it.
+// Toggle a toolbar item by name (save|stats open popups; environment|rules open
+// modals; edit opens the dock). Named openPanel for historical reasons.
 async function openPanel(page, panelName) {
   await page.locator(`#tool-${panelName}`).click();
 }
@@ -22,6 +22,26 @@ async function openPanel(page, panelName) {
 // Toggle the editor dock from the toolbar
 async function openEditor(page) {
   await page.locator('#tool-edit').click();
+}
+
+// Open the world controls modal and wait for it
+async function openWorldControls(page) {
+  await page.locator('#tool-environment').click();
+  await page.locator('[data-testid="world-modal"]').waitFor();
+}
+
+// Dismiss the open modal. The modal backdrop covers the toolbar, so a modal
+// is closed with Escape (or its X / a backdrop click), never by clicking a
+// toolbar button through it.
+async function closeModal(page, testId) {
+  await page.keyboard.press('Escape');
+  if (testId) await page.locator(`[data-testid="${testId}"]`).waitFor({ state: 'hidden' });
+}
+
+// Open the presets picker from the dock header and load one by its file key
+async function loadPreset(page, presetValue) {
+  await page.locator('#open-presets').click();
+  await page.locator(`.preset-card[data-preset="${presetValue}"]`).click();
 }
 
 // Pause the simulation for deterministic assertions on world state
@@ -54,4 +74,4 @@ async function localCellState(page, dc, dr) {
   }, [dc, dr]);
 }
 
-module.exports = { test, expect: base.expect, openPanel, openEditor, pauseEngine, editorCellPosition, clickEditorCell, localCellState };
+module.exports = { test, expect: base.expect, openPanel, openEditor, openWorldControls, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, localCellState };

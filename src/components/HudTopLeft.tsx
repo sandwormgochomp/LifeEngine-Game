@@ -4,12 +4,15 @@ import useEngineValue from './useEngineValue';
 import type { EngineAPI } from '../types/engine';
 
 import Notifier from '../Utils/Notifier';
+import WorldConfig from '../WorldConfig';
 
 interface HudTopLeftProps {
   engine: EngineAPI | null;
+  headless: boolean;
+  onToggleHeadless: () => void;
 }
 
-const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
+const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadless }) => {
   const running = useEngineValue(engine, e => e.running, false);
 
   const handlePlay = () => {
@@ -67,6 +70,14 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
         </button>
         <button className={styles.playbackBtn} onClick={handleSave} title="Save">
           <i className="fa-solid fa-floppy-disk" />
+        </button>
+        <button
+          id="headless-toggle"
+          className={`${styles.playbackBtn} ${headless ? styles.playbackBtnActive : ''}`}
+          onClick={onToggleHeadless}
+          title="Stop drawing the world so the simulation runs much faster. Hotkey: H"
+        >
+          <i className={`fa-solid ${headless ? 'fa-eye-slash' : 'fa-eye'}`} />
         </button>
       </div>
     </div>

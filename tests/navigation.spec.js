@@ -1,4 +1,4 @@
-const { test, expect, openPanel, openEditor } = require('./helpers/fixtures');
+const { test, expect, openPanel, openEditor, openWorldControls, closeModal } = require('./helpers/fixtures');
 
 test.describe('Navigation and UI', () => {
   test('Page loads and displays title', async ({ page }) => {
@@ -6,39 +6,45 @@ test.describe('Navigation and UI', () => {
     await expect(page.locator('#env-canvas')).toBeVisible();
   });
 
-  test('Toolbar popups toggle; opening the editor dock closes the popup', async ({ page }) => {
-    await openPanel(page, 'environment');
-    await expect(page.locator('#reset-env')).toBeVisible();
-
-    // Switching to another popup swaps the content
+  test('Toolbar items toggle their panel, modal or dock', async ({ page }) => {
+    // Popups
     await openPanel(page, 'save');
     await expect(page.locator('#save-world-btn')).toBeVisible();
-    await expect(page.locator('#reset-env')).toBeHidden();
+    await openPanel(page, 'stats');
+    await expect(page.locator('#org-count')).toBeVisible();
+    await expect(page.locator('#save-world-btn')).toBeHidden();
+    await openPanel(page, 'stats');
+    await expect(page.locator('#org-count')).toBeHidden();
 
-    // Opening the editor dock closes the popup
+    // Modals: opened from the toolbar, dismissed with Escape (the backdrop
+    // deliberately covers the toolbar so it can never occlude modal content)
+    await openWorldControls(page);
+    await expect(page.locator('#tool-environment')).toHaveClass(/toolbarBtnActive/);
+    await closeModal(page, 'world-modal');
+
+    await openPanel(page, 'rules');
+    await expect(page.getByTestId('evolution-modal')).toBeVisible();
+    await closeModal(page, 'evolution-modal');
+
+    // Dock
     await openEditor(page);
     await expect(page.getByTestId('editor-dock')).toBeVisible();
-    await expect(page.locator('#save-world-btn')).toBeHidden();
-
-    // A popup can sit alongside the open dock
-    await openPanel(page, 'environment');
-    await expect(page.locator('#reset-env')).toBeVisible();
-    await expect(page.getByTestId('editor-dock')).toBeVisible();
-
-    // Clicking the active tool again closes it
-    await openPanel(page, 'environment');
-    await expect(page.locator('#reset-env')).toBeHidden();
     await openEditor(page);
     await expect(page.getByTestId('editor-dock')).toBeHidden();
   });
 
-  test('Hint bar shows the mode actions and brush size', async ({ page }) => {
-    await openPanel(page, 'environment');
+  test('Hint bar reflects the mode and live brush size', async ({ page }) => {
+    await openWorldControls(page);
     await page.locator('#wall').click();
     await expect(page.getByText(/place wall .* brush 5×5/)).toBeVisible();
 
     await page.locator('#kill').click();
     await expect(page.getByText(/kill organism .* brush 5×5/)).toBeVisible();
+
+    // The brush slider feeds both the hint bar and the engine
+    await page.locator('#brush-slider').fill('4');
+    await expect(page.getByText(/kill organism .* brush 9×9/)).toBeVisible();
+    expect(await page.evaluate(() => window.engine.env.controller.mode)).toBeDefined();
   });
 
   test('Escape closes the popup first, then the editor dock', async ({ page }) => {

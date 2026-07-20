@@ -1,9 +1,10 @@
-const { test, expect, openPanel } = require('./helpers/fixtures');
+const { test, expect, openWorldControls, closeModal } = require('./helpers/fixtures');
 
 test.describe('Radiation Tool', () => {
   test.beforeEach(async ({ page }) => {
-    await openPanel(page, 'environment');
+    await openWorldControls(page);
     await page.locator('#radiation-drop').click();
+    await closeModal(page, 'world-modal'); // uncover the canvas
   });
 
   test('Placing and clearing radiation', async ({ page }) => {
@@ -12,6 +13,7 @@ test.describe('Radiation Tool', () => {
     const radCount = await page.evaluate(() => window.engine.env.radiation_map.size);
     expect(radCount).toBeGreaterThan(0);
 
+    await openWorldControls(page);
     await page.locator('#clear-radiation').click();
 
     const newRadCount = await page.evaluate(() => window.engine.env.radiation_map.size);

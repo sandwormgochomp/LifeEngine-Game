@@ -1,12 +1,12 @@
-const { test, expect, openPanel } = require('./helpers/fixtures');
+const { test, expect, openWorldControls, closeModal } = require('./helpers/fixtures');
 
 const canvasBox = (page) => page.locator('#env-canvas').boundingBox();
 
 // Select an environment tool, then close the panel so it doesn't cover the canvas
 async function selectEnvMode(page, buttonId) {
-  await openPanel(page, 'environment');
+  await openWorldControls(page);
   await page.locator(`#${buttonId}`).click();
-  await openPanel(page, 'environment');
+  await closeModal(page, 'world-modal');
 }
 
 async function dragBy(page, { from, dx, dy, steps = 10, button = 'left' }) {

@@ -8,6 +8,11 @@ class GridMap {
 
     resize(cols, rows, cell_size) {
         this.grid = [];
+        // Saved worlds can carry these as strings; coerce so arithmetic and
+        // the renderer never see a string cell size
+        cols = Number(cols);
+        rows = Number(rows);
+        cell_size = Number(cell_size);
         this.cols = cols;
         this.rows = rows;
         this.cell_size = cell_size;

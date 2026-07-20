@@ -5,6 +5,7 @@ import type { EngineAPI } from '../types/engine';
 import Engine from '../Engine';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
+import WorldConfig from '../WorldConfig';
 import useEngineValue from './useEngineValue';
 
 // HUD regions
@@ -16,18 +17,21 @@ import HudPanel from './HudPanel';
 import HudNotifications from './HudNotifications';
 import EditorDock from './EditorDock';
 import LifeformsModal from './LifeformsModal';
+import PresetsModal from './PresetsModal';
+import BrainModal from './BrainModal';
+import WorldsModal from './WorldsModal';
 import Floaties from './Floaties';
 
 // Tab content
 import SaveTab from './Tabs/SaveTab';
-import WorldControlsTab from './Tabs/WorldControlsTab';
-import EvolutionControlsTab from './Tabs/EvolutionControlsTab';
+import WorldControlsModal from './WorldControlsModal';
+import EvolutionControlsModal from './EvolutionControlsModal';
 import StatsTab from './Tabs/StatsTab';
+import AboutTab from './Tabs/AboutTab';
 
 const PANEL_TITLES: Record<string, string> = {
   save: 'SAVE / LOAD',
-  rules: 'RULES',
-  environment: 'ENVIRONMENT',
+  about: 'ABOUT',
   stats: 'STATS',
 };
 
@@ -36,6 +40,12 @@ const App: React.FC = () => {
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [lifeformsOpen, setLifeformsOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [worldOpen, setWorldOpen] = useState(false);
+  const [brainOpen, setBrainOpen] = useState(false);
+  const [headless, setHeadless] = useState(WorldConfig.headless);
+  const [worldsOpen, setWorldsOpen] = useState(false);
   const envRef = useRef<HTMLDivElement>(null);
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
   const glowCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,7 +70,17 @@ const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const envController = engine?.env?.controller;
-      if (lifeformsOpen) {
+      if (worldsOpen) {
+        setWorldsOpen(false);
+      } else if (brainOpen) {
+        setBrainOpen(false);
+      } else if (presetsOpen) {
+        setPresetsOpen(false);
+      } else if (rulesOpen) {
+        setRulesOpen(false);
+      } else if (worldOpen) {
+        setWorldOpen(false);
+      } else if (lifeformsOpen) {
         setLifeformsOpen(false);
       } else if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select)) {
         envController.mode = Modes.None;
@@ -74,13 +94,81 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine, activePanel, editorOpen, lifeformsOpen]);
+  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, worldOpen, brainOpen, worldsOpen]);
 
-  const handleOpenInLab = (raw: unknown, name: string) => {
+  // Headless skips all drawing so the simulation runs far faster; repaint
+  // everything on the way back so the canvas isn't left stale.
+  const toggleHeadless = () => {
+    const next = !WorldConfig.headless;
+    WorldConfig.headless = next;
+    setHeadless(next);
+    if (!next) engine?.env?.renderFull();
+    engine?.emitChange(true);
+  };
+
+  // Single-key hotkeys from the original control panel. Suppressed while a
+  // text field or dropdown has focus so typing a species name or setting a
+  // number never fires a tool.
+  useEffect(() => {
+    const setMode = (mode: number) => {
+      if (!engine) return;
+      engine.env.controller.mode = mode;
+      engine.emitChange(true);
+    };
+
+    const handleHotkey = (e: KeyboardEvent) => {
+      if (!engine || e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+
+      switch (e.key.toLowerCase()) {
+        case ' ':
+          e.preventDefault();
+          engine.controlpanel.setPaused(engine.running);
+          break;
+        case 'a': engine.env.controller.resetView(); break;
+        case 's': setMode(Modes.Drag); break;
+        case 'd': setMode(Modes.WallDrop); break;
+        case 'f': setMode(Modes.FoodDrop); break;
+        case 'g': setMode(Modes.ClickKill); break;
+        case 'r': setMode(Modes.RadiationDrop); break;
+        case 'h': toggleHeadless(); break;
+        case 'b':
+          engine.env.clearWalls();
+          engine.emitChange(true);
+          Notifier.notify('Walls cleared');
+          break;
+        case 'z':
+          setMode(engine.env.controller.mode === Modes.Select ? Modes.None : Modes.Select);
+          break;
+        case 'x': setEditorOpen(open => !open); break;
+        case 'c':
+          engine.env.controller.org_to_clone = engine.organism_editor.organism;
+          setMode(Modes.Clone);
+          Notifier.notify('Click in the world to place · ESC to cancel');
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleHotkey);
+    return () => window.removeEventListener('keydown', handleHotkey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine, headless]);
+
+  // Shared by both pickers. Presets ship without a species name, so fall back
+  // to the label the user picked.
+  const handleOpenInLab = (raw: any, name: string) => {
     if (!engine) return;
+    if (!raw?.anatomy?.cells?.length) {
+      Notifier.notify('Not a valid organism');
+      return;
+    }
     engine.organism_editor.loadRawOrg(raw);
+    if (!raw.species_name) engine.organism_editor.renameSpecies(name);
     engine.emitChange(true);
     setLifeformsOpen(false);
+    setPresetsOpen(false);
     setEditorOpen(true);
     Notifier.notify(`Loaded ${name} into the lab`);
   };
@@ -102,9 +190,29 @@ const App: React.FC = () => {
 
   const selectArmed = useEngineValue(engine, e => e.env.controller.mode === Modes.Select, false);
 
+  // Modals are mutually exclusive; the dock and popups can coexist with them
+  const closeModals = () => {
+    setRulesOpen(false);
+    setWorldOpen(false);
+    setPresetsOpen(false);
+    setLifeformsOpen(false);
+    setBrainOpen(false);
+    setWorldsOpen(false);
+  };
+
   const handleToolbarClick = (item: string) => {
     if (item === 'edit') {
       setEditorOpen(open => !open);
+      setActivePanel(null);
+    } else if (item === 'rules') {
+      const next = !rulesOpen;
+      closeModals();
+      setRulesOpen(next);
+      setActivePanel(null);
+    } else if (item === 'environment') {
+      const next = !worldOpen;
+      closeModals();
+      setWorldOpen(next);
       setActivePanel(null);
     } else if (item === 'select') {
       if (!engine) return;
@@ -120,13 +228,11 @@ const App: React.FC = () => {
   const renderPanelContent = () => {
     switch (activePanel) {
       case 'save':
-        return <SaveTab engine={engine} />;
-      case 'rules':
-        return <EvolutionControlsTab engine={engine} />;
-      case 'environment':
-        return <WorldControlsTab engine={engine} />;
+        return <SaveTab engine={engine} onBrowseWorlds={() => setWorldsOpen(true)} />;
       case 'stats':
         return <StatsTab engine={engine} />;
+      case 'about':
+        return <AboutTab />;
       default:
         return null;
     }
@@ -141,7 +247,7 @@ const App: React.FC = () => {
       <Floaties />
 
       {/* HUD Regions */}
-      <HudTopLeft engine={engine} />
+      <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />
       <HudTopCenter engine={engine} onLifeformsClick={() => setLifeformsOpen(open => !open)} />
       <HudTopRight engine={engine} />
       <HudBottomBar
@@ -149,9 +255,18 @@ const App: React.FC = () => {
         activePanel={activePanel}
         selectArmed={selectArmed}
         editorOpen={editorOpen}
+        rulesOpen={rulesOpen}
+        worldOpen={worldOpen}
         onItemClick={handleToolbarClick}
       />
       <HudNotifications />
+
+      {headless && (
+        <div className={styles.headlessNotice} data-testid="headless-notice" onClick={toggleHeadless} title="Click to resume rendering">
+          <i className="fa-solid fa-eye-slash" />
+          <span>RENDERING OFF</span>
+        </div>
+      )}
 
       {/* Popup panels mount on open and unmount on close */}
       {activePanel && (
@@ -164,7 +279,37 @@ const App: React.FC = () => {
       )}
 
       {/* The organism editor lives in a side dock so the world stays visible */}
-      {editorOpen && <EditorDock engine={engine} onClose={() => setEditorOpen(false)} />}
+      {editorOpen && (
+        <EditorDock
+          engine={engine}
+          onClose={() => setEditorOpen(false)}
+          onOpenPresets={() => setPresetsOpen(true)}
+          onOpenBrain={() => setBrainOpen(true)}
+        />
+      )}
+
+      {worldsOpen && (
+        <WorldsModal engine={engine} onClose={() => setWorldsOpen(false)} />
+      )}
+
+      {brainOpen && (
+        <BrainModal engine={engine} onClose={() => setBrainOpen(false)} />
+      )}
+
+      {rulesOpen && (
+        <EvolutionControlsModal engine={engine} onClose={() => setRulesOpen(false)} />
+      )}
+
+      {worldOpen && (
+        <WorldControlsModal engine={engine} onClose={() => setWorldOpen(false)} />
+      )}
+
+      {presetsOpen && (
+        <PresetsModal
+          onClose={() => setPresetsOpen(false)}
+          onOpenInLab={handleOpenInLab}
+        />
+      )}
 
       {lifeformsOpen && (
         <LifeformsModal

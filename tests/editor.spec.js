@@ -1,4 +1,4 @@
-const { test, expect, openEditor, pauseEngine, clickEditorCell, localCellState } = require('./helpers/fixtures');
+const { test, expect, openEditor, loadPreset, pauseEngine, clickEditorCell, localCellState } = require('./helpers/fixtures');
 
 const cellCountText = (page) => page.locator('#edit-organism-details .cell-count');
 
@@ -141,7 +141,7 @@ test.describe('Organism Lab dock', () => {
   test('The giant Bob preset loads without freezing and stays editable', async ({ page }) => {
     // Bob is ~10k cells; loading used to hard-freeze the tab (O(n²) anatomy rebuild)
     const start = Date.now();
-    await page.locator('#preset-select').selectOption('Bob');
+    await loadPreset(page, 'Bob');
     await expect(cellCountText(page)).toHaveText(/Cell count: 10783/);
     expect(Date.now() - start).toBeLessThan(5000);
 
@@ -151,8 +151,23 @@ test.describe('Organism Lab dock', () => {
     expect(await localCellState(page, 0, 0)).toBe('common');
   });
 
+  test('Presets picker shows every preset with a rendered thumbnail', async ({ page }) => {
+    await page.locator('#open-presets').click();
+    await expect(page.getByTestId('presets-modal')).toBeVisible();
+
+    const cards = page.locator('.preset-card');
+    await expect(cards).toHaveCount(16);
+    await expect(page.locator('.preset-card[data-preset="hunter"] canvas')).toBeVisible();
+    await expect(page.locator('.preset-card[data-preset="hunter"]')).toContainText('5 cells');
+
+    // Escape closes the picker but leaves the dock open
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('presets-modal')).toBeHidden();
+    await expect(page.getByTestId('editor-dock')).toBeVisible();
+  });
+
   test('Presets load and Save downloads the organism as JSON', async ({ page }) => {
-    await page.locator('#preset-select').selectOption('hunter');
+    await loadPreset(page, 'hunter');
     await expect(page.locator('#species-name')).toHaveValue('Hunter');
     await expect(cellCountText(page)).toHaveText(/Cell count: 5/);
     expect(await localCellState(page, 0, 0)).toBe('mover');

@@ -5,29 +5,15 @@ import type { EngineAPI, CellStateAPI } from '../types/engine';
 import CellStates from '../Organism/Cell/CellStates';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
+import { CELL_INFO } from './cellInfo';
 
 interface EditorDockProps {
   engine: EngineAPI | null;
   onClose: () => void;
+  onOpenPresets: () => void;
+  onOpenBrain: () => void;
 }
 
-// Short blurbs shown as tooltips on the cell palette
-const CELL_INFO: Record<string, string> = {
-  mouth: 'Eats adjacent food',
-  producer: 'Grows food in nearby empty cells',
-  mover: 'Lets the organism move and turn',
-  killer: 'Harms organisms it touches',
-  armor: 'Blocks killer cells',
-  eye: 'Sees ahead to steer movers. Click a placed eye to rotate it',
-  healer: 'Repairs damage by spending stored food',
-  explosive: 'Explodes on death, harming everything nearby',
-  poison: 'Poisons organisms that touch it',
-  pheromone: 'Emits a signal other organisms can sense',
-  common: 'Plain structural cell',
-  parasite: 'Steals food from adjacent organisms',
-  chameleon: 'Invisible to eyes',
-  shooter: 'Fires at targets the organism sees',
-};
 
 // Ability badges derived from which cell types are present
 const ABILITY_BADGES: Record<string, string> = {
@@ -45,11 +31,6 @@ const ABILITY_BADGES: Record<string, string> = {
   shooter: 'SHOOTS',
   pheromone: 'SIGNALS',
 };
-
-interface Preset {
-  name: string;
-  value: string;
-}
 
 const MouseLeftIcon: React.FC = () => (
   <svg width="11" height="14" viewBox="0 0 12 16" fill="none" style={{ verticalAlign: '-2px', marginRight: '2px' }}>
@@ -69,11 +50,10 @@ const MouseRightIcon: React.FC = () => (
   </svg>
 );
 
-const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
+const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets, onOpenBrain }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [presets, setPresets] = useState<Preset[]>([]);
 
   const editor = engine?.organism_editor;
   const controller = editor?.controller;
@@ -107,14 +87,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
     };
   }, [editor, engine]);
 
-  // Load the preset manifest once (same assets dir user creations go in)
-  useEffect(() => {
-    fetch('assets/organisms/_list.json')
-      .then(res => (res.ok ? res.json() : []))
-      .then(list => setPresets(Array.isArray(list) ? list : []))
-      .catch(() => setPresets([]));
-  }, []);
-
   // All state lives on the engine; emitChange(true) makes edits reflect
   // immediately instead of on the next throttled tick.
   const touch = () => engine?.emitChange(true);
@@ -129,6 +101,13 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
   const canZoomIn = useEngineValue(engine, e => e.organism_editor.canZoomIn(), true);
   const canZoomOut = useEngineValue(engine, e => e.organism_editor.canZoomOut(), true);
   const cellSize = useEngineValue(engine, e => e.organism_editor.cell_size, 14);
+  const moveRange = useEngineValue(engine, e => e.organism_editor.organism.move_range, 4);
+  const mutability = useEngineValue(engine, e => e.organism_editor.organism.mutability, 5);
+  const healerCost = useEngineValue(engine, e => e.organism_editor.organism.healer_food_cost, 1);
+  const poisonDuration = useEngineValue(engine, e => e.organism_editor.organism.poison_duration, 10);
+  const hasHealer = useEngineValue(engine, e => !!e.organism_editor.organism.anatomy.has_healer, false);
+  const hasPoison = useEngineValue(engine, e => !!e.organism_editor.organism.anatomy.has_poison, false);
+  const isNatural = useEngineValue(engine, e => e.organism_editor.organism.isNatural(), true);
   const envMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   const abilities = useEngineValue(
     engine,
@@ -172,11 +151,37 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
     touch();
   };
 
+  // Per-organism traits live on the Organism itself; snapshot them onto the
+  // editor's undo history like anatomy edits
+  const setOrgField = (field: 'move_range' | 'mutability' | 'healer_food_cost' | 'poison_duration', value: number) => {
+    if (!editor || Number.isNaN(value)) return;
+    editor.beginStroke();
+    (editor.organism as any)[field] = value;
+    editor.commitStroke();
+    touch();
+  };
+
+  const handleSeedWorld = () => {
+    if (!engine) return;
+    if (!window.confirm('Clear the world and seed it with this organism?')) return;
+    engine.env.reset(false);
+    const center = [Math.floor(engine.env.grid_map.cols / 2), Math.floor(engine.env.grid_map.rows / 2)];
+    engine.env.controller.dropOrganism(engine.organism_editor.organism, center[0], center[1]);
+    engine.emitChange(true);
+    Notifier.notify('World seeded with this organism');
+  };
+
   // Undo/redo shortcuts while the dock is open
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!editor || !(e.ctrlKey || e.metaKey)) return;
-      if (e.target instanceof HTMLInputElement) return;
+      // Let text fields keep native undo, but sliders and checkboxes shouldn't
+      // swallow the editor's own undo shortcut
+      const target = e.target as HTMLElement | null;
+      const type = (target as HTMLInputElement | null)?.type;
+      const typing = target?.tagName === 'TEXTAREA' ||
+        (target?.tagName === 'INPUT' && ['text', 'number', 'search', 'email', 'password', 'url'].includes(type ?? ''));
+      if (typing) return;
       const key = e.key.toLowerCase();
       if (key === 'z') {
         e.preventDefault();
@@ -222,17 +227,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
     file.text()
       .then(text => loadRaw(JSON.parse(text), file.name.replace(/\.json$/i, '')))
       .catch(() => Notifier.notify('Not a valid organism file'));
-  };
-
-  const handlePresetChosen = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    e.target.value = '';
-    if (!value) return;
-    const preset = presets.find(p => p.value === value);
-    fetch(`assets/organisms/${value}.json`)
-      .then(res => res.json())
-      .then(raw => loadRaw(raw, preset?.name || value))
-      .catch(() => Notifier.notify('Could not load preset'));
   };
 
   const toggleDeploy = () => {
@@ -296,18 +290,14 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
             style={{ display: 'none' }}
             onChange={handleFileChosen}
           />
-          <select
-            id="preset-select"
-            className={styles.dockPresetSelect}
-            defaultValue=""
-            onChange={handlePresetChosen}
-            title="Load a bundled preset organism"
+          <button
+            className={styles.dockHeaderBtn}
+            id="open-presets"
+            title="Browse bundled preset organisms"
+            onClick={onOpenPresets}
           >
-            <option value="" disabled>Presets…</option>
-            {presets.map(p => (
-              <option key={p.value} value={p.value}>{p.name}</option>
-            ))}
-          </select>
+            <i className="fa-solid fa-folder-open"></i>
+          </button>
         </span>
         <button className={styles.panelClose} onClick={onClose} title="Close (Esc)">
           <i className="fa-solid fa-xmark"></i>
@@ -389,6 +379,9 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
           <button id="random-btn" title="Generate a random organism" onClick={run(editor?.randomOrganism.bind(editor))}>
             Random
           </button>
+          <button id="open-brain" title="Edit this organism's brain: what it chases, flees, and does" onClick={onOpenBrain}>
+            <i className="fa-solid fa-brain"></i> Brain
+          </button>
         </div>
 
         <h4>Organism</h4>
@@ -403,10 +396,46 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
             title="Species name"
           />
           <p className="cell-count">Cell count: {cellCount}</p>
+          {!isNatural && (
+            <p id="unnatural-warning" className={styles.dockWarning} title="This organism has overlapping cells or no center cell, so it could not arise or reproduce naturally">
+              <i className="fa-solid fa-biohazard"></i> Unnatural organism
+            </p>
+          )}
           <div className={styles.dockBadges}>
             {abilities.split(',').filter(Boolean).map(name => (
               <span key={name} className={styles.dockBadge}>{ABILITY_BADGES[name]}</span>
             ))}
+          </div>
+
+          <label className={styles.ctrlRow} title="Cells to move before randomly changing direction. Overridden by brain decisions.">
+            <span className={styles.ctrlLabel}>Move range</span>
+            <input type="number" id="move-range" className={styles.ctrlNumber} min={1} max={100} value={moveRange}
+              onChange={e => setOrgField('move_range', parseInt(e.target.value))} />
+          </label>
+          <label className={styles.ctrlRow} title="Probability that this organism's offspring mutate">
+            <span className={styles.ctrlLabel}>Mutation rate</span>
+            <input type="number" id="mutation-rate" className={styles.ctrlNumber} min={0} max={100} value={mutability}
+              onChange={e => setOrgField('mutability', parseFloat(e.target.value))} />
+          </label>
+          {hasHealer && (
+            <label className={styles.ctrlRow} title="Food this organism's healer cells spend to repair 1 damage">
+              <span className={styles.ctrlLabel}>Healer food cost</span>
+              <input type="number" id="healer-cost" className={styles.ctrlNumber} min={0} max={1000} value={healerCost}
+                onChange={e => setOrgField('healer_food_cost', parseFloat(e.target.value))} />
+            </label>
+          )}
+          {hasPoison && (
+            <label className={styles.ctrlRow} title="How many ticks this organism's poison lasts on its victims">
+              <span className={styles.ctrlLabel}>Poison duration</span>
+              <input type="number" id="poison-duration" className={styles.ctrlNumber} min={1} max={1000} value={poisonDuration}
+                onChange={e => setOrgField('poison_duration', parseInt(e.target.value))} />
+            </label>
+          )}
+
+          <div className={styles.buttonGroup} style={{ marginTop: '8px' }}>
+            <button id="seed-world" title="Clear the world and start it from this organism" onClick={handleSeedWorld}>
+              <i className="fa-solid fa-seedling"></i> Seed World
+            </button>
           </div>
         </div>
       </div>

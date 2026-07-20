@@ -10,6 +10,8 @@ interface HudBottomBarProps {
   activePanel: string | null;
   selectArmed: boolean;
   editorOpen: boolean;
+  rulesOpen: boolean;
+  worldOpen: boolean;
   onItemClick: (item: string) => void;
 }
 
@@ -20,6 +22,7 @@ const toolbarItems = [
   { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
   { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', item: 'environment', title: 'World tools: food, walls, radiation, and terrain generation' },
   { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats', title: 'Population, species, and evolution charts over time' },
+  { id: 'tool-about', iconClass: 'fa-circle-info', label: 'ABOUT', item: 'about', title: 'What the cells do, the hotkeys, and project links' },
 ];
 
 const MouseLeftIcon: React.FC = () => (
@@ -48,8 +51,8 @@ const MouseRightIcon: React.FC = () => (
   </svg>
 );
 
-function renderClickHint(mode: number) {
-  const b = WorldConfig.brush_size * 2 + 1;
+function renderClickHint(mode: number, brushSize: number) {
+  const b = brushSize * 2 + 1;
   const brush = `${b}×${b}`;
   switch (mode) {
     case Modes.Clone:
@@ -109,19 +112,24 @@ function renderClickHint(mode: number) {
   }
 }
 
-const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, selectArmed, editorOpen, onItemClick }) => {
+const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, selectArmed, editorOpen, rulesOpen, worldOpen, onItemClick }) => {
   const envMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
+  // brush size lives on WorldConfig; re-read it on every engine change so the
+  // hint bar tracks the slider
+  const brushSize = useEngineValue(engine, () => WorldConfig.brush_size, WorldConfig.brush_size);
 
   const isActive = (item: string) => {
     if (item === 'select') return selectArmed;
     if (item === 'edit') return editorOpen;
+    if (item === 'rules') return rulesOpen;
+    if (item === 'environment') return worldOpen;
     return activePanel === item;
   };
 
   return (
     <div className={styles.bottomCenter}>
       <div className={styles.gameHintBar}>
-        {renderClickHint(envMode)}
+        {renderClickHint(envMode, brushSize)}
       </div>
       <div className={styles.toolbar}>
         {toolbarItems.map(({ id, iconClass, label, item, title }) => (

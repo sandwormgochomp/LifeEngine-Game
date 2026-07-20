@@ -1,4 +1,4 @@
-const { test, expect, openPanel } = require('./helpers/fixtures');
+const { test, expect, openPanel, openWorldControls } = require('./helpers/fixtures');
 
 test.describe('Simulation Controls', () => {
   test('Play/Pause buttons toggle simulation state', async ({ page }) => {
@@ -25,16 +25,18 @@ test.describe('Simulation Controls', () => {
     expect(await page.evaluate(() => window.engine.fps)).toBe(30);
   });
 
-  test('Clear environment button clears all organisms', async ({ page }) => {
-    const orgCount = await page.evaluate(() => window.engine.env.organisms.length);
-    expect(orgCount).toBeGreaterThan(0);
+  test('Clear Life removes organisms; Restart reseeds one', async ({ page }) => {
+    expect(await page.evaluate(() => window.engine.env.organisms.length)).toBeGreaterThan(0);
 
-    await openPanel(page, 'environment');
+    await openWorldControls(page);
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#clear-env').click();
+    expect(await page.evaluate(() => window.engine.env.organisms.length)).toBe(0);
+
+    // Restart is a distinct action: it reseeds the origin organism
     page.once('dialog', dialog => dialog.accept());
     await page.locator('#reset-env').click();
-
-    const newOrgCount = await page.evaluate(() => window.engine.env.organisms.length);
-    expect(newOrgCount).toBe(0);
+    expect(await page.evaluate(() => window.engine.env.organisms.length)).toBe(1);
   });
 
   test('World is a circular petri dish by default, and it can be toggled off', async ({ page }) => {
@@ -54,7 +56,7 @@ test.describe('Simulation Controls', () => {
     const cornerAfterReset = await page.evaluate(() => window.engine.env.grid_map.cellAt(0, 0).state.name);
     expect(cornerAfterReset).toBe('invincible_wall');
 
-    await openPanel(page, 'environment');
+    await openWorldControls(page);
     await page.locator('#petri-dish-toggle').uncheck();
     const corner = await page.evaluate(() => window.engine.env.grid_map.cellAt(0, 0).state.name);
     expect(corner).toBe('empty');

@@ -354,6 +354,7 @@ class WorldEnvironment extends Environment{
     }
 
     resizeGridColRow(cell_size, cols, rows) {
+        cell_size = Number(cell_size);
         this.renderer.cell_size = cell_size;
         this.renderer.fillShape(rows*cell_size, cols*cell_size);
         this.grid_map.resize(cols, rows, cell_size);

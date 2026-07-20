@@ -202,7 +202,8 @@ class OrganismEditor extends Environment{
     }
 
     renameSpecies(name) {
-        if (this.organism.species && name)
+        // Accepts '' so the field can be cleared while typing a new name
+        if (this.organism.species && name != null)
             this.organism.species.name = name;
     }
 

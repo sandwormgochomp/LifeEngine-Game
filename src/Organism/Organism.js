@@ -451,19 +451,21 @@ class Organism {
         return this.env.grid_map.cellAt(real_c, real_r);
     }
 
+    // An organism is natural if no two cells share a coordinate and one sits
+    // at the center. Uses a key set rather than the pairwise scan it replaced:
+    // the UI polls this, and O(n^2) froze the tab on 10k-cell organisms.
     isNatural() {
-        let found_center = false;
         if (this.anatomy.cells.length === 0) {
             return false;
         }
-        for (let i=0; i<this.anatomy.cells.length; i++) {
-            let cell = this.anatomy.cells[i];
-            for (let j=i+1; j<this.anatomy.cells.length; j++) {
-                let toCompare = this.anatomy.cells[j];
-                if (cell.loc_col === toCompare.loc_col && cell.loc_row === toCompare.loc_row) {
-                    return false;
-                }
+        let found_center = false;
+        let seen = new Set();
+        for (let cell of this.anatomy.cells) {
+            let key = cell.loc_col + ',' + cell.loc_row;
+            if (seen.has(key)) {
+                return false;
             }
+            seen.add(key);
             if (cell.loc_col === 0 && cell.loc_row === 0) {
                 found_center = true;
             }
