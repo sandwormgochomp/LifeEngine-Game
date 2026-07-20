@@ -15,7 +15,7 @@ Top-right bar
 - [ ] Fix speed adjustment interface - doesn't appear to function. Need to go lower and higher than 1x
 
 Bottom bar
-- [ ] Rename "Print" to "Save" and then actually implement it. Save also doesn't work in upper-lefthand corner
+- [x] Rename "Print" to "Save" and then actually implement it. Save also doesn't work in upper-lefthand corner
 
 Stats window
 - [ ] Replace the CanvasJS chart with something open source that can be themed

@@ -3,6 +3,8 @@ import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type { EngineAPI } from '../types/engine';
 
+import Notifier from '../Utils/Notifier';
+
 interface HudTopLeftProps {
   engine: EngineAPI | null;
 }
@@ -23,7 +25,16 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
   };
 
   const handleSave = () => {
-    console.log('Save clicked – placeholder');
+    if (!engine?.env) return;
+    const raw = engine.env.serialize();
+    const blob = new Blob([JSON.stringify(raw, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `life_engine_world_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    Notifier.notify('World saved successfully');
   };
 
   return (

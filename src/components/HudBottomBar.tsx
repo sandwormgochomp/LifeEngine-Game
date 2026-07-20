@@ -10,7 +10,7 @@ interface HudBottomBarProps {
 
 const toolbarItems = [
   { id: 'tool-select', iconClass: 'fa-arrow-pointer', label: 'SELECT', item: 'select' },
-  { id: 'tool-print', iconClass: 'fa-print', label: 'PRINT', item: 'print' },
+  { id: 'tool-save', iconClass: 'fa-floppy-disk', label: 'SAVE', item: 'save' },
   { id: 'tool-edit', iconClass: 'fa-flask', label: 'EDIT', item: 'edit' },
   { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', item: 'rules' },
   { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', item: 'environment' },

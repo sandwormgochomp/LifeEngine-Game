@@ -17,12 +17,13 @@ import HudNotifications from './HudNotifications';
 import EditorDock from './EditorDock';
 
 // Tab content
+import SaveTab from './Tabs/SaveTab';
 import WorldControlsTab from './Tabs/WorldControlsTab';
 import EvolutionControlsTab from './Tabs/EvolutionControlsTab';
 import StatsTab from './Tabs/StatsTab';
 
 const PANEL_TITLES: Record<string, string> = {
-  print: 'PRINT',
+  save: 'SAVE / LOAD',
   rules: 'RULES',
   environment: 'ENVIRONMENT',
   stats: 'STATS',
@@ -100,13 +101,8 @@ const App: React.FC = () => {
 
   const renderPanelContent = () => {
     switch (activePanel) {
-      case 'print':
-        return (
-          <div>
-            <h3>Print</h3>
-            <p>Print functionality — save a snapshot of the current world state.</p>
-          </div>
-        );
+      case 'save':
+        return <SaveTab engine={engine} />;
       case 'rules':
         return <EvolutionControlsTab engine={engine} />;
       case 'environment':
