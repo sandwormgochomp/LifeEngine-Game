@@ -53,6 +53,10 @@ class Engine {
         if (fps <= 0)
             fps = 1;
         this.fps = fps;
+        if (this.sim_loop) {
+            clearInterval(this.sim_loop);
+            this.sim_loop = null;
+        }
         this.sim_loop = setInterval(()=>{
             this.updateSimDeltaTime();
             this.environmentUpdate();
@@ -70,14 +74,20 @@ class Engine {
     }
     
     stop() {
-        clearInterval(this.sim_loop);
+        if (this.sim_loop) {
+            clearInterval(this.sim_loop);
+            this.sim_loop = null;
+        }
         this.running = false;
         this.setUiLoop();
         this.emitChange(true);
     }
 
     restart(fps) {
-        clearInterval(this.sim_loop);
+        if (this.sim_loop) {
+            clearInterval(this.sim_loop);
+            this.sim_loop = null;
+        }
         this.start(fps);
     }
 

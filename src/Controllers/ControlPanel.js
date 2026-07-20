@@ -34,7 +34,12 @@ class ControlPanel {
 
     changeEngineSpeed(fps) {
         this.fps = fps;
-        this.engine.start(fps);
+        this.engine.fps = fps;
+        if (this.engine.running) {
+            this.engine.start(fps);
+        } else {
+            this.engine.emitChange(true);
+        }
     }
 
     setPaused(paused) {

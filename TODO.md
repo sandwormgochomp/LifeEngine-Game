@@ -12,7 +12,7 @@ Organism Lab
 - [x] Add a little lab beaker svg icon beside the "Organism Lab" title. In fact, maybe the "Edit" button on the bottom bar should use a beaker icon too?
 
 Top-right bar
-- [ ] Fix speed adjustment interface - doesn't appear to function. Need to go lower and higher than 1x
+- [x] Fix speed adjustment interface - doesn't appear to function. Need to go lower and higher than 1x
 
 Bottom bar
 - [x] Rename "Print" to "Save" and then actually implement it. Save also doesn't work in upper-lefthand corner
