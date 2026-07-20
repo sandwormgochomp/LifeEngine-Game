@@ -125,6 +125,7 @@ const App: React.FC = () => {
       <HudTopCenter engine={engine} />
       <HudTopRight engine={engine} />
       <HudBottomBar
+        engine={engine}
         activePanel={activePanel}
         selectArmed={selectArmed}
         editorOpen={editorOpen}

@@ -241,7 +241,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  gap: 4px;
+}
+
+.gameHintBar {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #00FF41;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  padding: 3px 14px;
+  white-space: nowrap;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.12);
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
 }
 
 .toolbar {
