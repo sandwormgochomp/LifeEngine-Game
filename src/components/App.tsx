@@ -121,7 +121,7 @@ const App: React.FC = () => {
       </div>
 
       {/* HUD Regions */}
-      <HudTopLeft engine={engine} onOpenMenu={() => handleToolbarClick('rules')} />
+      <HudTopLeft engine={engine} />
       <HudTopCenter engine={engine} />
       <HudTopRight engine={engine} />
       <HudBottomBar

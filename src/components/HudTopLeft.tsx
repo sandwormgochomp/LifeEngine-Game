@@ -7,10 +7,9 @@ import Notifier from '../Utils/Notifier';
 
 interface HudTopLeftProps {
   engine: EngineAPI | null;
-  onOpenMenu?: () => void;
 }
 
-const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, onOpenMenu }) => {
+const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine }) => {
   const running = useEngineValue(engine, e => e.running, false);
 
   const handlePlay = () => {
@@ -49,9 +48,6 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, onOpenMenu }) => {
         <span className={styles.logoVersion}>v1.2</span>
       </div>
       <div className={styles.playbackRow}>
-        <button className={styles.playbackBtn} onClick={onOpenMenu} title="Rules & Menu">
-          <i className="fa-solid fa-bars" />
-        </button>
         <button
           className={`${styles.playbackBtn} ${running ? styles.playbackBtnActive : ''}`}
           onClick={handlePlay}
