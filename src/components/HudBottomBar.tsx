@@ -1,3 +1,5 @@
+import React from 'react';
+import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type { EngineAPI } from '../types/engine';
 import Modes from '../Controllers/ControlModes';

@@ -88,6 +88,7 @@ const App: React.FC = () => {
   const handleToolbarClick = (item: string) => {
     if (item === 'edit') {
       setEditorOpen(open => !open);
+      setActivePanel(null);
     } else if (item === 'select') {
       if (!engine) return;
       engine.env.controller.mode = selectArmed ? Modes.None : Modes.Select;
