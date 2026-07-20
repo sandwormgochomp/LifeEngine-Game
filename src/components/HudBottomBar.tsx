@@ -21,26 +21,88 @@ const toolbarItems = [
   { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats' },
 ];
 
-function getClickHint(mode: number): string {
+const MouseLeftIcon: React.FC = () => (
+  <svg width="11" height="14" viewBox="0 0 12 16" fill="none" style={{ verticalAlign: '-2px', marginRight: '2px' }}>
+    <rect x="1" y="1" width="10" height="14" rx="5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1.2" />
+    <path d="M 1 6 A 5 5 0 0 1 6 1 L 6 7.5 L 1 7.5 Z" fill="#00FF41" />
+    <line x1="6" y1="1" x2="6" y2="7.5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1" />
+    <line x1="1" y1="7.5" x2="11" y2="7.5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1" />
+  </svg>
+);
+
+const MouseMiddleIcon: React.FC = () => (
+  <svg width="11" height="14" viewBox="0 0 12 16" fill="none" style={{ verticalAlign: '-2px', marginRight: '2px' }}>
+    <rect x="1" y="1" width="10" height="14" rx="5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1.2" />
+    <rect x="4.5" y="3" width="3" height="4.5" rx="1.5" fill="#00FF41" />
+    <line x1="1" y1="7.5" x2="11" y2="7.5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1" />
+  </svg>
+);
+
+const MouseRightIcon: React.FC = () => (
+  <svg width="11" height="14" viewBox="0 0 12 16" fill="none" style={{ verticalAlign: '-2px', marginRight: '2px' }}>
+    <rect x="1" y="1" width="10" height="14" rx="5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1.2" />
+    <path d="M 6 1 A 5 5 0 0 1 11 6 L 11 7.5 L 6 7.5 Z" fill="#00FF41" />
+    <line x1="6" y1="1" x2="6" y2="7.5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1" />
+    <line x1="1" y1="7.5" x2="11" y2="7.5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1" />
+  </svg>
+);
+
+function renderClickHint(mode: number) {
   switch (mode) {
     case Modes.Clone:
-      return 'L-Click: Place organism in world · M-Click: Pan · ESC: Cancel';
+      return (
+        <span>
+          <MouseLeftIcon /> place organism · <MouseRightIcon /> cancel · <MouseMiddleIcon /> pan
+        </span>
+      );
     case Modes.Select:
-      return 'L-Click: Select organism for Organism Lab · M-Click: Pan · ESC: Cancel';
+      return (
+        <span>
+          <MouseLeftIcon /> select for lab · <MouseRightIcon /> cancel · <MouseMiddleIcon /> pan
+        </span>
+      );
     case Modes.FoodDrop:
-      return 'L-Click: Place food · M-Click: Pan · Wheel: Zoom';
+      return (
+        <span>
+          <MouseLeftIcon /> place food · <MouseRightIcon /> erase food · <MouseMiddleIcon /> pan
+        </span>
+      );
     case Modes.WallDrop:
-      return 'L-Click: Place wall · M-Click: Pan · Wheel: Zoom';
+      return (
+        <span>
+          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan
+        </span>
+      );
     case Modes.InvincibleWallDrop:
-      return 'L-Click: Place invincible wall · M-Click: Pan · Wheel: Zoom';
+      return (
+        <span>
+          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan
+        </span>
+      );
     case Modes.RadiationDrop:
-      return 'L-Click: Place radiation · M-Click: Pan · Wheel: Zoom';
+      return (
+        <span>
+          <MouseLeftIcon /> add radiation · <MouseRightIcon /> remove radiation · <MouseMiddleIcon /> pan
+        </span>
+      );
     case Modes.ClickKill:
-      return 'L-Click: Kill organism · M-Click: Pan · Wheel: Zoom';
+      return (
+        <span>
+          <MouseLeftIcon /> kill organism · <MouseMiddleIcon /> pan
+        </span>
+      );
     case Modes.Drag:
-      return 'L-Click / Drag: Pan view · Wheel: Zoom';
+      return (
+        <span>
+          <MouseLeftIcon /> pan view · wheel: zoom
+        </span>
+      );
     default:
-      return 'L-Click: Select organism · M-Click: Pan view · Wheel: Zoom';
+      return (
+        <span>
+          <MouseLeftIcon /> select organism · <MouseRightIcon /> erase · <MouseMiddleIcon /> pan
+        </span>
+      );
   }
 }
 
@@ -56,8 +118,7 @@ const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, select
   return (
     <div className={styles.bottomCenter}>
       <div className={styles.gameHintBar}>
-        <i className="fa-solid fa-circle-info" style={{ marginRight: '6px' }} />
-        {getClickHint(envMode)}
+        {renderClickHint(envMode)}
       </div>
       <div className={styles.toolbar}>
         {toolbarItems.map(({ id, iconClass, label, item }) => (
