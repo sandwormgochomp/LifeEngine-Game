@@ -18,7 +18,7 @@ export interface EditorControllerAPI {
   mode: number;
   edit_cell_type: CellStateAPI | null;
   custom_color: string;
-  use_custom_color: boolean;
+  loadOrg(raw: unknown): void;
 }
 
 export interface WorldEnvAPI {
@@ -31,16 +31,37 @@ export interface WorldEnvAPI {
   reset(reset_life?: boolean): boolean;
 }
 
+export interface EditorAnatomyAPI {
+  cells: { state: CellStateAPI; loc_col: number; loc_row: number }[];
+}
+
+export interface EditorOrganismAPI {
+  anatomy: EditorAnatomyAPI;
+  species: { name: string } | null;
+  serialize(): unknown;
+}
+
 export interface OrganismEditorAPI {
-  organism: {
-    anatomy: {
-      cells: { state: CellStateAPI }[];
-    };
-  };
+  organism: EditorOrganismAPI;
   controller: EditorControllerAPI;
-  setDefaultOrg(): void;
   bindCanvas(canvas: HTMLCanvasElement, container: HTMLElement): void;
   releaseCanvas(): void;
+  setDefaultOrg(): void;
+  clearOrganism(): void;
+  randomOrganism(): void;
+  rotateOrganism(): void;
+  flipOrganism(): void;
+  loadRawOrg(raw: unknown, record?: boolean): void;
+  renameSpecies(name: string): void;
+  undo(): void;
+  redo(): void;
+  canUndo(): boolean;
+  canRedo(): boolean;
+  zoomIn(): void;
+  zoomOut(): void;
+  zoomToFit(): void;
+  canZoomIn(): boolean;
+  canZoomOut(): boolean;
 }
 
 export interface StatsPanelAPI {
@@ -67,4 +88,5 @@ export interface EngineAPI {
   stop(): void;
   dispose(): void;
   subscribe(listener: () => void): () => void;
+  emitChange(force?: boolean): void;
 }

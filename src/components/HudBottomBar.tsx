@@ -3,28 +3,36 @@ import styles from './styles/Hud.module.css';
 
 interface HudBottomBarProps {
   activePanel: string | null;
-  onPanelToggle: (panel: string) => void;
+  selectArmed: boolean;
+  editorOpen: boolean;
+  onItemClick: (item: string) => void;
 }
 
 const toolbarItems = [
-  { id: 'tool-select', iconClass: 'fa-arrow-pointer', label: 'SELECT', panelName: 'select' },
-  { id: 'tool-print', iconClass: 'fa-print', label: 'PRINT', panelName: 'print' },
-  { id: 'tool-edit', iconClass: 'fa-pen', label: 'EDIT', panelName: 'edit' },
-  { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', panelName: 'rules' },
-  { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', panelName: 'environment' },
-  { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', panelName: 'stats' },
+  { id: 'tool-select', iconClass: 'fa-arrow-pointer', label: 'SELECT', item: 'select' },
+  { id: 'tool-print', iconClass: 'fa-print', label: 'PRINT', item: 'print' },
+  { id: 'tool-edit', iconClass: 'fa-pen', label: 'EDIT', item: 'edit' },
+  { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', item: 'rules' },
+  { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', item: 'environment' },
+  { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats' },
 ];
 
-const HudBottomBar: React.FC<HudBottomBarProps> = ({ activePanel, onPanelToggle }) => {
+const HudBottomBar: React.FC<HudBottomBarProps> = ({ activePanel, selectArmed, editorOpen, onItemClick }) => {
+  const isActive = (item: string) => {
+    if (item === 'select') return selectArmed;
+    if (item === 'edit') return editorOpen;
+    return activePanel === item;
+  };
+
   return (
     <div className={styles.bottomCenter}>
       <div className={styles.toolbar}>
-        {toolbarItems.map(({ id, iconClass, label, panelName }) => (
+        {toolbarItems.map(({ id, iconClass, label, item }) => (
           <button
             key={id}
             id={id}
-            className={`${styles.toolbarBtn} ${activePanel === panelName ? styles.toolbarBtnActive : ''}`}
-            onClick={() => onPanelToggle(panelName)}
+            className={`${styles.toolbarBtn} ${isActive(item) ? styles.toolbarBtnActive : ''}`}
+            onClick={() => onItemClick(item)}
           >
             <i className={`fa-solid ${iconClass} ${styles.toolbarIcon}`}></i>
             <span className={styles.toolbarLabel}>{label}</span>

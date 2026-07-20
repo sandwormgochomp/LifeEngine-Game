@@ -17,13 +17,6 @@ const WorldControlsTab: React.FC<WorldControlsTabProps> = ({ engine }) => {
     }
   };
 
-  const handleDropOrganism = () => {
-    if (engine && engine.env && engine.env.controller && engine.organism_editor) {
-      engine.env.controller.mode = Modes.Clone;
-      engine.env.controller.org_to_clone = engine.organism_editor.organism;
-    }
-  };
-
   const handleClearEnv = () => {
     if (engine && engine.env) {
       if (!window.confirm('The current environment will be lost. Proceed?')) return;
@@ -36,7 +29,6 @@ const WorldControlsTab: React.FC<WorldControlsTabProps> = ({ engine }) => {
       <h3>World Controls</h3>
       <div className={styles.buttonGroup}>
         <button id="reset-env" onClick={handleClearEnv}>Clear Environment</button>
-        <button id="drop-org" onClick={handleDropOrganism}>Drop Organism</button>
       </div>
 
       <h4>Tools</h4>
@@ -50,7 +42,6 @@ const WorldControlsTab: React.FC<WorldControlsTabProps> = ({ engine }) => {
         }}>Clear Radiation</button>
         <button className="env-mode-btn" id="kill" onClick={() => setMode(Modes.ClickKill)}>Kill</button>
         <button className="env-mode-btn" id="drag" onClick={() => setMode(Modes.Drag)}>Drag</button>
-        <button className="env-mode-btn" id="select" onClick={() => setMode(Modes.Select)}>Select</button>
       </div>
       
       <h4>Environment Generator</h4>

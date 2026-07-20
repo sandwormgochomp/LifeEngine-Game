@@ -3,6 +3,9 @@ import styles from './styles/App.module.css';
 import type { EngineAPI } from '../types/engine';
 
 import Engine from '../Engine';
+import Modes from '../Controllers/ControlModes';
+import Notifier from '../Utils/Notifier';
+import useEngineValue from './useEngineValue';
 
 // HUD regions
 import HudTopLeft from './HudTopLeft';
@@ -11,17 +14,15 @@ import HudTopRight from './HudTopRight';
 import HudBottomBar from './HudBottomBar';
 import HudPanel from './HudPanel';
 import HudNotifications from './HudNotifications';
+import EditorDock from './EditorDock';
 
 // Tab content
-import EditorTab from './Tabs/EditorTab';
 import WorldControlsTab from './Tabs/WorldControlsTab';
 import EvolutionControlsTab from './Tabs/EvolutionControlsTab';
 import StatsTab from './Tabs/StatsTab';
 
 const PANEL_TITLES: Record<string, string> = {
-  select: 'SELECT',
   print: 'PRINT',
-  edit: 'EDIT',
   rules: 'RULES',
   environment: 'ENVIRONMENT',
   stats: 'STATS',
@@ -30,6 +31,7 @@ const PANEL_TITLES: Record<string, string> = {
 const App: React.FC = () => {
   const [engine, setEngine] = useState<EngineAPI | null>(null);
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
   const envRef = useRef<HTMLDivElement>(null);
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -47,31 +49,57 @@ const App: React.FC = () => {
     return () => newEngine.dispose();
   }, []);
 
-  // Close panel on Escape key
+  // Escape backs out one layer at a time: armed world tool, then popup, then dock
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activePanel) {
+      if (e.key !== 'Escape') return;
+      const envController = engine?.env?.controller;
+      if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select)) {
+        envController.mode = Modes.None;
+        engine.emitChange(true);
+      } else if (activePanel) {
         setActivePanel(null);
+      } else if (editorOpen) {
+        setEditorOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activePanel]);
+  }, [engine, activePanel, editorOpen]);
 
-  const handlePanelToggle = (panel: string) => {
-    setActivePanel(prev => prev === panel ? null : panel);
+  // When an organism is picked from the world in Select mode, drop it into
+  // the editor: open the dock and disarm the tool. The organism reference
+  // changes exactly when a new organism is loaded into the editor.
+  const editorOrganism = useEngineValue(engine, e => e.organism_editor.organism, null);
+  useEffect(() => {
+    if (!engine || !editorOrganism) return;
+    if (engine.env.controller.mode === Modes.Select) {
+      engine.env.controller.mode = Modes.None;
+      engine.emitChange(true);
+      setEditorOpen(true);
+      Notifier.notify('Organism loaded into the editor');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorOrganism]);
+
+  const selectArmed = useEngineValue(engine, e => e.env.controller.mode === Modes.Select, false);
+
+  const handleToolbarClick = (item: string) => {
+    if (item === 'edit') {
+      setEditorOpen(open => !open);
+    } else if (item === 'select') {
+      if (!engine) return;
+      engine.env.controller.mode = selectArmed ? Modes.None : Modes.Select;
+      engine.emitChange(true);
+      if (!selectArmed)
+        Notifier.notify('Click an organism in the world to load it');
+    } else {
+      setActivePanel(prev => prev === item ? null : item);
+    }
   };
 
   const renderPanelContent = () => {
     switch (activePanel) {
-      case 'select':
-        return (
-          <div>
-            <h3>Select Mode</h3>
-            <p>Click on organisms in the world to select and inspect them.</p>
-            <p>Selected organisms can be loaded into the editor for modification.</p>
-          </div>
-        );
       case 'print':
         return (
           <div>
@@ -83,8 +111,6 @@ const App: React.FC = () => {
         return <EvolutionControlsTab engine={engine} />;
       case 'environment':
         return <WorldControlsTab engine={engine} />;
-      case 'edit':
-        return <EditorTab engine={engine} />;
       case 'stats':
         return <StatsTab engine={engine} />;
       default:
@@ -102,11 +128,15 @@ const App: React.FC = () => {
       <HudTopLeft engine={engine} />
       <HudTopCenter engine={engine} />
       <HudTopRight engine={engine} />
-      <HudBottomBar activePanel={activePanel} onPanelToggle={handlePanelToggle} />
+      <HudBottomBar
+        activePanel={activePanel}
+        selectArmed={selectArmed}
+        editorOpen={editorOpen}
+        onItemClick={handleToolbarClick}
+      />
       <HudNotifications />
 
-      {/* All panels mount on open and unmount on close; the editor and stats
-          tabs attach their canvas/chart container to the engine while mounted */}
+      {/* Popup panels mount on open and unmount on close */}
       {activePanel && (
         <HudPanel
           title={PANEL_TITLES[activePanel] || activePanel.toUpperCase()}
@@ -115,6 +145,9 @@ const App: React.FC = () => {
           {renderPanelContent()}
         </HudPanel>
       )}
+
+      {/* The organism editor lives in a side dock so the world stays visible */}
+      {editorOpen && <EditorDock engine={engine} onClose={() => setEditorOpen(false)} />}
     </div>
   );
 };
