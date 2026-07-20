@@ -110,6 +110,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
   const canRedo = useEngineValue(engine, e => e.organism_editor.canRedo(), false);
   const canZoomIn = useEngineValue(engine, e => e.organism_editor.canZoomIn(), true);
   const canZoomOut = useEngineValue(engine, e => e.organism_editor.canZoomOut(), true);
+  const cellSize = useEngineValue(engine, e => e.organism_editor.cell_size, 14);
   const envMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   const abilities = useEngineValue(
     engine,
@@ -260,8 +261,9 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose }) => {
         <div className={styles.dockCanvasBar}>
           <div className={styles.dockZoom}>
             <button id="zoom-out" title="Zoom out" onClick={run(editor?.zoomOut.bind(editor))} disabled={!canZoomOut}>−</button>
-            <button id="zoom-fit" title="Fit organism" onClick={run(editor?.zoomToFit.bind(editor))}>▣</button>
+            <span className={styles.zoomPixelLabel} title="Cell pixel size">{cellSize}px</span>
             <button id="zoom-in" title="Zoom in" onClick={run(editor?.zoomIn.bind(editor))} disabled={!canZoomIn}>+</button>
+            <button id="zoom-fit" title="Fit organism to view" onClick={run(editor?.zoomToFit.bind(editor))}>▣</button>
           </div>
           <span className={styles.dockHint}>L-click: apply tool · R-click: erase</span>
         </div>
