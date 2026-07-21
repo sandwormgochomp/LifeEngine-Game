@@ -7,9 +7,10 @@
 // fully repaints whenever the world changes, which makes overflowing artwork
 // safe by construction.
 
-/* BodyCell, Anatomy and Organism are all still untyped JS (or mid-conversion
-   in ./BodyCells), so these model only the members this renderer reaches
-   through. Each collapses to a real import once its module converts. */
+/* These model only the members this renderer reaches through. They stay
+   structural because the entry point is called with both a WorldEnvironment
+   organism and, from OrganismEditor, the editor itself -- see the cast at
+   OrganismEditor's drawOrganismDecorations call. */
 interface DecoBodyCellLike {
     loc_col: number;
     loc_row: number;

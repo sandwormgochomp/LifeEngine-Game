@@ -1,24 +1,14 @@
 import CellStates from "../Organism/Cell/CellStates";
 import SerializeHelper from "../Utils/SerializeHelper";
 import Species from "./Species";
-import type { AnatomyLike, CellCountMap } from "./Species";
-
-/* Minimal structural views of WorldEnvironment and Organism, both still .js.
-   They collapse to real imports once those files are converted. */
-export interface FossilRecordEnvLike {
-    total_ticks: number;
-    organisms: unknown[];
-    averageMutability(): number;
-}
-
-export interface FossilRecordOrganismLike {
-    anatomy: AnatomyLike | null;
-    /* A write target, not a read: addSpecies() mints a Species and assigns it
-       here. Organisms legitimately arrive without one -- that is the whole
-       reason to call addSpecies -- so this accepts the absent case rather than
-       forcing callers to assert a value they are about to supply. */
-    species: Species | null | undefined;
-}
+import type { CellCountMap } from "./Species";
+/* Both type-only, and that is load-bearing rather than stylistic. Organism and
+   WorldEnvironment each import this module for its *value* (addSpecies,
+   setEnv), so a value import back would close a real cycle -- and init() runs
+   at module evaluation below, so that cycle would be observable, not merely
+   theoretical. `import type` is erased entirely and adds no runtime edge. */
+import type Organism from "../Organism/Organism";
+import type WorldEnvironment from "../Environments/WorldEnvironment";
 
 /* The parallel history arrays, as they are nested under `records` by
    serialize() and read back by loadRaw(). The index signature is what lets
@@ -62,7 +52,7 @@ export interface FossilRecordType {
     record_size_limit: number;
     /* Assigned by setEnv(), which the WorldEnvironment constructor calls before
        any method that reads env can run. */
-    env: FossilRecordEnvLike;
+    env: WorldEnvironment;
     /* Assigned by setData(), reached via setEnv() / clear_record(). */
     tick_record: number[];
     pop_counts: number[];
@@ -72,8 +62,8 @@ export interface FossilRecordType {
     av_cell_counts: CellCountMap[];
 
     init(): void;
-    setEnv(env: FossilRecordEnvLike): void;
-    addSpecies(org: FossilRecordOrganismLike, ancestor: Species | null): Species;
+    setEnv(env: WorldEnvironment): void;
+    addSpecies(org: Organism, ancestor: Species | null): Species;
     addSpeciesObj(species: Species): Species | undefined;
     changeSpeciesName(species: Species, new_name: string): void;
     numExtantSpecies(): number;
@@ -108,12 +98,12 @@ const FossilRecord: FossilRecordType = {
         this.record_size_limit = 500; // store this many data points
     },
 
-    setEnv: function(this: FossilRecordType, env: FossilRecordEnvLike): void {
+    setEnv: function(this: FossilRecordType, env: WorldEnvironment): void {
         this.env = env;
         this.setData();
     },
 
-    addSpecies: function(this: FossilRecordType, org: FossilRecordOrganismLike, ancestor: Species | null): Species {
+    addSpecies: function(this: FossilRecordType, org: Organism, ancestor: Species | null): Species {
         var new_species = new Species(org.anatomy, ancestor, this.env.total_ticks);
         this.extant_species[new_species.name] = new_species;
         org.species = new_species;

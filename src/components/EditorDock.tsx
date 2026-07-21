@@ -266,7 +266,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
     <div className={styles.dockWrap} data-testid="editor-dock">
       {/* Cell palette rail: every type visible at once, no scrolling */}
       <div className={styles.dockRail}>
-        {CellStates.living.map((cellState: CellState) => (
+        {CellStates.living.map((cellState: CellState<LivingCellName>) => (
           <button
             key={cellState.name}
             id={cellState.name}

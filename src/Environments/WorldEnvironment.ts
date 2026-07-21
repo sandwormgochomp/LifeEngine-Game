@@ -393,13 +393,14 @@ class WorldEnvironment extends Environment{
 
     OriginOfLife(): void {
         var center = this.grid_map.getCenter();
-        /* Organism declares its own view of this same environment (OrganismEnv),
-           and the two cannot unify today: a grid cell's `cell_owner` is
-           RenderCellOwnerLike in GridCell but BodyCell in OrganismGridCell, and
-           BodyCell does not satisfy RenderCellOwnerLike (getAbsoluteDirection
-           lives on EyeCell alone). Both stand-ins describe the same runtime
-           object; this collapses to nothing once GridCell and Organism can name
-           each other directly. Same assertion, same reason, as
+        /* Organism declares its own view of this same environment
+           (OrganismEnv) and the two still cannot unify -- but no longer for any
+           reason this cleanup can reach. A grid cell's `cell_owner` is
+           RenderCellOwnerLike in GridCell and BodyCell in OrganismGridCell, and
+           neither satisfies the other: BodyCell lacks getAbsoluteDirection,
+           which lives on EyeCell alone. That is a GridCell-side variance
+           problem, independent of Organism being typed. The cast stays until
+           cell_owner has one type. Same assertion, same reason, as
            EnvironmentController.dropOrganism(). */
         var org = new Organism(center[0], center[1], this as unknown as OrganismEnv);
         org.anatomy.addDefaultCell(CellStates.mouth, 0, 0);

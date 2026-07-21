@@ -2,9 +2,10 @@ import CellStates from "../Organism/Cell/CellStates";
 import type { CellName } from "../Organism/Cell/CellStates";
 import type Cell from "../Organism/Cell/GridCell";
 
-/* Minimal shape of an environment as far as the colour scheme is concerned;
-   both WorldEnvironment and OrganismEditor are still untyped .js modules.
-   Replace with real imports once they convert. */
+/* Minimal shape of an environment as far as the colour scheme is concerned.
+   Structural on purpose rather than for want of types: the constructor takes a
+   world env *and* an editor env, two unrelated classes, and this is the slice
+   they share. */
 interface ColorSchemeEnvLike {
     renderer: { renderFullGrid(grid: Cell[][]): void };
     grid_map: { grid: Cell[][] };

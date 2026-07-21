@@ -1,8 +1,10 @@
 import ChartController from "./Charts/ChartController";
 import ChartSpecs from "./Charts/ChartSpecs";
 
-/* Minimal structural view of WorldEnvironment, which is still .js. It
-   collapses to a real import once that file is converted. */
+/* Stays structural, though WorldEnvironment is now typed: the only construction
+   site passes ControlPanel's own env stand-in, so naming WorldEnvironment here
+   just moves the mismatch up one level. It collapses once ControlPanel's
+   stand-in chain does, not before. */
 export interface StatsPanelEnvLike {
     reset_count: number;
 }

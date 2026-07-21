@@ -23,11 +23,10 @@ interface EditorRendererLike {
 }
 
 /* One of the organism's body cells, as handed back by Anatomy.getLocalCell().
-   Anatomy and the BodyCell hierarchy are reached through structurally rather
-   than imported: Anatomy is still untyped JS, and this collapses to the real
-   BodyCell type once it converts. `direction` really only exists on EyeCell,
-   but editOrganism only touches it after checking state === CellStates.eye, so
-   it is declared required here rather than optional. */
+   Kept structural rather than using the real BodyCell because `direction` only
+   exists on EyeCell -- editOrganism touches it only after checking
+   state === CellStates.eye, so declaring it required here encodes that guard.
+   The real BodyCell cannot express it without making every cell optional. */
 interface EditorBodyCellLike {
     state: CellState;
     direction: number;
@@ -41,9 +40,9 @@ interface EditorOrganismLike {
     anatomy: EditorAnatomyLike;
 }
 
-/* The slice of OrganismEditor this controller drives. OrganismEditor is still
-   untyped JS, so it is declared structurally; collapses to a real import once
-   that module converts. */
+/* The slice of OrganismEditor this controller drives. Structural because it
+   feeds EditorOrganismLike above, whose body cells are deliberately narrower
+   than the real BodyCell. */
 interface EditorEnvLike {
     renderer: EditorRendererLike;
     grid_map: GridMap;

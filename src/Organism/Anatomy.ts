@@ -2,19 +2,10 @@ import CellStates from "./Cell/CellStates";
 import type { CellName, CellState, LivingCellName } from "./Cell/CellStates";
 import BodyCellFactory from "./Cell/BodyCells/BodyCellFactory";
 import type BodyCell from "./Cell/BodyCells/BodyCell";
-import type { BodyCellOrganism } from "./Cell/BodyCells/BodyCell";
 import SerializeHelper from "../Utils/SerializeHelper";
-
-/* The owner an Anatomy hangs off. Organism is still untyped JS and imports this
-   file, so it is described structurally instead: everything the body cells reach
-   through (BodyCellOrganism, which is exactly what BodyCellFactory demands),
-   plus the one brain method addRandomizedCell calls. BodyCellOrganism already
-   declares `brain` with only `observe`, so it is widened here rather than
-   redeclared. Collapses into `import type { Organism }` once Organism is
-   converted -- a type-only import is erased, so it closes no runtime cycle. */
-interface AnatomyOwner extends BodyCellOrganism {
-    brain: BodyCellOrganism['brain'] & { randomizeDecisions(randomize_all?: boolean): void };
-}
+/* Type-only: Organism imports Anatomy for its value (`new Anatomy(this)`), so a
+   value import back would close a runtime cycle. `import type` is erased. */
+import type Organism from "./Organism";
 
 /* Save-format shapes. Both are what SerializeHelper.copyNonObjects leaves
    behind -- every non-object own property -- so the index signature is not
@@ -46,7 +37,7 @@ export interface SerializedAnatomy {
 }
 
 class Anatomy {
-    owner: AnatomyOwner;
+    owner: Organism;
     birth_distance: number;
     /* Every field below is first assigned by clear(), which the constructor
        calls, and reassigned by checkTypeChange(). TypeScript's definite
@@ -64,7 +55,7 @@ class Anatomy {
     has_chameleon!: boolean;
     has_shooter!: boolean;
 
-    constructor(owner: AnatomyOwner) {
+    constructor(owner: Organism) {
         this.owner = owner;
         this.birth_distance = 4;
         this.clear();

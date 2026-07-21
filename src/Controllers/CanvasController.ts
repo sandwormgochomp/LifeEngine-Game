@@ -1,9 +1,9 @@
 import type Cell from '../Organism/Cell/GridCell';
 import type { RenderOrganismLike } from '../Organism/Cell/CellStates';
 
-/* Minimal shapes of Renderer, GridMap and the React control panel, all of
-   which are still untyped .js/.tsx modules. Replace with real imports once
-   they convert. */
+/* Minimal shapes of Renderer, GridMap and the React control panel. These stay
+   structural because this base class is shared by the world and editor
+   controllers, whose envs are different classes. */
 interface RendererLike {
     clearAllHighlights(clear_to_highlight?: boolean): void;
     highlightOrganism(org: RenderOrganismLike): void;
@@ -25,8 +25,8 @@ interface ControllerEnvLike {
    WorldEnvironment pauses through `controller.control_panel`. A bare string
    index signature stood here before, which no class instance is ever assignable
    to; the real ControlPanel satisfies this shape. Declared structurally rather
-   than imported only because ControlPanel.ts still declares its own stand-in
-   for these controllers -- both collapse together once that goes away. */
+   than imported because ControlPanel.ts declares its own stand-in for these
+   controllers -- the two reference each other, so they only collapse together. */
 interface ControlPanelLike {
     setEditorOrganism(org: unknown): void;
     setPaused(paused: boolean): void;

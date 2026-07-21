@@ -12,7 +12,6 @@ import FossilRecord from "../Stats/FossilRecord";
 import SerializeHelper from "../Utils/SerializeHelper";
 import Observation from "./Perception/Observation";
 import type BodyCell from "./Cell/BodyCells/BodyCell";
-import type { BodyCellOrganism } from "./Cell/BodyCells/BodyCell";
 import type ExplosiveCell from "./Cell/BodyCells/ExplosiveCell";
 import type Species from "../Stats/Species";
 import type { OrganismSpriteCache } from "../Rendering/DecorationRenderer";
@@ -41,22 +40,23 @@ export interface OrganismProjectile {
     owner: Organism;
 }
 
-/* The environment an Organism lives in. WorldEnvironment is still untyped JS,
-   so it is described structurally by what this class (and, through the same
-   object, the body cells) reaches through. */
+/* The environment an Organism lives in. Deliberately structural rather than
+   `WorldEnvironment`: OrganismEditor is also passed here, and it implements
+   only grid_map and changeCell because its organism is never ticked. Naming the
+   concrete class would make the editor's partial implementation a type error
+   instead of the documented invariant it actually is. */
 export interface OrganismEnv {
     grid_map: {
         cellAt(col: number, row: number): OrganismGridCell | null;
     };
     /* The fourth argument is a *cell* owner, not an organism: GridMap.setCellOwner
        stores it as cell_owner and derives GridCell.owner from cell_owner.org.
-       updateGrid() passes a BodyCell, every other call site passes null. The
-       BodyCellOrganism union member is only here so that this interface stays
-       assignable to BodyCell.ts's stand-in, which declares the same method with
-       `owner: BodyCellOrganism | null` -- a shape no call site in the codebase
-       ever produces. It should shrink to `BodyCell | null` when that stand-in
-       collapses onto this class. */
-    changeCell(c: number, r: number, state: CellState, owner: BodyCell | BodyCellOrganism | null): void;
+       updateGrid() passes a BodyCell, every other call site passes null. This
+       used to also admit BodyCellOrganism -- a shape no call site ever produced
+       -- purely to stay assignable to BodyCell.ts's hand-written mirror of this
+       class. That mirror is now an alias for Organism itself, so the union has
+       shrunk to what the code actually passes. */
+    changeCell(c: number, r: number, state: CellState, owner: BodyCell | null): void;
     organisms: Organism[];
     canAddOrganism(): boolean;
     addOrganism(organism: Organism): void;

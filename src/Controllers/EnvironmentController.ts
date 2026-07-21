@@ -39,15 +39,17 @@ interface EnvRendererLike {
     highlightCell(cell: Cell): void;
 }
 
-/* Engine is still untyped JS; only the one method reached through here is
-   declared. Collapses to a real import once Engine converts. */
+/* Only the one method reached through here is declared, so that the controller
+   layer does not depend on Engine's full surface. */
 interface EnvEngineLike {
     emitChange(force?: boolean): void;
 }
 
-/* The slice of WorldEnvironment this controller drives. WorldEnvironment is
-   still untyped JS, so it is declared structurally; collapses to a real import
-   once that module converts. */
+/* The slice of WorldEnvironment this controller drives. Still structural,
+   though WorldEnvironment is now typed: this file sits inside the controller
+   layer's mutual stand-in chain (CanvasController <-> ControlPanel <->
+   EnvironmentController), and naming the class here only relocates the
+   mismatch. The chain has to be untangled as a unit. */
 interface EnvControllerEnvLike {
     renderer: EnvRendererLike;
     grid_map: {
@@ -398,14 +400,14 @@ class EnvironmentController extends CanvasController{
     dropOrganism(organism: Organism, col: number, row: number): boolean {
 
         // close the organism and drop it in the world
-        /* The only cast in this file. Organism declares its own view of the
-           same WorldEnvironment (OrganismEnv), and the two views cannot unify
-           today: a grid cell's `cell_owner` is RenderCellOwnerLike in GridCell
-           -- which the base controller's env is typed against -- but BodyCell in
-           OrganismGridCell, and BodyCell does not satisfy RenderCellOwnerLike
-           (getAbsoluteDirection lives on EyeCell alone). Both stand-ins describe
-           the same runtime object, so this collapses to nothing once GridCell
-           and Organism can name each other directly. */
+        /* The only cast in this file. Organism declares its own view of this same environment
+           (OrganismEnv) and the two still cannot unify -- but no longer for any
+           reason this cleanup can reach. A grid cell's `cell_owner` is
+           RenderCellOwnerLike in GridCell and BodyCell in OrganismGridCell, and
+           neither satisfies the other: BodyCell lacks getAbsoluteDirection,
+           which lives on EyeCell alone. That is a GridCell-side variance
+           problem, independent of Organism being typed. The cast stays until
+           cell_owner has one type. */
         var new_org = new Organism(col, row, this.env as unknown as OrganismEnv, organism);
 
         if (new_org.isClear(col, row)) {

@@ -3,90 +3,16 @@ import type { CellState } from "../CellStates";
 import type Observation from "../../Perception/Observation";
 import Directions from "../../Directions";
 import type { Direction } from "../../Directions";
+import type Organism from "../../Organism";
 
-/* The slice of Organism that the body-cell hierarchy reaches through. Organism
-   sits far above this file in the dependency order (it imports Anatomy, which
-   imports BodyCellFactory, which imports every BodyCell), so importing the real
-   class here would close a cycle. Declared structurally instead: the real
-   Organism satisfies this, and once Organism is converted this should collapse
-   into `import type { Organism }` -- a type-only import is erased, so it closes
-   no runtime cycle.
-
-   Subclasses that need more of Organism should widen this interface rather than
-   declaring their own. */
-export interface BodyCellOrganism {
-    c: number;
-    r: number;
-    /* One of the four cardinal directions, not an arbitrary number: this feeds
-       rotatedCol/rotatedRow, whose switches are only exhaustive over Direction. */
-    rotation: Direction;
-    /* Whether the organism is still alive. Read by ExplosiveCell, KillerCell and
-       PoisonCell before harming a neighbour's owner. */
-    living: boolean;
-    /* Food store. MouthCell and ParasiteCell increment it, HealerCell and
-       ParasiteCell spend it. */
-    food_collected: number;
-    /* Accumulated damage and the per-heal food price -- both HealerCell. */
-    damage: number;
-    healer_food_cost: number;
-    /* Set by the brain when it decides to heal; cleared by HealerCell. */
-    brain_triggered_heal: boolean;
-    /* Poison bookkeeping: KillerCell writes a fixed 10 onto itself when it bites
-       a poison cell, PoisonCell writes its own poison_duration onto victims. */
-    poison_ticks: number;
-    poison_duration: number;
-    /* EyeCell feeds its raycast result to the brain. Brain is still untyped JS,
-       so only the one method reached through is declared. */
-    brain: { observe(observation: Observation): void };
-    /* Applied to neighbours by ExplosiveCell/KillerCell/PoisonCell, and to self
-       by KillerCell under instaKill. */
-    harm(): void;
-    /* PheromoneCell's whole behaviour. */
-    emitPheromoneSignal(state_to_emit: CellState): void;
-    anatomy: {
-        birth_distance: number;
-        /* Capability flags each body cell raises on construction: MoverCell,
-           ProducerCell, EyeCell, HealerCell, ParasiteCell, ChameleonCell,
-           ShooterCell respectively. ProducerCell also reads is_mover and
-           HealerCell reads has_eyes. EyeCell reads has_chameleon off the
-           anatomy of the organism it is looking at. */
-        is_mover: boolean;
-        is_producer: boolean;
-        has_eyes: boolean;
-        has_healer: boolean;
-        has_parasite: boolean;
-        has_chameleon: boolean;
-        has_shooter: boolean;
-        /* Species comparison used by KillerCell and PoisonCell to avoid
-           attacking kin. */
-        isEqual(anatomy: BodyCellOrganism['anatomy']): boolean;
-    };
-    env: {
-        /* cellAt's result is the untyped GridCell class; described structurally
-           here because every body cell reaches through it. `owner` is itself an
-           organism, so it is typed as this same interface. */
-        grid_map: {
-            cellAt(col: number, row: number): {
-                state: CellState;
-                owner: BodyCellOrganism | null;
-                cell_owner: unknown;
-                col: number;
-                row: number;
-                /* Only present while the cell is a wall -- GridCell.setType
-                   deletes it otherwise. ExplosiveCell and KillerCell both
-                   typeof-guard before touching it. */
-                durability?: number;
-            } | null;
-        };
-        /* ExplosiveCell, KillerCell, MouthCell and ProducerCell all rewrite grid
-           cells. */
-        changeCell(c: number, r: number, state: CellState, owner: BodyCellOrganism | null): void;
-        /* ExplosiveCell queues the explosion cells it just painted. */
-        active_explosions: { col: number; row: number; ticks: number }[];
-        /* EyeCell halves its look range at night. */
-        is_night: boolean;
-    };
-}
+/* The body-cell hierarchy's view of its owning Organism. This was a
+   hand-maintained structural mirror of Organism while Organism was untyped;
+   it is now the real class. The import is type-only and therefore erased, so
+   it closes no runtime cycle -- which matters, because Organism does sit above
+   this file in the runtime dependency order (Organism -> Anatomy ->
+   BodyCellFactory -> every BodyCell). The alias is kept as the name the 14
+   subclasses spell so that the boundary stays greppable. */
+export type BodyCellOrganism = Organism;
 
 // A body cell defines the relative location of the cell in it's parent organism. It also defines their functional behavior.
 class BodyCell{

@@ -5,8 +5,9 @@ import type { StatsPanelEnvLike } from "../Stats/StatsPanel";
 import WorldConfig from "../WorldConfig";
 
 /* Minimal structural views of Engine, WorldEnvironment, OrganismEditor and the
-   canvas controllers, all of which are still .js. Each collapses to a real
-   import once those files are converted. */
+   canvas controllers. These stay structural because ControlPanel and
+   CanvasController each describe the other: importing both ways would be a
+   real cycle, so the pair has to be untangled together. */
 interface CanvasControllerLike {
     setControlPanel(panel: ControlPanel): void;
 }

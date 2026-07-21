@@ -3,6 +3,9 @@ import Directions from "../Directions";
 import CellStates from "../Cell/CellStates";
 import type { CellName } from "../Cell/CellStates";
 import type Observation from "./Observation";
+/* Type-only: Organism imports Brain for its value (`new Brain(this)`), so a
+   value import back would close a runtime cycle. `import type` is erased. */
+import type Organism from "../Organism";
 
 /* Weights and actions are keyed by cell state name. Both are partial on
    purpose: saved worlds predating a cell type arrive without its key, which is
@@ -24,22 +27,6 @@ export interface BrainState {
     transitions: BrainTransition[];
 }
 
-/* Organism is still untyped JS. Minimal shape of what the brain reaches
-   through; collapses to a real Organism import when that module converts. */
-interface BrainOwnerLike {
-    damage: number;
-    food_collected: number;
-    anatomy: { has_explosive: boolean; has_healer: boolean; has_shooter: boolean };
-    brain_triggered_heal?: boolean;
-    hibernating?: boolean;
-    maxHealth(): number;
-    foodNeeded(): number;
-    die(): void;
-    buildWall(): void;
-    shoot(): void;
-    changeDirection(dir: number): void;
-}
-
 const Decision = {
     neutral: 0,
     retreat: 1,
@@ -55,12 +42,12 @@ const Decision = {
 class Brain {
     static Decision = Decision;
 
-    owner: BrainOwnerLike;
+    owner: Organism;
     observations: Observation[];
     active_state_index: number;
     states: BrainState[];
 
-    constructor(owner: BrainOwnerLike){
+    constructor(owner: Organism){
         this.owner = owner;
         this.observations = [];
 

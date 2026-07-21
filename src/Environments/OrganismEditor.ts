@@ -14,6 +14,8 @@ import Notifier from '../Utils/Notifier';
 import drawOrganismDecorations from '../Rendering/DecorationRenderer';
 import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
 import type { SerializedBodyCell } from '../Organism/Anatomy';
+/* Type-only, so it adds no runtime edge between the two environments. */
+import type WorldEnvironment from "./WorldEnvironment";
 
 /* One serialized body cell as the transform callbacks below mutate it. Exactly
    SerializedAnatomy's cell shape, except that `direction` -- which that shape's
@@ -28,15 +30,6 @@ interface TransformableCell extends SerializedBodyCell {
     direction?: number;
 }
 
-/* The world environment resetWithRandomOrgs repopulates. WorldEnvironment is
-   still an untyped .js module, so it is described structurally by the three
-   members this method reaches through; collapses to a real import once that
-   file converts. */
-interface ResetTargetEnvLike {
-    reset(reset_life?: boolean): boolean;
-    grid_map: { cols: number; rows: number };
-    controller: { dropOrganism(organism: Organism, col: number, row: number): boolean };
-}
 
 // Cell sizes the editor canvas can render at; the grid is rebuilt to whatever
 // number of cells fits the bound canvas at the current size.
@@ -469,7 +462,7 @@ class OrganismEditor extends Environment{
         this.renderFull();
     }
 
-    resetWithRandomOrgs(env: ResetTargetEnvLike, numOrganisms=50): void {
+    resetWithRandomOrgs(env: WorldEnvironment, numOrganisms=50): void {
         env.reset(false);
 
         let size = Math.ceil(8);

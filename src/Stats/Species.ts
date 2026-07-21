@@ -2,12 +2,9 @@ import CellStates from "../Organism/Cell/CellStates";
 // Circular with FossilRecord (which imports Species); safe because both only
 // touch each other inside methods, never during module evaluation.
 import FossilRecord from "./FossilRecord";
-
-/* Minimal structural view of Anatomy, which is still .js. It collapses to a
-   real import from ../Organism/Anatomy once that file is converted. */
-export interface AnatomyLike {
-    cells: { state: { name: string } }[];
-}
+/* Type-only, so it is erased and adds no runtime edge -- unlike the
+   FossilRecord import above, which is a real (and deliberate) cycle. */
+import type Anatomy from "../Organism/Anatomy";
 
 /* Cell-name -> count. Keyed by CellState.name (a CellName), but every producer
    and consumer of this map builds and walks it with `for...in` / dynamic
@@ -15,7 +12,11 @@ export interface AnatomyLike {
 export type CellCountMap = Record<string, number>;
 
 class Species {
-    anatomy: AnatomyLike | null;
+    /* Nullable for real, not for want of a type: WorldEnvironment.loadRaw mints
+       every saved species as `new Species(null, null, 0)` and only attaches the
+       anatomy once it meets an organism carrying one. calcAnatomyDetails()
+       early-returns over exactly that window. */
+    anatomy: Anatomy | null;
     ancestor: Species | null | undefined;
     population: number;
     cumulative_pop: number;
@@ -28,7 +29,7 @@ class Species {
        falsy. Hence `| undefined` rather than a definite-assignment `!`. */
     cell_counts: CellCountMap | undefined;
 
-    constructor(anatomy: AnatomyLike | null, ancestor: Species | null | undefined, start_tick: number) {
+    constructor(anatomy: Anatomy | null, ancestor: Species | null | undefined, start_tick: number) {
         this.anatomy = anatomy;
         this.ancestor = ancestor; // eventually need to garbage collect ancestors to avoid memory problems
         this.population = 1;

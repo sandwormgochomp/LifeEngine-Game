@@ -6,11 +6,11 @@ import type Species from '../Stats/Species';
 import type Anatomy from '../Organism/Anatomy';
 import OrganismThumb from './OrganismThumb';
 
-/* Species declares its `anatomy` as the loose AnatomyLike stub in
-   Stats/Species (which predates Anatomy becoming a real class, and admits
-   null). Every species in the fossil record is minted from a real Anatomy, and
-   that is what the cards render and serialize, so the record is viewed through
-   this narrower type at the one place it is read. */
+/* Species.anatomy is a real Anatomy, but nullable: WorldEnvironment.loadRaw
+   briefly holds a species with none while it rebuilds a save. That window is
+   closed before any organism references the species, so everything reachable
+   from the fossil record has one -- which is what the cards render and
+   serialize. This narrows away only the null, at the one place it is read. */
 type LiveSpecies = Species & { anatomy: Anatomy };
 
 interface Entry {

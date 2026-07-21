@@ -1,17 +1,13 @@
 import type { CellState, RenderCellOwnerLike } from '../Organism/Cell/CellStates';
+/* Type-only, so the abstract base adds no runtime edge to GridMap. */
+import type GridMap from '../Grid/GridMap';
 
-/* Minimal shape of GridMap, which is still an untyped .js module. Replace with
-   a real import once it converts. */
-interface GridMapLike {
-    setCellType(col: number, row: number, state: CellState): void;
-    setCellOwner(col: number, row: number, cell_owner: RenderCellOwnerLike | null): void;
-}
 
 //An evironment has a grid_map, controller, and renderer
 abstract class Environment{
     /* Built by each subclass (WorldEnvironment, OrganismEditor), but reached
        through by changeCell() here on the base. */
-    abstract grid_map: GridMapLike;
+    abstract grid_map: GridMap;
 
     constructor() {
     }

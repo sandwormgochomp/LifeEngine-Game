@@ -3,16 +3,15 @@ import type { RenderEnvLike } from "../Organism/Cell/CellStates";
 
 /* The environment that owns this renderer. WorldEnvironment assigns it after
    construction (`this.renderer.env = this`) and OrganismEditor never does, so
-   it stays optional. Collapses to a real WorldEnvironment import when that
-   module converts. */
+   it stays optional -- and stays structural for the same reason: both classes
+   construct a Renderer, so it cannot name either one. */
 interface RendererEnvLike extends RenderEnvLike {
     radiation_map?: Set<string>;
 }
 
-/* Organism and Anatomy are still untyped JS. These model only what the
-   renderer reaches through; they collapse to real imports when those modules
-   convert. The body cells are opaque here -- they are only ever handed
-   straight back to getRealCell(). */
+/* Models only what the renderer reaches through. The body cells are opaque
+   here -- they are only ever handed straight back to getRealCell() -- so this
+   deliberately stays looser than the real Organism/Anatomy. */
 interface RendererOrganismLike {
     anatomy: { cells: unknown[] };
     getRealCell(org_cell: unknown): Cell;
