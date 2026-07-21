@@ -37,21 +37,27 @@ function shade(color, factor) {
     return out;
 }
 
-// A thick pixel strand crossing the corner (px, py) diagonally, running
-// down-right when dy is +1 and up-right when dy is -1. Four backbone squares
-// step through the two diagonal cells; two darker flanker squares complete a
-// 2x2 joint centered on the corner, spilling into the two orthogonal
-// neighbors' boxes.
+// A clean pixel-art diagonal connection with a sharp boundary line between colorA and colorB
 function drawStrand(ctx, px, py, dy, t, colorA, colorB) {
-    for (var s = -2; s <= 1; s++) {
-        ctx.fillStyle = s < 0 ? colorA : colorB;
-        var sy = dy > 0 ? py + s * t : py - (s + 1) * t;
-        ctx.fillRect(px + s * t, sy, t, t);
+    if (dy > 0) {
+        // SE diagonal (down-right): clean diagonal boundary between Cell A (top-left) and Cell B (bottom-right)
+        ctx.fillStyle = colorA;
+        ctx.fillRect(px - t, py - t, t, t);
+        ctx.fillRect(px - t, py, t, t);
+        ctx.fillRect(px, py - t, t, t);
+
+        ctx.fillStyle = colorB;
+        ctx.fillRect(px, py, t, t);
+    } else {
+        // NE diagonal (up-right): clean diagonal boundary between Cell A (bottom-left) and Cell B (top-right)
+        ctx.fillStyle = colorA;
+        ctx.fillRect(px - t, py, t, t);
+        ctx.fillRect(px - t, py - t, t, t);
+        ctx.fillRect(px, py, t, t);
+
+        ctx.fillStyle = colorB;
+        ctx.fillRect(px, py - t, t, t);
     }
-    ctx.fillStyle = shade(colorA, 0.6);
-    ctx.fillRect(px - t, dy > 0 ? py : py - t, t, t);
-    ctx.fillStyle = shade(colorB, 0.6);
-    ctx.fillRect(px, dy > 0 ? py - t : py, t, t);
 }
 
 function drawOrganismDecorations(ctx, env) {
@@ -99,7 +105,7 @@ function drawOrganismDecorations(ctx, env) {
             if (!hasS && !hasE && !same(col + 1, row + 1)) ctx.fillRect(x + sz - cut, y + sz - cut, cut, cut);
         }
 
-        // Pass 2: connective tissue across diagonal-only touches, drawn after
+        // Pass 2: connective tissue across diagonal touches, drawn after
         // the outline so strands sit on top of it. Checking only NE and SE
         // covers each diagonal pair exactly once.
         for (var tissue_cell of org.anatomy.cells) {
@@ -109,12 +115,12 @@ function drawOrganismDecorations(ctx, env) {
             var tc = tcell.col, tr = tcell.row;
             var own_color = tissue_cell.custom_color || tissue_cell.state.color;
 
-            if (same(tc + 1, tr - 1) && !same(tc, tr - 1) && !same(tc + 1, tr)) {
+            if (same(tc + 1, tr - 1)) {
                 var ne = grid.cellAt(tc + 1, tr - 1);
                 var ne_color = (ne.cell_owner && ne.cell_owner.custom_color) || ne.state.color;
                 drawStrand(ctx, tx + sz, ty, -1, t, own_color, ne_color);
             }
-            if (same(tc + 1, tr + 1) && !same(tc, tr + 1) && !same(tc + 1, tr)) {
+            if (same(tc + 1, tr + 1)) {
                 var se = grid.cellAt(tc + 1, tr + 1);
                 var se_color = (se.cell_owner && se.cell_owner.custom_color) || se.state.color;
                 drawStrand(ctx, tx + sz, ty + sz, 1, t, own_color, se_color);
