@@ -10,6 +10,17 @@ const eyeDirection = (page, dc, dr) => page.evaluate(([dc, dr]) => {
   return window.engine.organism_editor.organism.anatomy.getLocalCell(dc, dr)?.direction ?? null;
 }, [dc, dr]);
 
+// Pixels actually painted around the editor cell at (dc, dr), as a comparable
+// string. The eye decoration overflows its cell, so the sampled box is padded.
+const renderedCellPixels = (page, dc, dr) => page.evaluate(([dc, dr]) => {
+  const editor = window.engine.organism_editor;
+  const [cc, cr] = editor.grid_map.getCenter();
+  const cs = editor.grid_map.cell_size;
+  const ctx = editor.renderer.canvas.getContext('2d');
+  const data = ctx.getImageData((cc + dc) * cs - cs, (cr + dr) * cs - cs, cs * 3, cs * 3).data;
+  return Array.from(data).join(',');
+}, [dc, dr]);
+
 test.describe('Organism Lab dock', () => {
   test.beforeEach(async ({ page }) => {
     await pauseEngine(page);
@@ -113,6 +124,26 @@ test.describe('Organism Lab dock', () => {
     // Transforms are undoable
     await page.locator('#undo-btn').click();
     expect(await localCellState(page, 1, 0)).toBe('eye');
+  });
+
+  /* The decoration renderer caches a sprite per organism, keyed on an anatomy
+     hash. Rotating an eye changes only the cell's `direction`, so a hash that
+     leaves it out keeps serving the old sprite and the pupil never moves --
+     the anatomy is right and the picture is stale. Assert on pixels, since
+     eyeDirection() above passes either way. */
+  test('Rotating an eye repaints its pupil', async ({ page }) => {
+    await page.locator('.cell-type#eye').click();
+    await clickEditorCell(page, 0, -1);
+
+    const seen = new Set();
+    for (const expected of [1, 2, 3, 0]) { // right, down, left, back to up
+      seen.add(await renderedCellPixels(page, 0, -1));
+      await clickEditorCell(page, 0, -1);
+      expect(await eyeDirection(page, 0, -1)).toBe(expected);
+    }
+
+    // Four distinct facings must have produced four distinct renders
+    expect(seen.size).toBe(4);
   });
 
   test('Zoom, species rename, and ability badges', async ({ page }) => {

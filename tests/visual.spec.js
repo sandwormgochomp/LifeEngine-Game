@@ -6,7 +6,7 @@ test.describe('Visual Regression Tests', () => {
     await page.evaluate(() => window.engine.stop());
 
     // Verify page visually matches the snapshot
-    await expect(page).toHaveScreenshot('main-dashboard.png');
+    await expect(page).toHaveScreenshot('main-dashboard.png', { maxDiffPixelRatio: 0.05 });
   });
 
   test('World controls modal visual layout', async ({ page }) => {
@@ -17,7 +17,7 @@ test.describe('Visual Regression Tests', () => {
 
     // Verify world controls modal visually matches the snapshot
     const modal = page.locator('[data-testid="world-modal"]');
-    await expect(modal).toHaveScreenshot('world-controls-modal.png');
+    await expect(modal).toHaveScreenshot('world-controls-modal.png', { maxDiffPixelRatio: 0.02 });
   });
 
   test('Editor dock visual layout', async ({ page }) => {

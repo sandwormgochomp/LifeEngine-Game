@@ -16,6 +16,7 @@ interface DecoBodyCellLike {
     loc_row: number;
     state: { name: string; color: string };
     custom_color?: string | null;
+    direction?: number;
     rotatedCol?(rotation: number): number;
     rotatedRow?(rotation: number): number;
 }
@@ -108,11 +109,15 @@ function drawStrand(ctx: CanvasRenderingContext2D, px: number, py: number, dy: n
     }
 }
 
+/* Every input the sprite passes read off a cell has to appear here, or the
+   sprite cache in drawOrganismDecorations hands back stale pixels. `direction`
+   is one: rotating an eye in the editor changes nothing else about the cell,
+   so without it the pupil stays where it was through any number of clicks. */
 function getAnatomyHash(org: DecoOrganismLike): string {
     if (!org.anatomy) return '';
     var hash = org.anatomy.cells.length + ':';
     for (var cell of org.anatomy.cells) {
-        hash += cell.loc_col + ',' + cell.loc_row + ',' + (cell.state ? cell.state.name : '') + ',' + (cell.custom_color || '') + ';';
+        hash += cell.loc_col + ',' + cell.loc_row + ',' + (cell.state ? cell.state.name : '') + ',' + (cell.custom_color || '') + ',' + (cell.direction ?? '') + ';';
     }
     return hash;
 }
@@ -268,6 +273,112 @@ function generateOrganismSprite(org: DecoOrganismLike, sz: number): OrganismSpri
         if (!sameN && !sameE && !sameNE) ctx.fillRect(pos.x + sz - cut, pos.y, cut, cut);
         if (!sameS && !sameW && !sameSW) ctx.fillRect(pos.x, pos.y + sz - cut, cut, cut);
         if (!sameS && !sameE && !sameSE) ctx.fillRect(pos.x + sz - cut, pos.y + sz - cut, cut, cut);
+    }
+
+    // Combined Pass 2: Cute Pixel Art Eyeballs (only for 'eye' cells)
+    // Rendered in a separate pass so they draw on top of adjacent cell bodies and silhouettes
+    for (var body_cell of cells) {
+        if (body_cell.state.name === 'eye') {
+            var rc = body_cell.rotatedCol ? body_cell.rotatedCol(rotation) : body_cell.loc_col;
+            var rr = body_cell.rotatedRow ? body_cell.rotatedRow(rotation) : body_cell.loc_row;
+            var pos = getCellPos(rc, rr);
+            var color = body_cell.custom_color || body_cell.state.color;
+            var darkColor = shade(color, 0.45);
+
+            var r_sz = Math.ceil(sz / bw);
+            var cx = (r_sz - 1) / 2;
+            var cy = (r_sz - 1) / 2;
+
+            /* Every radius below is a fraction of r_sz, so the eye keeps the same
+               proportions at any cell size -- only the sampling gets chunkier as
+               r_sz drops. That matters because the editor and the world draw the
+               same organism at different r_sz: the editor's cell is 8-24px
+               (r_sz 6-8) while the world's is a fixed 5px (r_sz 5) and gets
+               scaled up by a CSS transform instead. Absolute retro-pixel terms
+               here -- an `R_outer - 1.0` ring, an `r_sz < 6` special case, a
+               `rx + ry > r_sz + 1` dither band -- read as different eyes between
+               the two views. Ratios are calibrated to r_sz 7, the editor's
+               default zoom. */
+            var R_outer = r_sz * 0.65;
+            var R_inner = R_outer * 0.78;
+
+            var eyeDir = (rotation + (body_cell.direction ?? 0)) % 4;
+            var shift = R_inner * 0.45;
+            var pdx = 0;
+            var pdy = 0;
+            if (eyeDir === 0) pdy = -shift;
+            else if (eyeDir === 1) pdx = shift;
+            else if (eyeDir === 2) pdy = shift;
+            else if (eyeDir === 3) pdx = -shift;
+
+            var pcx = cx + pdx;
+            var pcy = cy + pdy;
+            var R_pupil = Math.max(0.7, R_inner * 0.42);
+
+            var hlrx = pcx - Math.max(0.5, R_pupil * 0.5);
+            var hlry = pcy - Math.max(0.5, R_pupil * 0.5);
+
+            var start_r = Math.floor(cx - R_outer);
+            var end_r = Math.ceil(cx + R_outer);
+
+            for (var rx = start_r; rx <= end_r; rx++) {
+                for (var ry = start_r; ry <= end_r; ry++) {
+                    var dx = rx - cx;
+                    var dy = ry - cy;
+                    var dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist <= R_outer) {
+                        var c_x = Math.floor(pos.x) + rx * bw;
+                        var c_y = Math.floor(pos.y) + ry * bw;
+                        var w = bw;
+                        var h = bw;
+
+                        if (dist > R_inner) {
+                            // Eyeball socket outline (matches the cell's shaded outline color)
+                            ctx.fillStyle = darkColor;
+                            ctx.fillRect(c_x, c_y, w, h);
+                        } else {
+                            // Inside eyeball
+                            var pdx_pixel = rx - pcx;
+                            var pdy_pixel = ry - pcy;
+                            var p_dist = Math.sqrt(pdx_pixel * pdx_pixel + pdy_pixel * pdy_pixel);
+
+                            var pixel_color = 'white';
+                            if (p_dist <= R_pupil) {
+                                // Pupil
+                                var is_highlight = (rx === Math.round(hlrx) && ry === Math.round(hlry));
+                                if (is_highlight) {
+                                    pixel_color = 'white';
+                                } else {
+                                    pixel_color = '#111116';
+                                }
+                            }
+
+                            ctx.fillStyle = pixel_color;
+                            ctx.fillRect(c_x, c_y, w, h);
+
+                            // Apply pixel dither / gradient shading to eyeball interior (sclera)
+                            if (pixel_color === 'white') {
+                                if ((rx + ry) % 2 === 0) {
+                                    // Distance along the top-left -> bottom-right
+                                    // light axis, measured from the eye's center
+                                    // and scaled by its radius (see R_outer).
+                                    var shade_d = dx + dy;
+                                    if (shade_d > R_outer * 0.44) {
+                                        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'; // Darker shadow at bottom-right
+                                    } else if (shade_d >= 0) {
+                                        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; // Mid shadow
+                                    } else {
+                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Highlight / bright white
+                                    }
+                                    ctx.fillRect(c_x, c_y, w, h);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return {
