@@ -23,6 +23,7 @@ class Empty extends CellState {
 class Food extends CellState {
     constructor() {
         super('food');
+        this.color = '#438250';
     }
 }
 class Wall extends CellState {

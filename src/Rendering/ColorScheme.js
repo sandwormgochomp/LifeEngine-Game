@@ -2,7 +2,7 @@ import CellStates from "../Organism/Cell/CellStates";
 
 var color_scheme = {
     "empty":"#0E1318",
-    "food":"#2F7AB7",
+    "food":"#438250",
     "wall":"gray",
     "mouth":"#DEB14D",
     "producer":"#15DE59",
