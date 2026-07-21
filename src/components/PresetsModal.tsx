@@ -89,7 +89,7 @@ const PresetsModal: React.FC<PresetsModalProps> = ({ onClose, onOpenInLab }) => 
                 onClick={() => choose(preset)}
               >
                 {cells
-                  ? <OrganismThumb cells={cells} />
+                  ? <OrganismThumb cells={cells} decorated />
                   : <span className={styles.pickerThumbPending}></span>}
                 <span className={`preset-name ${styles.pickerName}`}>{preset.name}</span>
                 <span className={styles.pickerMeta}>

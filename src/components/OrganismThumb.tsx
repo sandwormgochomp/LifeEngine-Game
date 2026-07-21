@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import styles from './styles/Hud.module.css';
 import CellStates from '../Organism/Cell/CellStates';
+import { renderOrganismSprite } from '../Rendering/DecorationRenderer';
 
 // A cell as it appears either on a live anatomy (state is the CellState
 // singleton) or in serialized JSON (state is just {name}).
@@ -8,12 +9,17 @@ export interface ThumbCell {
   loc_col: number;
   loc_row: number;
   custom_color?: string | null;
+  // Present on live anatomy cells; orients an eye's pupil in decorated mode.
+  direction?: number;
   state: { name?: string; color?: string };
 }
 
 interface OrganismThumbProps {
   cells: ThumbCell[];
   size?: number;
+  // When true, render the full decorated sprite (shaded bodies, connective
+  // tissue, eyeballs) instead of the flat body plan.
+  decorated?: boolean;
 }
 
 /* Built from CellStates.all rather than indexing the registry by name: a
@@ -30,12 +36,28 @@ const cellColor = (cell: ThumbCell): string =>
   '#888';
 
 // Mini rendering of an organism's body plan, scaled to fit the tile.
-const OrganismThumb: React.FC<OrganismThumbProps> = ({ cells, size = 72 }) => {
+const OrganismThumb: React.FC<OrganismThumbProps> = ({ cells, size = 72, decorated = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    if (decorated) {
+      // The sprite pipeline reads state.color off each cell; serialized cells
+      // carry only a name, so resolve the runtime color here (as the flat path
+      // does below) before handing them over.
+      const resolved = (cells ?? []).map(cell => ({
+        loc_col: cell.loc_col,
+        loc_row: cell.loc_row,
+        custom_color: cell.custom_color ?? null,
+        direction: cell.direction,
+        state: { name: cell.state?.name ?? '', color: cellColor(cell) },
+      }));
+      renderOrganismSprite(canvas, resolved, size);
+      return;
+    }
+
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, size, size);
     if (!cells?.length) return;
@@ -86,7 +108,7 @@ const OrganismThumb: React.FC<OrganismThumbProps> = ({ cells, size = 72 }) => {
         ctx.fillRect(px, py, Math.max(cs, 1), Math.max(cs, 1));
       }
     }
-  }, [cells, size]);
+  }, [cells, size, decorated]);
 
   return <canvas ref={canvasRef} width={size} height={size} className={styles.pickerThumb}></canvas>;
 };

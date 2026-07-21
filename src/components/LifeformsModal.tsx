@@ -112,7 +112,7 @@ const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, onClose, onOpen
                 entry.name
               )}
             >
-              <OrganismThumb cells={entry.species.anatomy.cells} />
+              <OrganismThumb cells={entry.species.anatomy.cells} decorated />
               <span className={`lifeform-name ${styles.pickerName}`}>{entry.name}</span>
               <span className={styles.pickerMeta}>
                 {entry.extinct

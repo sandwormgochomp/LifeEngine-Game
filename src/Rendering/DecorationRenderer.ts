@@ -392,6 +392,101 @@ function generateOrganismSprite(org: DecoOrganismLike, sz: number): OrganismSpri
     };
 }
 
+/* Renders a single cell's decorated sprite -- shaded body, silhouette outline,
+   and (for an 'eye' cell) the pixel-art eyeball -- into `canvas`, scaled to
+   fill it. The Organism Lab's cell palette uses this so each swatch previews a
+   cell exactly as it appears on the editor and world canvases, rather than as a
+   flat colour square. Reuses generateOrganismSprite so the palette can never
+   drift from what the sprite actually draws. `direction` orients an eye's
+   pupil; it is inert for every other cell type. */
+export function renderCellSwatch(
+    canvas: HTMLCanvasElement,
+    cell: { name: string; color: string },
+    direction: number = 1
+): void {
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false;
+
+    var sz = 16;
+    var org: DecoOrganismLike = {
+        c: 0,
+        r: 0,
+        rotation: 0,
+        living: true,
+        anatomy: {
+            cells: [{ loc_col: 0, loc_row: 0, state: { name: cell.name, color: cell.color }, direction: direction }],
+        },
+    };
+    var sprite = generateOrganismSprite(org, sz);
+    if (!sprite) return;
+
+    // The cell body sits at (padding, padding) sized sz; crop a bw-wide margin
+    // around it so the silhouette outline shows (and a sliver of drop shadow
+    // reads as depth) without the sprite's full organism-sized padding.
+    var bw = Math.max(1, Math.floor(sz / 5));
+    var region = sz + bw * 2;
+    var src = sprite.padding - bw;
+    ctx.drawImage(sprite.canvas, src, src, region, region, 0, 0, canvas.width, canvas.height);
+}
+
+/* Renders a whole organism's decorated sprite into `canvas`, scaled to fit and
+   centered. Used by the modal thumbnails (Lifeforms) so a species previews with
+   the same shaded bodies, connective tissue, and eyeballs it has on the world
+   and editor canvases. Callers pass cells whose state.color is already resolved
+   (the CellState singletons carry the runtime color; serialized cells do not),
+   since this module deliberately does not depend on CellStates. */
+export function renderOrganismSprite(
+    canvas: HTMLCanvasElement,
+    cells: DecoBodyCellLike[],
+    size: number
+): void {
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false;
+    if (!cells || cells.length === 0) return;
+
+    var minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+    for (var cell of cells) {
+        minCol = Math.min(minCol, cell.loc_col);
+        maxCol = Math.max(maxCol, cell.loc_col);
+        minRow = Math.min(minRow, cell.loc_row);
+        maxRow = Math.max(maxRow, cell.loc_row);
+    }
+    var cols = maxCol - minCol + 1;
+    var rows = maxRow - minRow + 1;
+
+    // Pick a per-cell pixel size that fits the organism's bounding box in the
+    // tile, leaving ~half a cell of slack for the outline and shadow that spill
+    // past the cell boxes so nothing clips at the tile edge.
+    var sz = Math.max(2, Math.floor(size / (Math.max(cols, rows) + 0.6)));
+
+    var org: DecoOrganismLike = {
+        c: 0, r: 0, rotation: 0, living: true,
+        anatomy: { cells: cells },
+    };
+    var sprite = generateOrganismSprite(org, sz);
+    if (!sprite) return;
+
+    var bw = Math.max(1, Math.floor(sz / 5));
+    var shadowOff = Math.max(1, Math.floor(sz / 5));
+    var margin = bw + shadowOff;
+    var srcX = sprite.padding - margin;
+    var srcY = sprite.padding - margin;
+    var srcW = cols * sz + margin * 2;
+    var srcH = rows * sz + margin * 2;
+
+    // Fit the cropped sprite into the tile, centered, preserving aspect ratio.
+    var scale = Math.min(canvas.width / srcW, canvas.height / srcH);
+    var destW = srcW * scale;
+    var destH = srcH * scale;
+    var dx = (canvas.width - destW) / 2;
+    var dy = (canvas.height - destH) / 2;
+    ctx.drawImage(sprite.canvas, srcX, srcY, srcW, srcH, dx, dy, destW, destH);
+}
+
 // Matches Renderer.renderCellHighlight, so a selection reads the same whether
 // it lands on bare cells or on a sprite.
 const HIGHLIGHT_COLOR = 'yellow';

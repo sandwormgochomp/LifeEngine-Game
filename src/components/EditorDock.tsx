@@ -7,6 +7,7 @@ import CellStates from '../Organism/Cell/CellStates';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
 import { CELL_INFO } from './cellInfo';
+import CellSwatch from './CellSwatch';
 
 interface EditorDockProps {
   engine: Engine | null;
@@ -274,7 +275,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
             title={CELL_INFO[cellState.name] || cellState.name}
             onClick={() => selectCellType(cellState)}
           >
-            <span className={styles.dockCellSwatch} style={{ backgroundColor: cellState.color }}></span>
+            <CellSwatch cellState={cellState} />
             <span className={styles.dockCellName}>{cellState.name}</span>
           </button>
         ))}
