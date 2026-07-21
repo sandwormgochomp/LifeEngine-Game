@@ -21,6 +21,7 @@ import PresetsModal from './PresetsModal';
 import BrainModal from './BrainModal';
 import WorldsModal from './WorldsModal';
 import Floaties from './Floaties';
+import MicroscopeOverlay from './MicroscopeOverlay';
 
 // Tab content
 import SaveTab from './Tabs/SaveTab';
@@ -245,6 +246,7 @@ const App: React.FC = () => {
         <canvas id="env-glow-canvas" ref={glowCanvasRef}></canvas>
       </div>
       <Floaties engine={engine} />
+      <MicroscopeOverlay engine={engine} />
 
       {/* HUD Regions */}
       <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />
