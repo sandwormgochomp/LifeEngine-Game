@@ -11,11 +11,12 @@ const min_render_speed = 60;
 class Engine {
     // env_canvas/env_container: the world canvas and its containing element.
     // glow_canvas: overlay the world environment composites organism glow onto.
+    // deco_canvas: overlay for organism decorations that overflow their cells.
     // The world canvas is always mounted; the editor canvas is attached later
     // via organism_editor.bindCanvas when its panel mounts.
-    constructor({env_canvas, env_container, glow_canvas}){
+    constructor({env_canvas, env_container, glow_canvas, deco_canvas}){
         this.fps = 60;
-        this.env = new WorldEnvironment(5, env_canvas, env_container, glow_canvas);
+        this.env = new WorldEnvironment(5, env_canvas, env_container, glow_canvas, deco_canvas);
         this.env.engine = this;
         this.organism_editor = new OrganismEditor();
         this.controlpanel = new ControlPanel(this);

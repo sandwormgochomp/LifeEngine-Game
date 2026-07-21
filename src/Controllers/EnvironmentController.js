@@ -47,9 +47,11 @@ class EnvironmentController extends CanvasController{
     applyView() {
         var transform = `translate(${this.pan_x}px, ${this.pan_y}px) scale(${this.scale})`;
         this.canvas.style.transform = transform;
-        // the glow overlay canvas mirrors the world's pan/zoom
+        // the overlay canvases mirror the world's pan/zoom
         if (this.env.glow_canvas)
             this.env.glow_canvas.style.transform = transform;
+        if (this.env.deco_canvas)
+            this.env.deco_canvas.style.transform = transform;
     }
 
     defineZoomControls() {

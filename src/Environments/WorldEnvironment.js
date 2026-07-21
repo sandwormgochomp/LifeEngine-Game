@@ -1,5 +1,6 @@
 import Environment from './Environment';
 import Renderer from '../Rendering/Renderer';
+import drawOrganismDecorations from '../Rendering/DecorationRenderer';
 import GridMap from '../Grid/GridMap';
 import Organism from '../Organism/Organism';
 import CellStates from '../Organism/Cell/CellStates';
@@ -18,7 +19,7 @@ const GLOW_SPREAD = 1.5;
 const GLOW_ALPHA = 0.1;
 
 class WorldEnvironment extends Environment{
-    constructor(cell_size, canvas, container, glow_canvas=null) {
+    constructor(cell_size, canvas, container, glow_canvas=null, deco_canvas=null) {
         super();
         this.renderer = new Renderer(canvas, container, cell_size);
         this.renderer.env = this;
@@ -31,7 +32,13 @@ class WorldEnvironment extends Environment{
         this.glow_ctx = glow_canvas ? glow_canvas.getContext('2d') : null;
         this.glow_scratch = document.createElement('canvas');
         this.glow_scratch_ctx = this.glow_scratch.getContext('2d');
-        this.syncGlowSize();
+        // Decorations (outlines, connective tissue) overflow their cells'
+        // pixel boxes, so they live on their own overlay that is cleared and
+        // fully repainted when the world changes — the dirty-rect world
+        // canvas would clip and smear them.
+        this.deco_canvas = deco_canvas;
+        this.deco_ctx = deco_canvas ? deco_canvas.getContext('2d') : null;
+        this.syncOverlaySizes();
         this.controller = new EnvironmentController(this, this.renderer.canvas);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
         this.num_cols = Math.ceil(this.renderer.width / cell_size);
@@ -128,11 +135,10 @@ class WorldEnvironment extends Environment{
         if (this.day_timer > 3600) { // 1 minute at 60 ticks per second
             this.day_timer = 0;
             this.is_night = !this.is_night;
-            if (this.is_night) {
-                this.renderer.canvas.style.filter = "brightness(0.3) hue-rotate(180deg) saturate(0.5)"; // Blueish dark tint
-            } else {
-                this.renderer.canvas.style.filter = "none";
-            }
+            var night_filter = this.is_night ? "brightness(0.3) hue-rotate(180deg) saturate(0.5)" : "none"; // Blueish dark tint
+            this.renderer.canvas.style.filter = night_filter;
+            if (this.deco_canvas)
+                this.deco_canvas.style.filter = night_filter;
         }
 
         this.total_ticks ++;
@@ -149,10 +155,16 @@ class WorldEnvironment extends Environment{
         this.renderer.renderCells();
         this.renderer.renderHighlights();
         this.controller.renderCursorOverlay();
+        this.renderDecorations();
         this.renderGlow();
     }
 
-    syncGlowSize() {
+    syncOverlaySizes() {
+        if (this.deco_canvas) {
+            this.deco_canvas.width = this.renderer.width;
+            this.deco_canvas.height = this.renderer.height;
+            this.deco_dirty = true;
+        }
         if (!this.glow_canvas) return;
         this.glow_canvas.width = this.renderer.width;
         this.glow_canvas.height = this.renderer.height;
@@ -162,6 +174,15 @@ class WorldEnvironment extends Environment{
         this.glow_scratch.width = Math.max(1, Math.ceil(this.renderer.width / GLOW_DOWNSCALE));
         this.glow_scratch.height = Math.max(1, Math.ceil(this.renderer.height / GLOW_DOWNSCALE));
         this.glow_dirty = true;
+    }
+
+    renderDecorations() {
+        if (!this.deco_ctx || WorldConfig.headless) return;
+        // Like glow, only repaint when the world changed; pan/zoom move the
+        // overlay via its CSS transform instead.
+        if (!this.deco_dirty) return;
+        this.deco_dirty = false;
+        drawOrganismDecorations(this.deco_ctx, this);
     }
 
     renderGlow() {
@@ -202,6 +223,7 @@ class WorldEnvironment extends Environment{
 
     renderFull() {
         this.renderer.renderFullGrid(this.grid_map.grid);
+        this.deco_dirty = true;
     }
 
     removeOrganisms(org_indeces) {
@@ -258,6 +280,7 @@ class WorldEnvironment extends Environment{
         super.changeCell(c, r, state, owner);
         this.renderer.addToRender(this.grid_map.cellAt(c, r));
         this.glow_dirty = true;
+        this.deco_dirty = true;
         if(state == CellStates.wall || state == CellStates.invincible_wall)
             this.walls.push(this.grid_map.cellAt(c, r));
     }
@@ -364,6 +387,9 @@ class WorldEnvironment extends Environment{
         this.day_timer = 0;
         this.is_night = false;
         this.renderer.canvas.style.filter = "none";
+        if (this.deco_canvas)
+            this.deco_canvas.style.filter = "none";
+        this.deco_dirty = true;
         this.radiation_map.clear();
         FossilRecord.clear_record();
         if (reset_life)
@@ -376,13 +402,13 @@ class WorldEnvironment extends Environment{
         this.renderer.cell_size = cell_size;
         this.renderer.fillShape(rows*cell_size, cols*cell_size);
         this.grid_map.resize(cols, rows, cell_size);
-        this.syncGlowSize();
+        this.syncOverlaySizes();
     }
 
     resizeFillWindow(cell_size) {
         this.renderer.cell_size = cell_size;
         this.renderer.fillWindow();
-        this.syncGlowSize();
+        this.syncOverlaySizes();
         this.num_cols = Math.ceil(this.renderer.width / cell_size);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
         this.grid_map.resize(this.num_cols, this.num_rows, cell_size);

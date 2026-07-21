@@ -40,9 +40,11 @@ body{
     position: relative;
 }
 
-/* Organism glow overlay: sits exactly over the world canvas and receives the
-   same pan/zoom transform from the controller; never intercepts clicks */
-#env-glow-canvas {
+/* Organism glow and decoration overlays: sit exactly over the world canvas
+   and receive the same pan/zoom transform from the controller; never
+   intercept clicks */
+#env-glow-canvas,
+#env-deco-canvas {
     position: absolute;
     top: 0;
     left: 0;

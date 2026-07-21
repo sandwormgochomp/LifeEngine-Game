@@ -49,6 +49,7 @@ const App: React.FC = () => {
   const [worldsOpen, setWorldsOpen] = useState(false);
   const envRef = useRef<HTMLDivElement>(null);
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
+  const decoCanvasRef = useRef<HTMLCanvasElement>(null);
   const glowCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -58,6 +59,7 @@ const App: React.FC = () => {
       env_canvas: envCanvasRef.current!,
       env_container: envRef.current!,
       glow_canvas: glowCanvasRef.current!,
+      deco_canvas: decoCanvasRef.current!,
     });
     (window as any).engine = newEngine;
     newEngine.start(60);
@@ -243,6 +245,7 @@ const App: React.FC = () => {
     <div className={styles.appContainer} data-engine-ready={engine ? "true" : "false"}>
       <div id="env" ref={envRef} className={styles.envArea}>
         <canvas id="env-canvas" ref={envCanvasRef}></canvas>
+        <canvas id="env-deco-canvas" ref={decoCanvasRef}></canvas>
         <canvas id="env-glow-canvas" ref={glowCanvasRef}></canvas>
       </div>
       <Floaties engine={engine} />
