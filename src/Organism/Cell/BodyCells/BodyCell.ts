@@ -121,7 +121,10 @@ class BodyCell{
         // initialize to default values
     }
 
-    performFunction(env: unknown) {
+    /* No parameter: all fourteen subclasses override this as performFunction(),
+       and the sole caller (Organism.update) passes nothing. The `env` parameter
+       the JS declared here was vestigial -- never supplied, never read. */
+    performFunction() {
         // default behavior: none
     }
 

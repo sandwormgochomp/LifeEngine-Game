@@ -5,9 +5,27 @@ import FossilRecord from '../FossilRecord';
 // `get(i)` reads the value for the i-th recorded tick; colors for the cell
 // series are read lazily so the ColorScheme has been applied by then.
 
+/* One plotted line. `get` returns undefined past the end of a history array,
+   and for cell series whose name is missing from a recorded cell-count map;
+   ChartController coalesces that to null for uPlot. */
+export interface ChartSeriesSpec {
+    label: string;
+    color: string;
+    get(i: number): number | undefined;
+}
+
+export interface ChartSpec {
+    title: string;
+    y_label: string;
+    note?: string;
+    /* Read once per chart instance by ChartController; the cell-composition
+       spec implements it as a getter, which satisfies this property. */
+    readonly series: ChartSeriesSpec[];
+}
+
 const GREEN = '#00FF41';
 
-const ChartSpecs = [
+const ChartSpecs: ChartSpec[] = [
     {
         title: 'Population',
         y_label: 'organisms',
@@ -26,10 +44,13 @@ const ChartSpecs = [
         title: 'Organism Size / Composition',
         y_label: 'avg. cells per organism',
         note: 'Note: to maintain efficiency, species with very small populations are discarded when collecting cell statistics.',
-        get series() {
+        /* Explicit return type: contextual typing does not reach into a
+           getter body, so without it the `get(i)` params below are implicitly
+           any under strict. */
+        get series(): ChartSeriesSpec[] {
             return [
                 { label: 'Avg. organism size', color: GREEN, get: i => FossilRecord.av_cells[i] },
-                ...CellStates.living.map(c => ({
+                ...CellStates.living.map((c): ChartSeriesSpec => ({
                     label: `Avg. ${c.name} cells`,
                     color: c.color,
                     get: i => FossilRecord.av_cell_counts[i]?.[c.name],

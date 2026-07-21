@@ -1,18 +1,26 @@
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import FossilRecord from '../FossilRecord';
+import type { ChartSeriesSpec, ChartSpec } from './ChartSpecs';
 
 // Thin wrapper around uPlot (open source, themeable) driven by a spec from
 // ChartSpecs.js. Data is rebuilt wholesale on each update; at the fossil
 // record's 500-point cap that is far cheaper than incremental bookkeeping.
 class ChartController {
-    constructor(container, spec) {
+    spec: ChartSpec;
+    note: string;
+    series_defs: ChartSeriesSpec[];
+    /* Built in the constructor and nulled by destroy(), after which every
+       reader guards on it -- so `| null` rather than a definite assignment. */
+    plot: uPlot | null;
+
+    constructor(container: HTMLElement, spec: ChartSpec) {
         this.spec = spec;
         this.note = spec.note || '';
         // spec.series may be a lazy getter; resolve once per chart instance
         this.series_defs = spec.series;
 
-        const axisTheme = {
+        const axisTheme: uPlot.Axis = {
             stroke: 'rgba(0, 255, 65, 0.8)',
             grid: { stroke: 'rgba(0, 255, 65, 0.08)' },
             ticks: { stroke: 'rgba(0, 255, 65, 0.25)' },
@@ -42,24 +50,24 @@ class ChartController {
         }, this.buildData(), container);
     }
 
-    buildData() {
+    buildData(): uPlot.AlignedData {
         const xs = FossilRecord.tick_record.slice();
         return [xs, ...this.series_defs.map(s => xs.map((_, i) => s.get(i) ?? null))];
     }
 
-    setData() {
+    setData(): void {
         if (this.plot) this.plot.setData(this.buildData());
     }
 
-    updateData() {
+    updateData(): void {
         this.setData();
     }
 
-    render() {
+    render(): void {
         // uPlot repaints on setData; nothing extra to do
     }
 
-    destroy() {
+    destroy(): void {
         if (this.plot) this.plot.destroy();
         this.plot = null;
     }
