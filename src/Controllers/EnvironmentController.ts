@@ -1,17 +1,83 @@
 import CanvasController from "./CanvasController";
 import Organism from '../Organism/Organism';
+import type { OrganismEnv } from '../Organism/Organism';
 import Modes from "./ControlModes";
 import CellStates from "../Organism/Cell/CellStates";
+import type { CellState, RenderOrganismLike } from "../Organism/Cell/CellStates";
 import Neighbors from "../Grid/Neighbors";
 import FossilRecord from "../Stats/FossilRecord";
 import WorldConfig from "../WorldConfig";
 import Hyperparams from "../Hyperparameters";
 import Perlin from "../Utils/Perlin";
+import type Cell from "../Organism/Cell/GridCell";
+import type BodyCell from "../Organism/Cell/BodyCells/BodyCell";
+
+/* A grid cell as this controller reaches through it. GridCell declares its
+   `owner` as RenderOrganismLike, which models only what the renderer needs;
+   this file calls die() on it and hands it out as the current selection, so the
+   owner is renarrowed to the real Organism here. Narrowing a member of a class
+   type is legal because Organism satisfies RenderOrganismLike, and it keeps
+   this shape assignable to the base controller's own view of a cell. Collapses
+   when GridCell itself can name Organism without closing an import cycle. */
+interface ControllerCell extends Cell {
+    owner: Organism | null;
+}
+
+/* The renderer, as this controller and its base class between them reach
+   through it. The last three members mirror CanvasController's own (unexported)
+   renderer shape verbatim, which is what keeps this `env` assignable to the
+   base's. The real Renderer is not imported for the same reason EditorController
+   does not import it: its highlightOrganism() takes a stricter organism shape
+   than the base class declares, so the two structural views do not unify. */
+interface EnvRendererLike {
+    ctx: CanvasRenderingContext2D | null;
+    cell_size: number;
+    renderCell(cell: Cell): void;
+    addToRender(cell: Cell): void;
+    clearAllHighlights(clear_to_highlight?: boolean): void;
+    highlightOrganism(org: RenderOrganismLike): void;
+    highlightCell(cell: Cell): void;
+}
+
+/* Engine is still untyped JS; only the one method reached through here is
+   declared. Collapses to a real import once Engine converts. */
+interface EnvEngineLike {
+    emitChange(force?: boolean): void;
+}
+
+/* The slice of WorldEnvironment this controller drives. WorldEnvironment is
+   still untyped JS, so it is declared structurally; collapses to a real import
+   once that module converts. */
+interface EnvControllerEnvLike {
+    renderer: EnvRendererLike;
+    grid_map: {
+        xyToColRow(x: number, y: number): [number, number];
+        cellAt(col: number, row: number): ControllerCell | null;
+    };
+    num_rows: number;
+    num_cols: number;
+    total_ticks: number;
+    /* Both overlay canvases are optional constructor arguments of
+       WorldEnvironment and stay null when the React layer does not supply
+       them. */
+    glow_canvas: HTMLCanvasElement | null;
+    deco_canvas: HTMLCanvasElement | null;
+    /* Set by Engine after it builds the environment, so absent for the window
+       between construction and that assignment -- performModeAction() guards on
+       it explicitly. */
+    engine?: EnvEngineLike;
+    /* Keys are "col,row". dropRadiation() creates it when missing rather than
+       assuming the environment brought one. */
+    radiation_map?: Set<string>;
+    clearWalls(): void;
+    changeCell(c: number, r: number, state: CellState, owner: BodyCell | null): void;
+    addOrganism(organism: Organism): void;
+}
 
 // Modes where the click affects a brush_size-radius area
-const BRUSH_MODES = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill];
+const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill];
 
-const MODE_CURSORS = {
+const MODE_CURSORS: Record<number, string> = {
     [Modes.Drag]: 'grab',
     [Modes.ClickKill]: 'not-allowed',
     [Modes.Select]: 'pointer',
@@ -20,7 +86,27 @@ const MODE_CURSORS = {
 };
 
 class EnvironmentController extends CanvasController{
-    constructor(env, canvas) {
+    /* Narrower than the base's env: this controller reaches through to the whole
+       WorldEnvironment, not just the renderer and grid map. Assigned by the base
+       constructor through super(), which the checker cannot see, hence the
+       definite assignment assertion. */
+    env!: EnvControllerEnvLike;
+    /* Not declared by CanvasController -- each subclass owns its own mode set.
+       Both mode and org_to_clone are also written from outside by the React
+       HUD (App.tsx, EditorDock). */
+    mode: number;
+    org_to_clone: Organism | null;
+    scale: number;
+    pan_x: number;
+    pan_y: number;
+    /* Cells painted by the cursor overlay on the previous frame, re-rendered at
+       the start of the next one so the overlay does not smear. */
+    overlay_cells: Set<Cell>;
+    /* Assigned by setCanvas(), which the base constructor always calls, hence
+       the definite assignment assertion rather than `| undefined`. */
+    pointer_inside!: boolean;
+
+    constructor(env: EnvControllerEnvLike, canvas: HTMLCanvasElement | null) {
         super(env, canvas);
         this.mode = Modes.FoodDrop;
         this.org_to_clone = null;
@@ -31,7 +117,7 @@ class EnvironmentController extends CanvasController{
         this.defineZoomControls();
     }
 
-    setCanvas(canvas) {
+    setCanvas(canvas: HTMLCanvasElement | null): void {
         super.setCanvas(canvas);
         this.pointer_inside = false;
         if (canvas) {
@@ -44,7 +130,7 @@ class EnvironmentController extends CanvasController{
     // Reading them back off the element instead would lose sub-pixel precision
     // to parseInt, and animating transform avoids the per-frame relayout that
     // top/left forces.
-    applyView() {
+    applyView(): void {
         var transform = `translate(${this.pan_x}px, ${this.pan_y}px) scale(${this.scale})`;
         this.canvas.style.transform = transform;
         // the overlay canvases mirror the world's pan/zoom
@@ -54,11 +140,11 @@ class EnvironmentController extends CanvasController{
             this.env.deco_canvas.style.transform = transform;
     }
 
-    defineZoomControls() {
+    defineZoomControls(): void {
         const zoom_speed = 0.7;
         const MAX = 32;
         const MIN = Math.pow(2, -3);
-        this.canvas.onwheel = (event) => {
+        this.canvas.onwheel = (event: WheelEvent) => {
             event.preventDefault();
 
             var sign = Math.sign(event.deltaY);
@@ -76,7 +162,7 @@ class EnvironmentController extends CanvasController{
         };
     }
 
-    resetView() {
+    resetView(): void {
         this.scale = 1;
         this.pan_x = 0;
         this.pan_y = 0;
@@ -86,7 +172,7 @@ class EnvironmentController extends CanvasController{
     /*
     Iterate over grid from 0,0 to env.num_cols,env.num_rows and create random walls using perlin noise to create a more organic shape.
     */
-    randomizeWalls(thickness=1) {
+    randomizeWalls(thickness: number = 1): void {
         this.env.clearWalls();
         const noise_threshold = -0.017;
         let avg_noise = 0;
@@ -110,25 +196,25 @@ class EnvironmentController extends CanvasController{
         }
     }
 
-    updateMouseLocation(offsetX, offsetY){
+    updateMouseLocation(offsetX: number, offsetY: number): void {
         super.updateMouseLocation(offsetX, offsetY);
     }
 
-    mouseMove() {
+    mouseMove(): void {
         this.performModeAction();
     }
 
-    mouseDown() {
+    mouseDown(): void {
         this.drag_anchor_x = this.client_x;
         this.drag_anchor_y = this.client_y;
         this.performModeAction();
     }
 
-    mouseUp() {
+    mouseUp(): void {
 
     }
 
-    performModeAction() {
+    performModeAction(): void {
         if (WorldConfig.headless && this.mode != Modes.Drag)
             return;
         var mode = this.mode;
@@ -217,7 +303,7 @@ class EnvironmentController extends CanvasController{
         }
     }
 
-    dragScreen() {
+    dragScreen(): void {
         // Both the anchor and the current position are screen coords, so the
         // delta is the true mouse movement and the pan tracks it 1:1.
         this.pan_x += this.client_x - this.drag_anchor_x;
@@ -229,7 +315,7 @@ class EnvironmentController extends CanvasController{
         this.applyView();
     }
 
-    applyCursor() {
+    applyCursor(): void {
         if (!this.canvas) return;
         var cursor = MODE_CURSORS[this.mode] || 'crosshair';
         if (this.canvas.style.cursor !== cursor)
@@ -240,7 +326,7 @@ class EnvironmentController extends CanvasController{
     // brush modes show their exact footprint, clone mode shows a ghost of the
     // organism (red-tinted when the spot is blocked). Cells painted over are
     // re-rendered at the start of the next pass, so nothing smears.
-    renderCursorOverlay() {
+    renderCursorOverlay(): void {
         var renderer = this.env.renderer;
         if (!renderer.ctx || WorldConfig.headless) return;
         this.applyCursor();
@@ -294,10 +380,18 @@ class EnvironmentController extends CanvasController{
         }
     }
 
-    dropOrganism(organism, col, row) {
+    dropOrganism(organism: Organism, col: number, row: number): boolean {
 
         // close the organism and drop it in the world
-        var new_org = new Organism(col, row, this.env, organism);
+        /* The only cast in this file. Organism declares its own view of the
+           same WorldEnvironment (OrganismEnv), and the two views cannot unify
+           today: a grid cell's `cell_owner` is RenderCellOwnerLike in GridCell
+           -- which the base controller's env is typed against -- but BodyCell in
+           OrganismGridCell, and BodyCell does not satisfy RenderCellOwnerLike
+           (getAbsoluteDirection lives on EyeCell alone). Both stand-ins describe
+           the same runtime object, so this collapses to nothing once GridCell
+           and Organism can name each other directly. */
+        var new_org = new Organism(col, row, this.env as unknown as OrganismEnv, organism);
 
         if (new_org.isClear(col, row)) {
             let new_species = !FossilRecord.speciesIsExtant(new_org.species.name);
@@ -317,7 +411,7 @@ class EnvironmentController extends CanvasController{
         return false;
     }
 
-    dropCellType(col, row, state, killBlocking=false, ignoreState=null) {
+    dropCellType(col: number, row: number, state: CellState, killBlocking: boolean = false, ignoreState: CellState | null = null): void {
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
             var c=col + loc[0];
             var r=row + loc[1];
@@ -338,7 +432,7 @@ class EnvironmentController extends CanvasController{
         }
     }
 
-    dropRadiation(col, row, isAdding) {
+    dropRadiation(col: number, row: number, isAdding: boolean): void {
         if (!this.env.radiation_map) this.env.radiation_map = new Set();
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
             var c = col + loc[0];
@@ -365,15 +459,15 @@ class EnvironmentController extends CanvasController{
         }
     }
 
-    findNearOrganism() {
-        let closest = null;
+    findNearOrganism(): Organism | null {
+        let closest: Organism | null = null;
         let closest_dist = 100;
         for (let loc of Neighbors.inRange(WorldConfig.brush_size)){
             let c = this.cur_cell.col + loc[0];
             let r = this.cur_cell.row + loc[1];
             let cell = this.env.grid_map.cellAt(c, r);
             let dist = Math.abs(loc[0]) + Math.abs(loc[1]);
-            if (cell != null && cell.owner != null) { 
+            if (cell != null && cell.owner != null) {
                 if (closest === null || dist < closest_dist) {
                     closest = cell.owner;
                     closest_dist = dist;
@@ -383,7 +477,7 @@ class EnvironmentController extends CanvasController{
         return closest;
     }
 
-    killNearOrganisms() {
+    killNearOrganisms(): void {
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
             var c = this.cur_cell.col + loc[0];
             var r = this.cur_cell.row + loc[1];

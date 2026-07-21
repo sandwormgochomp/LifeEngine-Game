@@ -20,8 +20,16 @@ interface ControllerEnvLike {
     grid_map: GridMapLike;
 }
 
+/* The control panel, as the controllers and the environment between them reach
+   through it: EnvironmentController hands it the newly selected organism and
+   WorldEnvironment pauses through `controller.control_panel`. A bare string
+   index signature stood here before, which no class instance is ever assignable
+   to; the real ControlPanel satisfies this shape. Declared structurally rather
+   than imported only because ControlPanel.ts still declares its own stand-in
+   for these controllers -- both collapse together once that goes away. */
 interface ControlPanelLike {
-    [key: string]: unknown;
+    setEditorOrganism(org: unknown): void;
+    setPaused(paused: boolean): void;
 }
 
 class CanvasController{
@@ -40,7 +48,7 @@ class CanvasController{
     middle_click: boolean;
     right_click: boolean;
     cur_cell: Cell | null;
-    /* Also assigned directly by subclasses (EditorController). */
+    /* Also assigned directly by subclasses (EnvironmentController). */
     cur_org: RenderOrganismLike | null;
     highlight_org: boolean;
     /* Assigned through setCanvas() from the constructor, which the checker

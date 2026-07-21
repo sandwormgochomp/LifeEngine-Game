@@ -10,6 +10,71 @@ import FossilRecord from '../Stats/FossilRecord';
 import WorldConfig from '../WorldConfig';
 import SerializeHelper from '../Utils/SerializeHelper';
 import Species from '../Stats/Species';
+import type { CellState, RenderCellOwnerLike } from '../Organism/Cell/CellStates';
+import type Cell from '../Organism/Cell/GridCell';
+import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
+import type { OrganismEnv, OrganismProjectile, SerializedOrganism } from '../Organism/Organism';
+import type { SerializedGridMap } from '../Grid/GridMap';
+import type { SerializedFossilRecord } from '../Stats/FossilRecord';
+import type { HyperparamsSingleton } from '../Hyperparameters';
+/* Type-only, so it is erased at emit and closes no runtime cycle -- Engine
+   imports this module for real. */
+import type Engine from '../Engine';
+
+/* A grid cell as this environment reaches through it. GridCell declares `owner`
+   as RenderOrganismLike, which models only what CellState.render needs; this
+   class calls die() and takeDamage() on it, so the owner is renarrowed to the
+   real Organism here. Narrowing is legal because Organism satisfies
+   RenderOrganismLike and the value stored really is an Organism --
+   GridMap.setCellOwner derives it from `cell_owner.org`. Same pattern as
+   ControllerCell in EnvironmentController.ts.
+
+   `cell_owner` is deliberately NOT renarrowed to BodyCell, even though that is
+   what it always holds: GridCell types it as RenderCellOwnerLike, which demands
+   getAbsoluteDirection(), and of the body cells only EyeCell implements that.
+   The two views therefore do not unify -- the same gap EnvironmentController.ts
+   documents at dropOrganism(), and the reason the OrganismEnv seam below needs
+   an assertion. */
+interface WorldCell extends Cell {
+    owner: Organism | null;
+}
+
+/* GridMap with that narrowing threaded through cellAt(). */
+interface WorldGridMap extends GridMap {
+    cellAt(col: number, row: number): WorldCell | null;
+}
+
+/* The saved world: whatever SerializeHelper.copyNonObjects leaves of a
+   WorldEnvironment -- every non-object own property -- plus the four nested
+   values serialize() attaches by hand. `deco_dirty` and `glow_dirty` are
+   optional because they are only ever assigned once an overlay canvas exists
+   (see syncOverlaySizes). The index signature is what lets loadRaw's reflective
+   overwriteNonObjects walk this shape. */
+export interface SerializedWorld {
+    num_rows: number;
+    num_cols: number;
+    total_mutability: number;
+    largest_cell_count: number;
+    reset_count: number;
+    total_ticks: number;
+    data_update_rate: number;
+    day_timer: number;
+    is_night: boolean;
+    deco_dirty?: boolean;
+    glow_dirty?: boolean;
+    grid: SerializedGridMap;
+    organisms: SerializedOrganism[];
+    fossil_record: SerializedFossilRecord;
+    controls: HyperparamsSingleton;
+    [key: string]: unknown;
+}
+
+/* The position fields loadRaw() reads off each saved organism. Neither is ever
+   written: Organism.serialize() emits the position as `c`/`r`. Declared as its
+   own optional pair, instead of leaning on SerializedOrganism's `unknown` index
+   signature, so that their absence is visible in the type. See the comment at
+   the constructor call in loadRaw(). */
+type SavedOrganism = SerializedOrganism & { col?: number; row?: number };
 
 // Glow overlay tuning. The scratch canvas renders at 1/DOWNSCALE resolution
 // and is upscaled with smoothing, so a bigger divisor diffuses the halo more.
@@ -19,7 +84,49 @@ const GLOW_SPREAD = 1.5;
 const GLOW_ALPHA = 0.1;
 
 class WorldEnvironment extends Environment{
-    constructor(cell_size, canvas, container, glow_canvas=null, deco_canvas=null) {
+    /* No initializers anywhere below: useDefineForClassFields is false and these
+       must stay bare declarations, so the constructor assignments remain the
+       only writes. */
+    container: HTMLElement | null;
+    renderer: Renderer;
+    glow_canvas: HTMLCanvasElement | null;
+    glow_ctx: CanvasRenderingContext2D | null;
+    glow_scratch: HTMLCanvasElement;
+    /* Non-null asserted, unlike the two overlay contexts above: the scratch
+       canvas is created on the line before, so getContext('2d') on it cannot
+       fail the way it can for a canvas the React layer may not have mounted. */
+    glow_scratch_ctx: CanvasRenderingContext2D;
+    deco_canvas: HTMLCanvasElement | null;
+    deco_ctx: CanvasRenderingContext2D | null;
+    controller: EnvironmentController;
+    num_rows: number;
+    num_cols: number;
+    grid_map: WorldGridMap;
+    organisms: Organism[];
+    walls: WorldCell[];
+    total_mutability: number;
+    largest_cell_count: number;
+    reset_count: number;
+    total_ticks: number;
+    data_update_rate: number;
+    active_explosions: { col: number; row: number; ticks: number }[];
+    active_projectiles: OrganismProjectile[];
+    radiation_map: Set<string>;
+    day_timer: number;
+    is_night: boolean;
+    /* Genuinely absent for a real window: syncOverlaySizes() is the only writer
+       the constructor reaches, and it sets each of these only when the matching
+       overlay canvas exists. With no overlays (headless, or before React mounts
+       them) both stay unset for the lifetime of the environment -- which is
+       safe only because renderDecorations()/renderGlow() bail on the null
+       context first. Hence `| undefined` rather than a definite-assignment `!`. */
+    deco_dirty: boolean | undefined;
+    glow_dirty: boolean | undefined;
+    /* Assigned from outside by Engine right after it constructs this, so absent
+       for the window in between -- setNightMode() guards on it. */
+    engine?: Engine;
+
+    constructor(cell_size: number, canvas: HTMLCanvasElement | null, container: HTMLElement | null, glow_canvas: HTMLCanvasElement | null = null, deco_canvas: HTMLCanvasElement | null = null) {
         super();
         this.container = container;
         this.renderer = new Renderer(canvas, container, cell_size);
@@ -32,7 +139,7 @@ class WorldEnvironment extends Environment{
         this.glow_canvas = glow_canvas;
         this.glow_ctx = glow_canvas ? glow_canvas.getContext('2d') : null;
         this.glow_scratch = document.createElement('canvas');
-        this.glow_scratch_ctx = this.glow_scratch.getContext('2d');
+        this.glow_scratch_ctx = this.glow_scratch.getContext('2d')!;
         // Decorations (outlines, connective tissue) overflow their cells'
         // pixel boxes, so they live on their own overlay that is cleared and
         // fully repainted when the world changes — the dirty-rect world
@@ -40,10 +147,19 @@ class WorldEnvironment extends Environment{
         this.deco_canvas = deco_canvas;
         this.deco_ctx = deco_canvas ? deco_canvas.getContext('2d') : null;
         this.syncOverlaySizes();
-        this.controller = new EnvironmentController(this, this.renderer.canvas);
+        /* The controller declares its own structural view of this environment,
+           and the two cannot unify today: that view's renderer types
+           highlightOrganism() with the shared RenderOrganismLike, while the real
+           Renderer types it with its own shape that additionally requires
+           getRealCell(). Neither is assignable to the other, so the mismatch is
+           in already-converted files, not here. Spelled as the field's declared
+           type rather than re-declaring its unexported interface. */
+        this.controller = new EnvironmentController(this as unknown as EnvironmentController['env'], this.renderer.canvas);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
         this.num_cols = Math.ceil(this.renderer.width / cell_size);
-        this.grid_map = new GridMap(this.num_cols, this.num_rows, cell_size);
+        /* The narrowing described on WorldGridMap: the map built here is an
+           ordinary GridMap, only viewed through the narrower cell type. */
+        this.grid_map = new GridMap(this.num_cols, this.num_rows, cell_size) as WorldGridMap;
         this.organisms = [];
         this.walls = [];
         this.total_mutability = 0;
@@ -59,10 +175,15 @@ class WorldEnvironment extends Environment{
         FossilRecord.setEnv(this);
     }
 
-    update() {
-        var to_remove = [];
+    /* Engine calls this as `env.update(this.sim_delta_time)` and always has, but
+       the tick is fixed-step and nothing below reads a delta. The parameter is
+       declared (optional, unused) so that existing call keeps type-checking
+       without changing either side's behaviour; the base class declares
+       update() with no parameters, and widening in an override is sound. */
+    update(_sim_delta_time?: number): void {
+        var to_remove: string[] = [];
         for (var i in this.organisms) {
-            var org = this.organisms[i];
+            var org: Organism = this.organisms[i];
             if (!org.living || !org.update()) {
                 to_remove.push(i);
             }
@@ -73,7 +194,7 @@ class WorldEnvironment extends Environment{
         }
 
         // Update active explosions
-        var remaining_explosions = [];
+        var remaining_explosions: { col: number; row: number; ticks: number }[] = [];
         for (var exp of this.active_explosions) {
             exp.ticks--;
             if (exp.ticks <= 0) {
@@ -88,7 +209,7 @@ class WorldEnvironment extends Environment{
         this.active_explosions = remaining_explosions;
 
         // Update active projectiles
-        var remaining_projectiles = [];
+        var remaining_projectiles: OrganismProjectile[] = [];
         for (var proj of this.active_projectiles) {
             // Clear current pos
             var current_cell = this.grid_map.cellAt(proj.col, proj.row);
@@ -96,10 +217,10 @@ class WorldEnvironment extends Environment{
             proj.col += proj.dir_col;
             proj.row += proj.dir_row;
             proj.ticks++;
-            
+
             var target_cell = this.grid_map.cellAt(proj.col, proj.row);
             var hit = false;
-            
+
             if (target_cell) {
                 if (target_cell.state === CellStates.wall || target_cell.state === CellStates.invincible_wall) {
                     hit = true;
@@ -120,7 +241,7 @@ class WorldEnvironment extends Environment{
             } else {
                 hit = true; // Off screen
             }
-            
+
             if (!hit && proj.ticks < 50) { // Max range 50
                 remaining_projectiles.push(proj);
                 if (this.renderer.ctx) {
@@ -130,7 +251,7 @@ class WorldEnvironment extends Environment{
             }
         }
         this.active_projectiles = remaining_projectiles;
-        
+
         // Day/Night Cycle
         this.day_timer++;
         if (this.day_timer > 3600) { // 1 minute at 60 ticks per second
@@ -149,7 +270,7 @@ class WorldEnvironment extends Environment{
     // Its appearance (canvas filter, void color) is applied by App from this
     // flag — pushing styles onto elements from here meant every path that left
     // night mode had to remember to undo all four of them, and reset() didn't.
-    setNightMode(isNight) {
+    setNightMode(isNight: boolean): void {
         this.is_night = Boolean(isNight);
         this.day_timer = 0;
         // Forced: while the sim is paused there is no frame loop to refresh the
@@ -161,7 +282,7 @@ class WorldEnvironment extends Environment{
         }
     }
 
-    render() {
+    render(): void {
         if (WorldConfig.headless) {
             this.renderer.cells_to_render.clear();
             return;
@@ -173,7 +294,7 @@ class WorldEnvironment extends Environment{
         this.renderGlow();
     }
 
-    syncOverlaySizes() {
+    syncOverlaySizes(): void {
         if (this.deco_canvas) {
             this.deco_canvas.width = this.renderer.width;
             this.deco_canvas.height = this.renderer.height;
@@ -190,7 +311,7 @@ class WorldEnvironment extends Environment{
         this.glow_dirty = true;
     }
 
-    renderDecorations() {
+    renderDecorations(): void {
         if (!this.deco_ctx || WorldConfig.headless) return;
         // Like glow, only repaint when the world changed; pan/zoom move the
         // overlay via its CSS transform instead.
@@ -199,7 +320,7 @@ class WorldEnvironment extends Environment{
         drawOrganismDecorations(this.deco_ctx, this);
     }
 
-    renderGlow() {
+    renderGlow(): void {
         if (!this.glow_ctx || WorldConfig.headless) return;
         // Only re-composite when the world changed (changeCell/addOrganism);
         // pan and zoom move the overlay via its CSS transform instead.
@@ -215,7 +336,13 @@ class WorldEnvironment extends Environment{
         sctx.clearRect(0, 0, this.glow_scratch.width, this.glow_scratch.height);
         for (var org of this.organisms) {
             for (var body_cell of org.anatomy.cells) {
-                var cell = org.getRealCell(body_cell);
+                /* getRealCell() returns Organism's own structural view of a grid
+                   cell, which omits the pixel coordinates; every organism in this
+                   environment sits on this grid_map, so the value is one of its
+                   cells and carries x/y. Routed through `unknown` because the two
+                   views of a grid cell do not overlap for the checker: the
+                   organism's omits x/y/setType entirely. */
+                var cell = org.getRealCell(body_cell) as unknown as WorldCell | null;
                 if (cell == null) continue;
                 sctx.fillStyle = body_cell.custom_color || body_cell.state.color;
                 sctx.fillRect(
@@ -235,16 +362,21 @@ class WorldEnvironment extends Environment{
         gctx.globalAlpha = 1;
     }
 
-    renderFull() {
+    renderFull(): void {
         this.renderer.renderFullGrid(this.grid_map.grid);
         this.deco_dirty = true;
     }
 
-    removeOrganisms(org_indeces) {
+    /* The indices arrive as strings: both callers collect them with `for...in`
+       over the organism array, which yields keys, not numbers. */
+    removeOrganisms(org_indeces: string[]): void {
         let start_pop = this.organisms.length;
         for (var i of org_indeces.reverse()){
-            this.total_mutability -= this.organisms[i].mutability;
-            this.organisms.splice(i, 1);
+            /* Element access and splice() both coerce the string index at
+               runtime exactly as the JS did; the casts record that rather than
+               changing the value passed. */
+            this.total_mutability -= this.organisms[i as unknown as number].mutability;
+            this.organisms.splice(i as unknown as number, 1);
         }
         if (this.organisms.length === 0 && start_pop > 0) {
             if (WorldConfig.auto_pause) {
@@ -259,9 +391,17 @@ class WorldEnvironment extends Environment{
         }
     }
 
-    OriginOfLife() {
+    OriginOfLife(): void {
         var center = this.grid_map.getCenter();
-        var org = new Organism(center[0], center[1], this);
+        /* Organism declares its own view of this same environment (OrganismEnv),
+           and the two cannot unify today: a grid cell's `cell_owner` is
+           RenderCellOwnerLike in GridCell but BodyCell in OrganismGridCell, and
+           BodyCell does not satisfy RenderCellOwnerLike (getAbsoluteDirection
+           lives on EyeCell alone). Both stand-ins describe the same runtime
+           object; this collapses to nothing once GridCell and Organism can name
+           each other directly. Same assertion, same reason, as
+           EnvironmentController.dropOrganism(). */
+        var org = new Organism(center[0], center[1], this as unknown as OrganismEnv);
         org.anatomy.addDefaultCell(CellStates.mouth, 0, 0);
         org.anatomy.addDefaultCell(CellStates.producer, 1, 1);
         org.anatomy.addDefaultCell(CellStates.producer, -1, -1);
@@ -269,19 +409,19 @@ class WorldEnvironment extends Environment{
         FossilRecord.addSpecies(org, null);
     }
 
-    addOrganism(organism) {
+    addOrganism(organism: Organism): void {
         organism.updateGrid();
         this.total_mutability += organism.mutability;
         this.organisms.push(organism);
-        if (organism.anatomy.cells.length > this.largest_cell_count) 
+        if (organism.anatomy.cells.length > this.largest_cell_count)
             this.largest_cell_count = organism.anatomy.cells.length;
     }
 
-    canAddOrganism() {
+    canAddOrganism(): boolean {
         return this.organisms.length < Hyperparams.maxOrganisms || Hyperparams.maxOrganisms < 0;
     }
 
-    averageMutability() {
+    averageMutability(): number {
         if (this.organisms.length < 1)
             return 0;
         if (Hyperparams.useGlobalMutability) {
@@ -290,8 +430,17 @@ class WorldEnvironment extends Environment{
         return this.total_mutability / this.organisms.length;
     }
 
-    changeCell(c, r, state, owner) {
-        super.changeCell(c, r, state, owner);
+    /* The owner parameter is widened past the base class's, which declares only
+       `RenderCellOwnerLike | null`: Organism.updateGrid() really does hand body
+       cells through here. Widening a parameter in an override is sound, so no
+       assertion is needed on the declaration -- only on the forward below,
+       because RenderCellOwnerLike demands getAbsoluteDirection(), which of the
+       body cells only EyeCell implements. Nothing downstream calls it for a
+       non-eye cell: GridMap.setCellOwner only stores the value and reads .org,
+       and CellState.render only reaches for it from EyeCell's own renderer.
+       Mirrors OrganismEditor.changeCell verbatim. */
+    changeCell(c: number, r: number, state: CellState, owner: RenderCellOwnerLike | BodyCell | null): void {
+        super.changeCell(c, r, state, owner as RenderCellOwnerLike | null);
         this.renderer.addToRender(this.grid_map.cellAt(c, r));
         this.glow_dirty = true;
         this.deco_dirty = true;
@@ -304,7 +453,7 @@ class WorldEnvironment extends Environment{
     // because fillGrid preserves walls unless clear_walls_on_reset is set.
     // Cells are flagged so the renderer can draw the glass as page-background
     // (hiding the rectangular canvas) with a lit rim ring at the dish edge.
-    buildPetriDish() {
+    buildPetriDish(): void {
         var cx = (this.grid_map.cols - 1) / 2;
         var cy = (this.grid_map.rows - 1) / 2;
         // Inset radius by 4 cells so the full 3-tier glass rim and shadow fit comfortably
@@ -312,7 +461,9 @@ class WorldEnvironment extends Environment{
         var radius = Math.min(this.grid_map.cols, this.grid_map.rows) / 2 - 4;
         for (var c = 0; c < this.grid_map.cols; c++) {
             for (var r = 0; r < this.grid_map.rows; r++) {
-                var cell = this.grid_map.cellAt(c, r);
+                /* The loop bounds are the grid's own dimensions, so cellAt()
+                   never returns null here. */
+                var cell = this.grid_map.cellAt(c, r)!;
                 var dx = c - cx;
                 var dy = r - cy;
                 var dist = Math.hypot(dx, dy);
@@ -346,35 +497,39 @@ class WorldEnvironment extends Environment{
         this.renderFull();
     }
 
-    clearWalls() {
+    clearWalls(): void {
         for(var wall of this.walls){
             let wcell = this.grid_map.cellAt(wall.col, wall.row);
             if (wcell && (wcell.state == CellStates.wall || wcell.state == CellStates.invincible_wall)) {
                 wcell.dish_glass = false;
-                wcell.dish_rim = false;
+                /* Dead write, kept verbatim: `dish_rim` is not a GridCell field
+                   and nothing reads it -- buildPetriDish flags the rim with
+                   dish_glass/dish_tier/dish_light. The cast is only what lets an
+                   undeclared property be assigned. */
+                (wcell as WorldCell & { dish_rim?: boolean }).dish_rim = false;
                 this.changeCell(wall.col, wall.row, CellStates.empty, null);
             }
         }
         this.renderFull();
     }
 
-    clearOrganisms() {
+    clearOrganisms(): void {
         for (var org of this.organisms)
             org.die();
         this.organisms = [];
     }
-    
-    clearDeadOrganisms() {
-        let to_remove = [];
+
+    clearDeadOrganisms(): void {
+        let to_remove: string[] = [];
         for (let i in this.organisms) {
-            let org = this.organisms[i];
+            let org: Organism = this.organisms[i];
             if (!org.living)
                 to_remove.push(i);
         }
         this.removeOrganisms(to_remove);
     }
 
-    generateFood() {
+    generateFood(): void {
         var num_food = Math.max(Math.floor(this.grid_map.cols*this.grid_map.rows*Hyperparams.foodDropProb/50000), 1)
         var prob = Hyperparams.foodDropProb;
         for (var i=0; i<num_food; i++) {
@@ -382,7 +537,10 @@ class WorldEnvironment extends Environment{
                 var c=Math.floor(Math.random() * this.grid_map.cols);
                 var r=Math.floor(Math.random() * this.grid_map.rows);
 
-                if (this.grid_map.cellAt(c, r).state == CellStates.empty){
+                /* c and r are drawn from the grid's own dimensions, so cellAt()
+                   never returns null here -- the JS dereferenced it unguarded
+                   for the same reason. */
+                if (this.grid_map.cellAt(c, r)!.state == CellStates.empty){
                     this.changeCell(c, r, CellStates.food, null);
                 }
             }
@@ -390,7 +548,7 @@ class WorldEnvironment extends Environment{
     }
 
     // Destructive: callers are responsible for confirming with the user first
-    reset(reset_life=true) {
+    reset(reset_life: boolean = true): boolean {
         this.organisms = [];
         this.grid_map.fillGrid(CellStates.empty, !WorldConfig.clear_walls_on_reset);
         this.renderer.renderFullGrid(this.grid_map.grid);
@@ -407,7 +565,7 @@ class WorldEnvironment extends Environment{
         return true;
     }
 
-    resizeGridColRow(cell_size, cols, rows) {
+    resizeGridColRow(cell_size: number | string, cols: number, rows: number): void {
         cell_size = Number(cell_size);
         this.renderer.cell_size = cell_size;
         this.renderer.fillShape(rows*cell_size, cols*cell_size);
@@ -415,7 +573,7 @@ class WorldEnvironment extends Environment{
         this.syncOverlaySizes();
     }
 
-    resizeFillWindow(cell_size) {
+    resizeFillWindow(cell_size: number): void {
         this.renderer.cell_size = cell_size;
         this.renderer.fillWindow();
         this.syncOverlaySizes();
@@ -424,9 +582,12 @@ class WorldEnvironment extends Environment{
         this.grid_map.resize(this.num_cols, this.num_rows, cell_size);
     }
 
-    serialize() {
+    serialize(): SerializedWorld {
         this.clearDeadOrganisms();
-        let env = SerializeHelper.copyNonObjects(this);
+        /* copyNonObjects reflects over arbitrary keys, so it takes and returns
+           Record<string, unknown>; the casts on either side are the join between
+           that dynamic walk and the declared save shape. */
+        let env = SerializeHelper.copyNonObjects(this as unknown as Record<string, unknown>) as SerializedWorld;
         env.grid = this.grid_map.serialize();
         env.organisms = [];
         for (let org of this.organisms){
@@ -437,13 +598,17 @@ class WorldEnvironment extends Environment{
         return env;
     }
 
-    loadRaw(env) { // species name->stats map, evolution controls, 
+    loadRaw(env: unknown): void { // species name->stats map, evolution controls,
+        /* Asserted, not runtime-checked: the JS did no validation either and
+           adding a guard here would change behavior on malformed saves. `raw` is
+           a type-only view of the value already in hand. */
+        let raw = env as SerializedWorld;
         this.organisms = [];
         FossilRecord.clear_record();
-        let cell_size = env.grid.cell_size ? env.grid.cell_size : this.grid_map.cell_size;
-        this.resizeGridColRow(cell_size, env.grid.cols, env.grid.rows)
-        this.grid_map.loadRaw(env.grid);
-        for (let wall of env.grid.walls) {
+        let cell_size = raw.grid.cell_size ? raw.grid.cell_size : this.grid_map.cell_size;
+        this.resizeGridColRow(cell_size, raw.grid.cols, raw.grid.rows)
+        this.grid_map.loadRaw(raw.grid);
+        for (let wall of raw.grid.walls) {
             this.walls.push(this.grid_map.cellAt(wall.c, wall.r));
         }
         // Saved worlds carry dish walls but not the glass flags; re-flag them
@@ -451,20 +616,28 @@ class WorldEnvironment extends Environment{
             this.buildPetriDish();
 
         // create species map
-        let species = {};
-        for (let name in env.fossil_record.species) {
+        let species: Record<string, Species> = {};
+        for (let name in raw.fossil_record.species) {
             let s = new Species(null, null, 0);
-            SerializeHelper.overwriteNonObjects(env.fossil_record.species[name], s)
+            SerializeHelper.overwriteNonObjects(raw.fossil_record.species[name] as unknown as Record<string, unknown>, s as unknown as Record<string, unknown>)
             species[name] = s; // the species needs an anatomy obj still
         }
 
-        for (let orgRaw of env.organisms) {
-            let org = new Organism(orgRaw.col, orgRaw.row, this);
+        /* The cast is only the SavedOrganism view described above -- it adds the
+           two position fields loadRaw reads and serialize() never writes. */
+        for (let orgRaw of raw.organisms as SavedOrganism[]) {
+            /* KNOWN SAVE-FORMAT BUG, preserved verbatim: serialize() writes an
+               organism's position as `c`/`r` (Organism.serialize -> copyNonObjects),
+               never `col`/`row`, so the constructor receives undefined for both
+               here. The overwriteNonObjects call inside org.loadRaw on the next
+               line restores c/r from the save, which is the only reason this
+               works at all. Typed as the absence it really is; not fixed. */
+            let org = new Organism(orgRaw.col, orgRaw.row, this as unknown as OrganismEnv);
             org.loadRaw(orgRaw);
             this.addOrganism(org);
             let s = species[orgRaw.species_name];
             if (!s){ // ideally, every organisms species should exists, but there is a bug that misses some species sometimes
-                s = new Species(org.anatomy, null, env.total_ticks);
+                s = new Species(org.anatomy, null, raw.total_ticks);
                 species[orgRaw.species_name] = s;
             }
             if (!s.anatomy) {
@@ -477,11 +650,10 @@ class WorldEnvironment extends Environment{
         }
         for (let name in species)
             FossilRecord.addSpeciesObj(species[name]);
-        FossilRecord.loadRaw(env.fossil_record);
-        SerializeHelper.overwriteNonObjects(env, this);
+        FossilRecord.loadRaw(raw.fossil_record);
+        SerializeHelper.overwriteNonObjects(raw, this as unknown as Record<string, unknown>);
         this.renderer.renderFullGrid(this.grid_map.grid);
     }
 }
 
 export default WorldEnvironment;
-
