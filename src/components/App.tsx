@@ -78,7 +78,7 @@ const App: React.FC = () => {
       deco_canvas: decoCanvasRef.current!,
     });
     window.engine = newEngine;
-    newEngine.start(60);
+    newEngine.start();
     setEngine(newEngine);
 
     return () => newEngine.dispose();
@@ -144,7 +144,7 @@ const App: React.FC = () => {
       switch (e.key.toLowerCase()) {
         case ' ':
           e.preventDefault();
-          engine.controlpanel.setPaused(engine.running);
+          engine.toggleRunning();
           break;
         case 'a': engine.env.controller.resetView(); break;
         case 's': setMode(Modes.Drag); break;

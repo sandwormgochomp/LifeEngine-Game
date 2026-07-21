@@ -26,16 +26,14 @@ interface ControllerEnvLike {
     deco_dirty?: boolean;
 }
 
-/* The control panel, as the controllers and the environment between them reach
-   through it: EnvironmentController hands it the newly selected organism and
-   WorldEnvironment pauses through `controller.control_panel`. A bare string
-   index signature stood here before, which no class instance is ever assignable
-   to; the real ControlPanel satisfies this shape. Declared structurally rather
-   than imported because ControlPanel.ts declares its own stand-in for these
-   controllers -- the two reference each other, so they only collapse together. */
+/* The control panel, as EnvironmentController reaches through it to hand over
+   the newly selected organism. A bare string index signature stood here before,
+   which no class instance is ever assignable to; the real ControlPanel satisfies
+   this shape. Declared structurally rather than imported because ControlPanel.ts
+   declares its own stand-in for these controllers -- the two reference each
+   other, so they only collapse together. */
 interface ControlPanelLike {
     setEditorOrganism(org: unknown): void;
-    setPaused(paused: boolean): void;
 }
 
 class CanvasController{

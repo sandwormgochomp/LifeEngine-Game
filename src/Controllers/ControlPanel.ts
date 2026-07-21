@@ -24,29 +24,21 @@ interface OrganismEditorLike {
 }
 
 interface EngineLike {
-    fps: number;
-    running: boolean;
     env: ControlPanelEnvLike;
     organism_editor: OrganismEditorLike;
-    start(fps?: number): void;
-    stop(): void;
-    emitChange(force?: boolean): void;
 }
 
 class ControlPanel {
     engine: EngineLike;
-    fps: number;
     organism_record: number;
     env_controller: CanvasControllerLike;
     editor_controller: CanvasControllerLike;
     stats_panel: StatsPanel;
     headless_opacity: number;
     opacity_change_rate: number;
-    paused: boolean;
 
     constructor(engine: EngineLike) {
         this.engine = engine;
-        this.fps = engine.fps;
         this.organism_record = 0;
         this.env_controller = this.engine.env.controller;
         this.editor_controller = this.engine.organism_editor.controller;
@@ -55,7 +47,6 @@ class ControlPanel {
         this.stats_panel = new StatsPanel(this.engine.env);
         this.headless_opacity = 1;
         this.opacity_change_rate = -0.8;
-        this.paused = false;
 
         // Setup hyperparams
         this.setHyperparamDefaults();
@@ -73,25 +64,6 @@ class ControlPanel {
     resetHyperparams(): void {
         Hyperparams.setDefaults();
         this.setHyperparamDefaults();
-    }
-
-    changeEngineSpeed(fps: number): void {
-        this.fps = fps;
-        this.engine.fps = fps;
-        if (this.engine.running) {
-            this.engine.start(fps);
-        } else {
-            this.engine.emitChange(true);
-        }
-    }
-
-    setPaused(paused: boolean): void {
-        this.paused = paused;
-        if (paused) {
-            this.engine.stop();
-        } else {
-            this.engine.start(this.fps);
-        }
     }
 
     setEditorOrganism(org: unknown): void {

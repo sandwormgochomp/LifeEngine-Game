@@ -46,7 +46,7 @@ async function loadPreset(page, presetValue) {
 
 // Pause the simulation for deterministic assertions on world state
 async function pauseEngine(page) {
-  await page.evaluate(() => window.engine.controlpanel.setPaused(true));
+  await page.evaluate(() => window.engine.stop());
 }
 
 // Canvas-relative position of the editor grid cell at the given offset from

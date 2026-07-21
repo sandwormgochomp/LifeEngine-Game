@@ -386,9 +386,7 @@ class WorldEnvironment extends Environment{
         }
         if (this.organisms.length === 0 && start_pop > 0) {
             if (WorldConfig.auto_pause) {
-                if (this.controller && this.controller.control_panel) {
-                    this.controller.control_panel.setPaused(true);
-                }
+                this.engine?.stop();
             }
             else if (WorldConfig.auto_reset) {
                 this.reset_count++;

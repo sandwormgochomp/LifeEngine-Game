@@ -21,10 +21,40 @@ export type EngineListener = () => void;
 // at a reasonable speed. If it is above, the simulation interval will be used to update the ui.
 const min_render_speed = 60;
 
+/* The playback ladder. Index 0 is stopped -- pause is the bottom of the speed
+   scale rather than a separate flag, so "is the sim running, and how fast" has
+   exactly one representation, and each control is an absolute destination.
+
+   The multipliers stop at 4x because that is where the machine does: measured
+   tick rates plateau around 120/sec with rendering on and 220/sec headless, so
+   the 5x and 10x steps this replaced delivered nothing over 2x -- and 10x ran
+   *slower* than 2x (99/sec), the interval oversubscribing until it thrashed.
+   4x is the last step that is real, and only headless makes it fully so. */
+export interface SpeedMode {
+    label: string;
+    icon: string;
+    multiplier: number;
+}
+
+export const SPEED_MODES: SpeedMode[] = [
+    {label: 'Pause',  icon: 'fa-pause',        multiplier: 0},
+    {label: 'Play',   icon: 'fa-play',         multiplier: 1},
+    {label: 'Fast',   icon: 'fa-forward',      multiplier: 2},
+    {label: 'Faster', icon: 'fa-forward-fast', multiplier: 4},
+];
+
+export const DEFAULT_SPEED_INDEX = 1; // Play, 1x
+
 class Engine {
     /* No initializers: useDefineForClassFields is false and these must stay
        bare declarations, so the constructor assignments remain the only writes. */
-    fps: number;
+    /* Playback is these two fields and nothing else. speed_index is the whole
+       transport state, 0 meaning stopped; the intervals below are reconciled to
+       match it by applyLoops(), their only writer outside dispose().
+       resume_index remembers the last moving speed, purely so the spacebar has
+       somewhere to come back to. */
+    speed_index: number;
+    resume_index: number;
     env: WorldEnvironment;
     organism_editor: OrganismEditor;
     controlpanel: ControlPanel;
@@ -34,7 +64,6 @@ class Engine {
     ui_last_update: number;
     ui_delta_time: number;
     actual_fps: number;
-    running: boolean;
     listeners: Set<EngineListener>;
     last_emit: number;
     /* Genuinely absent for a real window: the constructor never touches either
@@ -55,7 +84,9 @@ class Engine {
     // The world canvas is always mounted; the editor canvas is attached later
     // via organism_editor.bindCanvas when its panel mounts.
     constructor({env_canvas, env_container, glow_canvas, deco_canvas}: EngineCanvases){
-        this.fps = 60;
+        // Constructed stopped; App starts the loops once it has the engine.
+        this.speed_index = 0;
+        this.resume_index = DEFAULT_SPEED_INDEX;
         this.env = new WorldEnvironment(5, env_canvas, env_container, glow_canvas, deco_canvas);
         this.env.engine = this;
         this.organism_editor = new OrganismEditor();
@@ -73,7 +104,6 @@ class Engine {
         this.ui_delta_time = 0;
 
         this.actual_fps = 0;
-        this.running = false;
 
         this.listeners = new Set();
         this.last_emit = 0;
@@ -95,21 +125,65 @@ class Engine {
             listener();
     }
 
-    start(fps: number = 60): void {
-        if (fps <= 0)
-            fps = 1;
-        this.fps = fps;
+    /* Both derived, so there is no second copy of either to drift out of sync
+       with the ladder. fps is zero while paused -- applyLoops() reads that as
+       "no sim interval". */
+    get running(): boolean {
+        return this.speed_index > 0;
+    }
+
+    get fps(): number {
+        return SPEED_MODES[this.speed_index].multiplier * 60;
+    }
+
+    // The one mutator for playback; every control routes through it.
+    setSpeedIndex(index: number): void {
+        const next = Math.max(0, Math.min(SPEED_MODES.length - 1, index));
+        if (next === this.speed_index)
+            return;
+        this.speed_index = next;
+        if (next > 0)
+            this.resume_index = next;
+        this.applyLoops();
+        this.emitChange(true);
+    }
+
+    // Resume at whatever speed was last running.
+    start(): void {
+        this.setSpeedIndex(this.resume_index);
+    }
+
+    stop(): void {
+        this.setSpeedIndex(0);
+    }
+
+    toggleRunning(): void {
+        if (this.running)
+            this.stop();
+        else
+            this.start();
+    }
+
+    /* The single reconciler for both intervals: what they should be is entirely
+       a function of speed_index, so tear down whatever is there and rebuild what
+       that speed implies. The ui loop keeps running while stopped, so the world
+       still repaints for panning, editing and tool overlays. */
+    applyLoops(): void {
         if (this.sim_loop) {
             clearInterval(this.sim_loop);
             this.sim_loop = null;
         }
-        this.sim_loop = setInterval(()=>{
-            this.updateSimDeltaTime();
-            this.environmentUpdate();
-        }, 1000/fps);
-        this.running = true;
-        this.emitChange(true);
-        if (this.fps >= min_render_speed) {
+        const fps = this.fps;
+        if (fps > 0) {
+            /* Rebase before the first tick: otherwise the delta spans the whole
+               pause, and the world would take one enormous step on resume. */
+            this.sim_last_update = Date.now();
+            this.sim_loop = setInterval(()=>{
+                this.updateSimDeltaTime();
+                this.environmentUpdate();
+            }, 1000/fps);
+        }
+        if (fps >= min_render_speed) {
             if (this.ui_loop != null) {
                 clearInterval(this.ui_loop);
                 this.ui_loop = null;
@@ -117,24 +191,6 @@ class Engine {
         }
         else
             this.setUiLoop();
-    }
-
-    stop(): void {
-        if (this.sim_loop) {
-            clearInterval(this.sim_loop);
-            this.sim_loop = null;
-        }
-        this.running = false;
-        this.setUiLoop();
-        this.emitChange(true);
-    }
-
-    restart(fps: number): void {
-        if (this.sim_loop) {
-            clearInterval(this.sim_loop);
-            this.sim_loop = null;
-        }
-        this.start(fps);
     }
 
     setUiLoop(): void {
@@ -181,8 +237,9 @@ class Engine {
            branching. */
         clearInterval(this.sim_loop ?? undefined);
         clearInterval(this.ui_loop ?? undefined);
+        this.sim_loop = null;
         this.ui_loop = null;
-        this.running = false;
+        this.speed_index = 0;
     }
 
 }

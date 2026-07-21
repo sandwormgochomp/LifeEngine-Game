@@ -24,7 +24,7 @@ test.describe('World controls', () => {
 
     // Kill everything and let the sim tick so removeOrganisms sees extinction
     await page.evaluate(() => {
-      window.engine.controlpanel.setPaused(false);
+      window.engine.start();
       window.engine.env.organisms.forEach(o => o.die());
     });
 
@@ -37,7 +37,7 @@ test.describe('World controls', () => {
     await expect(page.locator('#reset-count')).toContainText('Auto reset count: 0');
 
     await page.evaluate(() => {
-      window.engine.controlpanel.setPaused(false);
+      window.engine.start();
       window.engine.env.organisms.forEach(o => o.die());
     });
 

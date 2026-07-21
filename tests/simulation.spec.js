@@ -1,28 +1,35 @@
 const { test, expect, openPanel, openWorldControls } = require('./helpers/fixtures');
 
 test.describe('Simulation Controls', () => {
-  test('Play/Pause buttons toggle simulation state', async ({ page }) => {
-    // The simulation starts running
-    expect(await page.evaluate(() => window.engine.running)).toBe(true);
+  test('Each speed button sets its rate, and shows as the active one', async ({ page }) => {
+    // The simulation starts at Play, 1x
+    expect(await page.evaluate(() => window.engine.fps)).toBe(60);
+    await expect(page.locator('#speed-1')).toHaveAttribute('aria-pressed', 'true');
 
-    await page.getByTitle('Pause').click();
+    await page.locator('#speed-2').click(); // Fast
+    expect(await page.evaluate(() => window.engine.fps)).toBe(120);
+    await expect(page.locator('#speed-2')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#speed-1')).toHaveAttribute('aria-pressed', 'false');
+
+    await page.locator('#speed-3').click(); // Faster
+    expect(await page.evaluate(() => window.engine.fps)).toBe(240);
+
+    await page.locator('#speed-0').click(); // Pause
     expect(await page.evaluate(() => window.engine.running)).toBe(false);
-
-    await page.getByTitle('Play').click();
-    expect(await page.evaluate(() => window.engine.running)).toBe(true);
+    expect(await page.evaluate(() => window.engine.fps)).toBe(0);
+    await expect(page.locator('#speed-0')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('Speed controls step the engine fps', async ({ page }) => {
-    await expect(page.locator('span[title="Click to cycle speed"]')).toHaveText('1x');
+  test('Space resumes at the speed that was running, not 1x', async ({ page }) => {
+    await page.locator('#speed-3').click(); // Faster
+    expect(await page.evaluate(() => window.engine.fps)).toBe(240);
 
-    await page.getByTitle('Increase Speed').click();
-    await expect(page.locator('span[title="Click to cycle speed"]')).toHaveText('2x');
-    expect(await page.evaluate(() => window.engine.fps)).toBe(120);
+    await page.keyboard.press(' ');
+    expect(await page.evaluate(() => window.engine.running)).toBe(false);
 
-    await page.getByTitle('Decrease Speed').click();
-    await page.getByTitle('Decrease Speed').click();
-    await expect(page.locator('span[title="Click to cycle speed"]')).toHaveText('0.5x');
-    expect(await page.evaluate(() => window.engine.fps)).toBe(30);
+    await page.keyboard.press(' ');
+    expect(await page.evaluate(() => window.engine.fps)).toBe(240);
+    await expect(page.locator('#speed-3')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('Clear Life removes organisms; Restart reseeds one', async ({ page }) => {

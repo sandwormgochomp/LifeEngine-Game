@@ -310,7 +310,7 @@ test.describe('Select from world', () => {
     // Wipe out all life. Auto-reset seeds a brand new species, so the list
     // should swap over on its own with the modal still open.
     await page.evaluate(() => {
-      window.engine.controlpanel.setPaused(false);
+      window.engine.start();
       window.engine.env.organisms.forEach(o => o.die());
     });
 

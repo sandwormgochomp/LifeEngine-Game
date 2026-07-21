@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
+import { SPEED_MODES } from '../Engine';
 
 import Notifier from '../Utils/Notifier';
 import WorldConfig from '../WorldConfig';
@@ -13,15 +14,7 @@ interface HudTopLeftProps {
 }
 
 const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadless }) => {
-  const running = useEngineValue(engine, e => e.running, false);
-
-  const handlePlay = () => {
-    engine?.controlpanel.setPaused(false);
-  };
-
-  const handlePause = () => {
-    engine?.controlpanel.setPaused(true);
-  };
+  const speedIndex = useEngineValue(engine, e => e.speed_index, 0);
 
   const handleRestart = () => {
     if (!engine?.env) return;
@@ -51,21 +44,25 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadl
         <span className={styles.logoVersion}>v1.2</span>
       </div>
       <div className={styles.playbackRow}>
+        {/* The speed ladder, pause included: every rate is one click away and
+            the active one is always visible, so there is nothing to infer. */}
+        {SPEED_MODES.map((mode, index) => (
+          <button
+            key={mode.label}
+            id={`speed-${index}`}
+            className={`${styles.playbackBtn} ${speedIndex === index ? styles.playbackBtnActive : ''}`}
+            onClick={() => engine?.setSpeedIndex(index)}
+            title={index === 0 ? 'Pause · Space' : `${mode.label} · ${mode.multiplier}x`}
+            aria-pressed={speedIndex === index}
+          >
+            <i className={`fa-solid ${mode.icon}`} />
+          </button>
+        ))}
         <button
-          className={`${styles.playbackBtn} ${engine && !running ? styles.playbackBtnActive : ''}`}
-          onClick={handlePause}
-          title="Pause"
+          className={`${styles.playbackBtn} ${styles.playbackGroupBreak}`}
+          onClick={handleRestart}
+          title="Restart Simulation"
         >
-          <i className="fa-solid fa-pause" />
-        </button>
-        <button
-          className={`${styles.playbackBtn} ${running ? styles.playbackBtnActive : ''}`}
-          onClick={handlePlay}
-          title="Play"
-        >
-          <i className="fa-solid fa-play" />
-        </button>
-        <button className={styles.playbackBtn} onClick={handleRestart} title="Restart Simulation">
           <i className="fa-solid fa-rotate" />
         </button>
         <button className={styles.playbackBtn} onClick={handleSave} title="Save">
