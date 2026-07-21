@@ -1,4 +1,4 @@
-const { test, expect, openEditor, openWorldControls } = require('./helpers/fixtures');
+const { test, expect, openEditor, openWorldControls, loadPreset } = require('./helpers/fixtures');
 
 test.describe('Visual Regression Tests', () => {
   test('Main dashboard layout', async ({ page }) => {
@@ -29,5 +29,19 @@ test.describe('Visual Regression Tests', () => {
     // Verify the editor dock visually matches the snapshot
     const dock = page.getByTestId('editor-dock');
     await expect(dock).toHaveScreenshot('editor-dock.png');
+  });
+
+  test('Editor dock with Fly Catcher preset', async ({ page }) => {
+    await page.evaluate(() => window.engine.stop());
+
+    // Open the editor dock
+    await openEditor(page);
+
+    // Load the Fly Catcher preset
+    await loadPreset(page, 'flycatcher');
+
+    // Verify the editor dock showing the Fly Catcher visually matches the snapshot
+    const dock = page.getByTestId('editor-dock');
+    await expect(dock).toHaveScreenshot('editor-dock-flycatcher.png');
   });
 });
