@@ -8,6 +8,7 @@ import Species from '../Stats/Species';
 import RandomOrganismGenerator from '../Organism/RandomOrganismGenerator';
 import Directions from '../Organism/Directions';
 import Notifier from '../Utils/Notifier';
+import drawOrganismDecorations from '../Rendering/DecorationRenderer';
 
 // Cell sizes the editor canvas can render at; the grid is rebuilt to whatever
 // number of cells fits the bound canvas at the current size.
@@ -119,6 +120,8 @@ class OrganismEditor extends Environment{
         this.needs_render = false;
         if (!this.renderer.ctx) return;
         this.renderer.renderFullGrid(this.grid_map.grid);
+        this.organisms = [this.organism];
+        drawOrganismDecorations(this.renderer.ctx, this);
         this.renderDecorations();
     }
 
