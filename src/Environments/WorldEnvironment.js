@@ -144,23 +144,20 @@ class WorldEnvironment extends Environment{
         }
     }
 
+    // Night is engine state, not a visual effect: EyeCell reads is_night inside
+    // the sim loop to clamp vision range, so it can't round-trip through React.
+    // Its appearance (canvas filter, void color) is applied by App from this
+    // flag — pushing styles onto elements from here meant every path that left
+    // night mode had to remember to undo all four of them, and reset() didn't.
     setNightMode(isNight) {
         this.is_night = Boolean(isNight);
         this.day_timer = 0;
-        var night_filter = this.is_night ? "brightness(0.3) hue-rotate(180deg) saturate(0.5)" : "none";
-
-        if (this.renderer && this.renderer.canvas) this.renderer.canvas.style.filter = night_filter;
-        if (this.deco_canvas) this.deco_canvas.style.filter = night_filter;
-        if (this.glow_canvas) this.glow_canvas.style.filter = night_filter;
-
-        var container = this.container || (this.renderer ? this.renderer.container : null);
-        if (container) {
-            container.style.filter = "none";
-            container.style.backgroundColor = this.is_night ? '#000000' : '#05050A';
-        }
-
-        if (this.engine && typeof this.engine.notify === 'function') {
-            this.engine.notify();
+        // Forced: while the sim is paused there is no frame loop to refresh the
+        // HUD, and its toggle reads is_night to pick the next target — a stale
+        // value leaves it stuck on one side. Unguarded on purpose, so renaming
+        // the emit breaks loudly here instead of silently freezing the toggle.
+        if (this.engine) {
+            this.engine.emitChange(true);
         }
     }
 
@@ -401,11 +398,7 @@ class WorldEnvironment extends Environment{
         this.total_ticks = 0;
         this.active_explosions = [];
         this.active_projectiles = [];
-        this.day_timer = 0;
-        this.is_night = false;
-        this.renderer.canvas.style.filter = "none";
-        if (this.deco_canvas)
-            this.deco_canvas.style.filter = "none";
+        this.setNightMode(false);
         this.deco_dirty = true;
         this.radiation_map.clear();
         FossilRecord.clear_record();

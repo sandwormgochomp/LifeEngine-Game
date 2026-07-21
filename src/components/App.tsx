@@ -30,6 +30,12 @@ import EvolutionControlsModal from './EvolutionControlsModal';
 import StatsTab from './Tabs/StatsTab';
 import AboutTab from './Tabs/AboutTab';
 
+// Night is a presentation pass over the world canvases: a blue-shifted dim.
+// The container goes flat black to match, since the canvas void color reads
+// near-black once the filter is applied and a seam would show at the edges.
+const NIGHT_FILTER = 'brightness(0.3) hue-rotate(180deg) saturate(0.5)';
+const NIGHT_VOID = '#000000';
+
 const PANEL_TITLES: Record<string, string> = {
   save: 'SAVE / LOAD',
   about: 'ABOUT',
@@ -46,6 +52,9 @@ const App: React.FC = () => {
   const [worldOpen, setWorldOpen] = useState(false);
   const [brainOpen, setBrainOpen] = useState(false);
   const [headless, setHeadless] = useState(WorldConfig.headless);
+  // Derived as a boolean, so this only re-renders App when night actually
+  // flips — not on every engine emit.
+  const isNight = useEngineValue(engine, e => Boolean(e.env?.is_night), false);
   const [worldsOpen, setWorldsOpen] = useState(false);
   const envRef = useRef<HTMLDivElement>(null);
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -241,12 +250,19 @@ const App: React.FC = () => {
     }
   };
 
+  const nightStyle: React.CSSProperties = { filter: isNight ? NIGHT_FILTER : undefined };
+
   return (
     <div className={styles.appContainer} data-engine-ready={engine ? "true" : "false"}>
-      <div id="env" ref={envRef} className={styles.envArea}>
-        <canvas id="env-canvas" ref={envCanvasRef}></canvas>
-        <canvas id="env-deco-canvas" ref={decoCanvasRef}></canvas>
-        <canvas id="env-glow-canvas" ref={glowCanvasRef}></canvas>
+      <div
+        id="env"
+        ref={envRef}
+        className={styles.envArea}
+        style={{ backgroundColor: isNight ? NIGHT_VOID : undefined }}
+      >
+        <canvas id="env-canvas" ref={envCanvasRef} style={nightStyle}></canvas>
+        <canvas id="env-deco-canvas" ref={decoCanvasRef} style={nightStyle}></canvas>
+        <canvas id="env-glow-canvas" ref={glowCanvasRef} style={nightStyle}></canvas>
       </div>
       <Floaties engine={engine} />
       <MicroscopeOverlay engine={engine} />

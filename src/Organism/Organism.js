@@ -287,6 +287,9 @@ class Organism {
 
     die() {
         this.living = false;
+        if (this.env && typeof this.env.addDeathEffect === 'function') {
+            this.env.addDeathEffect(this);
+        }
         var explosive_cells = [];
         for (var cell of this.anatomy.cells) {
             if (cell.state == CellStates.explosive) {
