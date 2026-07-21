@@ -1,11 +1,11 @@
 import React from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import FossilRecord from '../Stats/FossilRecord';
 
 interface HudTopCenterProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onLifeformsClick?: () => void;
 }
 

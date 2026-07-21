@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styles from './styles/Hud.module.css';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
 import WorldConfig from '../WorldConfig';
 import Notifier from '../Utils/Notifier';
@@ -11,7 +11,7 @@ interface WorldEntry {
 }
 
 interface WorldsModalProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onClose: () => void;
 }
 

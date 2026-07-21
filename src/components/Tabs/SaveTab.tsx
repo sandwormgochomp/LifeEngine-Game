@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
 import styles from '../styles/Hud.module.css';
-import type { EngineAPI } from '../../types/engine';
+import type Engine from '../../Engine';
 import Notifier from '../../Utils/Notifier';
 
 interface SaveTabProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onBrowseWorlds: () => void;
 }
 

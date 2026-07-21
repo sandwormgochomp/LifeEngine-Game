@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import Modes from '../Controllers/ControlModes';
 import WorldConfig from '../WorldConfig';
 import Notifier from '../Utils/Notifier';
 
 interface WorldControlsModalProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onClose: () => void;
 }
 

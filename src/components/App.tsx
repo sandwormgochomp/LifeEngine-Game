@@ -1,7 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/App.module.css';
-import type { EngineAPI } from '../types/engine';
-
 import Engine from '../Engine';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
@@ -43,7 +41,7 @@ const PANEL_TITLES: Record<string, string> = {
 };
 
 const App: React.FC = () => {
-  const [engine, setEngine] = useState<EngineAPI | null>(null);
+  const [engine, setEngine] = useState<Engine | null>(null);
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [lifeformsOpen, setLifeformsOpen] = useState(false);
@@ -64,7 +62,7 @@ const App: React.FC = () => {
   useEffect(() => {
     // Refs are populated by the time effects run, so the engine can take the
     // world canvas directly instead of looking elements up by id.
-    const newEngine: EngineAPI = new Engine({
+    const newEngine: Engine = new Engine({
       env_canvas: envCanvasRef.current!,
       env_container: envRef.current!,
       glow_canvas: glowCanvasRef.current!,

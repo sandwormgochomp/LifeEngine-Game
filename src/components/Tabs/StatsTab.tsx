@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from '../styles/Hud.module.css';
 import useEngineValue from '../useEngineValue';
-import type { EngineAPI } from '../../types/engine';
+import type Engine from '../../Engine';
 import FossilRecord from '../../Stats/FossilRecord';
 
 interface StatsTabProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
 }
 
 const StatsTab: React.FC<StatsTabProps> = ({ engine }) => {

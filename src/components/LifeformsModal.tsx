@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import FossilRecord from '../Stats/FossilRecord';
 import OrganismThumb from './OrganismThumb';
 import type { ThumbCell } from './OrganismThumb';
@@ -23,7 +23,7 @@ interface Entry {
 }
 
 interface LifeformsModalProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onClose: () => void;
   onOpenInLab: (raw: unknown, name: string) => void;
 }

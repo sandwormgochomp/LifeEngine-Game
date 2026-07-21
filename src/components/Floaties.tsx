@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 
 // Ambient "microscope dust": faint motes drifting over the world that shy
 // away from the cursor. Pure decoration on its own click-transparent layer.
@@ -179,7 +179,7 @@ interface Mote {
 }
 
 interface FloatiesProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
 }
 
 const wrap = (v: number, lo: number, hi: number) => {
@@ -233,7 +233,7 @@ const drawPixelSprite = (
 
 const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<EngineAPI | null>(engine);
+  const engineRef = useRef<Engine | null>(engine);
 
   useEffect(() => {
     engineRef.current = engine;

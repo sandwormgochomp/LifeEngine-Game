@@ -1,13 +1,13 @@
 import React from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 
 import Notifier from '../Utils/Notifier';
 import WorldConfig from '../WorldConfig';
 
 interface HudTopLeftProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   headless: boolean;
   onToggleHeadless: () => void;
 }

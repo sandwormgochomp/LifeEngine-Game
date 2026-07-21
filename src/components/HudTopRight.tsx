@@ -1,10 +1,10 @@
 import React from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 
 interface HudTopRightProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
 }
 
 const SPEED_STEPS = [0.25, 0.5, 1, 2, 5, 10];

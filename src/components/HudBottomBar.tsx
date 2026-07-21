@@ -1,12 +1,12 @@
 import React from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import Modes from '../Controllers/ControlModes';
 import WorldConfig from '../WorldConfig';
 
 interface HudBottomBarProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   activePanel: string | null;
   selectArmed: boolean;
   editorOpen: boolean;

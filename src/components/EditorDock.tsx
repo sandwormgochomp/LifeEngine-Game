@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
-import type { EngineAPI, CellStateAPI } from '../types/engine';
+import type Engine from '../Engine';
+import type { CellState, LivingCellName } from '../Organism/Cell/CellStates';
 import CellStates from '../Organism/Cell/CellStates';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
 import { CELL_INFO } from './cellInfo';
 
 interface EditorDockProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onClose: () => void;
   onOpenPresets: () => void;
   onOpenBrain: () => void;
@@ -16,7 +17,10 @@ interface EditorDockProps {
 
 
 // Ability badges derived from which cell types are present
-const ABILITY_BADGES: Record<string, string> = {
+/* Keyed by living cell-state name. Partial because `common` carries no
+   badge. Typing the keys means a badge for a cell type that does not
+   exist fails to compile, rather than silently never rendering. */
+const ABILITY_BADGES: Partial<Record<LivingCellName, string>> = {
   mouth: 'EATS',
   producer: 'GROWS FOOD',
   mover: 'MOVES',
@@ -113,7 +117,8 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
     engine,
     e => {
       const present = new Set(e.organism_editor.organism?.anatomy?.cells?.map(c => c.state.name) ?? []);
-      return Object.keys(ABILITY_BADGES).filter(name => present.has(name)).join(',');
+      return (Object.keys(ABILITY_BADGES) as LivingCellName[])
+        .filter(name => present.has(name)).join(',');
     },
     ''
   );
@@ -127,7 +132,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
     touch();
   };
 
-  const selectCellType = (cellState: CellStateAPI) => {
+  const selectCellType = (cellState: CellState) => {
     if (!controller) return;
     controller.edit_cell_type = cellState;
     controller.mode = Modes.Edit;
@@ -256,7 +261,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
     <div className={styles.dockWrap} data-testid="editor-dock">
       {/* Cell palette rail: every type visible at once, no scrolling */}
       <div className={styles.dockRail}>
-        {CellStates.living.map((cellState: CellStateAPI) => (
+        {CellStates.living.map((cellState: CellState) => (
           <button
             key={cellState.name}
             id={cellState.name}
@@ -402,7 +407,10 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
             </p>
           )}
           <div className={styles.dockBadges}>
-            {abilities.split(',').filter(Boolean).map(name => (
+            {/* `abilities` is the ABILITY_BADGES keys joined into a string, so
+                that useEngineValue can compare it by value rather than by array
+                identity; splitting it recovers the same keys. */}
+            {(abilities.split(',').filter(Boolean) as LivingCellName[]).map(name => (
               <span key={name} className={styles.dockBadge}>{ABILITY_BADGES[name]}</span>
             ))}
           </div>

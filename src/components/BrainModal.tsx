@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import styles from './styles/Hud.module.css';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import CellStates from '../Organism/Cell/CellStates';
 import Notifier from '../Utils/Notifier';
 
 interface BrainModalProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onClose: () => void;
 }
 

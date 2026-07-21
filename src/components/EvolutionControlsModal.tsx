@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
 import Notifier from '../Utils/Notifier';
 
 interface EvolutionControlsModalProps {
-  engine: EngineAPI | null;
+  engine: Engine | null;
   onClose: () => void;
 }
 

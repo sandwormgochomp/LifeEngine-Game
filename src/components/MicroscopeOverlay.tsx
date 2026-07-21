@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { EngineAPI } from '../types/engine';
+import type Engine from '../Engine';
 import styles from './styles/MicroscopeOverlay.module.css';
 
 interface MicroscopeOverlayProps {
-  engine?: EngineAPI | null;
+  engine?: Engine | null;
 }
 
 const MicroscopeOverlay: React.FC<MicroscopeOverlayProps> = ({ engine }) => {
