@@ -244,7 +244,7 @@ const App: React.FC = () => {
         <canvas id="env-canvas" ref={envCanvasRef}></canvas>
         <canvas id="env-glow-canvas" ref={glowCanvasRef}></canvas>
       </div>
-      <Floaties />
+      <Floaties engine={engine} />
 
       {/* HUD Regions */}
       <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />

@@ -9,6 +9,9 @@ export interface CellStateAPI {
 export interface EnvControllerAPI {
   mode: number;
   scale: number;
+  pan_x: number;
+  pan_y: number;
+  canvas: HTMLCanvasElement | null;
   org_to_clone: unknown;
   resetView(): void;
   randomizeWalls(thickness?: number): void;
