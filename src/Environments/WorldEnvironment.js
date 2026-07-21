@@ -270,7 +270,9 @@ class WorldEnvironment extends Environment{
     buildPetriDish() {
         var cx = (this.grid_map.cols - 1) / 2;
         var cy = (this.grid_map.rows - 1) / 2;
-        var radius = Math.min(this.grid_map.cols, this.grid_map.rows) / 2 - 1;
+        // Inset radius by 4 cells so the full 3-tier glass rim and shadow fit comfortably
+        // inside the canvas grid without being cut off on top, bottom, left or right.
+        var radius = Math.min(this.grid_map.cols, this.grid_map.rows) / 2 - 4;
         for (var c = 0; c < this.grid_map.cols; c++) {
             for (var r = 0; r < this.grid_map.rows; r++) {
                 var cell = this.grid_map.cellAt(c, r);
