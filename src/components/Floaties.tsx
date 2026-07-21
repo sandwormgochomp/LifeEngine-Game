@@ -10,7 +10,7 @@ import type { EngineAPI } from '../types/engine';
 // The camera is read straight off the controller each frame instead of through
 // useEngineValue: the controller never emits on pan/zoom, and the engine's own
 // emits are throttled to 100ms, which would make the dust stutter behind a drag.
-const NUM_MOTES = 38;
+const NUM_MOTES = 80;
 
 const PAN_STIFFNESS = 0.10;
 const PAN_DAMPING = 0.6;
@@ -317,13 +317,16 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
       prev_pan_y = pan_y;
       prev_scale = scale;
 
-      // Fixed world wrapping bounds so floaties remain distributed across the world
-      // when zooming in, instead of collapsing into the zoomed view rect.
-      const margin = 250;
+      // Significantly expanded world wrapping bounds (2000px margin) so floaties
+      // cover a massive space around the dish without popping in at visible edges.
+      const margin = 2000;
       const left = -margin;
       const right = W + margin;
       const top = -margin;
       const bottom = H + margin;
+
+      const isNight = Boolean(engineRef.current?.env?.is_night);
+      const nightMult = isNight ? 0.55 : 1.0;
 
       for (const m of motes) {
         m.pvx = (m.pvx + (pan_x - m.pan_x) * m.stiffness) * PAN_DAMPING;
@@ -337,7 +340,7 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
         m.x += (m.vx + Math.sin(t * 0.3 + m.phase) * 0.03) / scale;
         m.y += (m.vy + Math.cos(t * 0.25 + m.phase) * 0.03) / scale;
 
-        // Wrap against the full world extent
+        // Wrap against the expanded world extent
         m.x = wrap(m.x, left, right);
         m.y = wrap(m.y, top, bottom);
 
@@ -345,7 +348,7 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
         let sy = mOriginY + m.y * scale;
 
         // Frustum culling: Only draw motes currently visible on screen
-        const renderMargin = 120;
+        const renderMargin = 160;
         if (
           sx < -renderMargin ||
           sx > canvas.width + renderMargin ||
@@ -371,10 +374,10 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
         const pixelSize = Math.max(1, Math.round(rawPixelSize));
         const matrix = SPRITES[m.spriteName] || SPRITES.dot;
 
-        // Translucent ambient opacities (0.025 to 0.14)
-        const baseAlpha = m.isGiant
+        // Translucent ambient opacities scaled by night mode
+        const baseAlpha = (m.isGiant
           ? Math.min(0.08, Math.max(0.025, (DISC_ENERGY / Math.pow(m.r, DISC_FALLOFF)) * 0.8))
-          : Math.min(0.14, Math.max(0.04, (DISC_ENERGY / Math.pow(m.r, DISC_FALLOFF)) * 1.1));
+          : Math.min(0.14, Math.max(0.04, (DISC_ENERGY / Math.pow(m.r, DISC_FALLOFF)) * 1.1))) * nightMult;
 
         const pulseFactor = 0.9 + Math.sin(t * 1.2 + m.phase) * 0.15;
 
@@ -422,8 +425,6 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
         inset: 0,
         zIndex: 40,
         pointerEvents: 'none',
-        opacity: 0.65,
-        mixBlendMode: 'screen',
       }}
     />
   );
