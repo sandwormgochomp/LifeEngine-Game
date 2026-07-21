@@ -274,14 +274,30 @@ class WorldEnvironment extends Environment{
         for (var c = 0; c < this.grid_map.cols; c++) {
             for (var r = 0; r < this.grid_map.rows; r++) {
                 var cell = this.grid_map.cellAt(c, r);
-                var dist = Math.hypot(c - cx, r - cy);
-                if (dist < radius) {
+                var dx = c - cx;
+                var dy = r - cy;
+                var dist = Math.hypot(dx, dy);
+                if (dist < radius - 0.5) {
                     cell.dish_glass = false;
-                    cell.dish_rim = false;
+                    cell.dish_tier = 0;
                     continue;
                 }
                 cell.dish_glass = true;
-                cell.dish_rim = dist < radius + 1.8;
+                var angle = Math.atan2(dy, dx);
+                // Angle light factor: 1.0 at top-left (-135 deg), -1.0 at bottom-right (45 deg)
+                var light = -Math.cos(angle - Math.PI * 0.75);
+
+                if (dist < radius + 0.5) {
+                    cell.dish_tier = 1; // Inner Lip
+                } else if (dist < radius + 1.8) {
+                    cell.dish_tier = 2; // Main Rim
+                } else if (dist < radius + 2.8) {
+                    cell.dish_tier = 3; // Outer Shadow Rim
+                } else {
+                    cell.dish_tier = 4; // Void
+                }
+                cell.dish_light = light;
+
                 if (cell.owner != null)
                     cell.owner.die();
                 if (cell.state !== CellStates.invincible_wall)

@@ -186,11 +186,31 @@ class InvincibleWall extends CellState {
     }
     render(ctx, cell, size) {
         // Petri-dish glass (flagged by WorldEnvironment.buildPetriDish):
-        // blends into the page background so the rectangular canvas
-        // disappears, with a lit rim ring marking the dish edge.
+        // 16-bit retro pixel-art shaded glass dish with top-left specular highlights
         if (cell.dish_glass) {
-            ctx.fillStyle = cell.dish_rim ? '#1d403b' : '#05050A';
+            var tier = cell.dish_tier || 0;
+            var light = cell.dish_light || 0;
+
+            if (tier === 1) {
+                // Inner Glass Lip
+                ctx.fillStyle = light > 0.35 ? '#2A8570' : (light > -0.35 ? '#16423A' : '#0A201B');
+            } else if (tier === 2) {
+                // Main Glass Rim
+                ctx.fillStyle = light > 0.35 ? '#52F0CB' : (light > -0.35 ? '#247867' : '#144238');
+            } else if (tier === 3) {
+                // Outer Shadow Rim
+                ctx.fillStyle = light > 0.35 ? '#1C5247' : (light > -0.35 ? '#0E2E28' : '#071814');
+            } else {
+                // Outer Void
+                ctx.fillStyle = '#05050A';
+            }
             ctx.fillRect(cell.x, cell.y, size, size);
+
+            // Add pixel specular highlight corner on the main rim at the top-left
+            if (tier === 2 && light > 0.6 && size >= 4) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.fillRect(cell.x, cell.y, Math.max(1, Math.floor(size * 0.35)), Math.max(1, Math.floor(size * 0.35)));
+            }
             return;
         }
         super.render(ctx, cell, size);
