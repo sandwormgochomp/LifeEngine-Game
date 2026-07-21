@@ -196,14 +196,21 @@ const drawPixelSprite = (
   pixelSize: number,
   color: string,
   alpha: number,
-  pulseFactor: number = 1.0
+  pulseFactor: number = 1.0,
+  t: number = 0,
+  phase: number = 0
 ) => {
   const height = matrix.length;
   const width = matrix[0].length;
   const startX = Math.floor(px - (width * pixelSize) / 2);
   const startY = Math.floor(py - (height * pixelSize) / 2);
 
+  // Organic pixel-aligned travelling wave wriggle
+  const wriggleWave = (r: number) =>
+    Math.round(Math.sin(t * 3.2 + r * 0.75 + phase) * 0.75) * pixelSize;
+
   for (let r = 0; r < height; r++) {
+    const rowOffset = wriggleWave(r);
     for (let c = 0; c < width; c++) {
       const val = matrix[r][c];
       if (val === 0) continue;
@@ -215,7 +222,7 @@ const drawPixelSprite = (
         ctx.fillStyle = `rgba(${color}, ${alpha})`;
       }
       ctx.fillRect(
-        startX + c * pixelSize,
+        startX + c * pixelSize + rowOffset,
         startY + r * pixelSize,
         pixelSize,
         pixelSize
@@ -400,7 +407,9 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
             pixelSize,
             m.color,
             sampleAlpha * (1 - f * 0.4),
-            pulseFactor
+            pulseFactor,
+            t,
+            m.phase
           );
         }
       }

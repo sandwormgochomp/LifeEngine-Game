@@ -1,17 +1,114 @@
-// A cell state is used to differentiate type and render the cell
 class CellState{
     constructor(name) {
         this.name = name;
         this.color = 'black';
     }
 
-    render(ctx, cell, size) {
+    render(ctx, cell, size, env) {
         if (cell.cell_owner && cell.cell_owner.custom_color) {
             ctx.fillStyle = cell.cell_owner.custom_color;
         } else {
             ctx.fillStyle = this.color;
         }
-        ctx.fillRect(cell.x, cell.y, size, size);
+
+        if (size > 2 && (cell.owner || cell.cell_owner)) {
+            this.renderOrganismCell(ctx, cell, size, env);
+        } else {
+            ctx.fillRect(cell.x, cell.y, size, size);
+        }
+    }
+
+    renderOrganismCell(ctx, cell, size, env) {
+        var x = Math.floor(cell.x);
+        var y = Math.floor(cell.y);
+        var sz = Math.floor(size);
+
+        // Wipe any cursor overlay / brush preview artifacts on this cell first
+        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#0E1318';
+        ctx.fillRect(x, y, sz, sz);
+
+        var org = cell.owner || (cell.cell_owner ? cell.cell_owner.org : null);
+        var hasN = false, hasS = false, hasE = false, hasW = false;
+        var hasNW = false, hasNE = false, hasSW = false, hasSE = false;
+        var diffN = false, diffS = false, diffE = false, diffW = false;
+
+        if (env && env.grid_map && cell.col !== undefined && cell.row !== undefined) {
+            var col = cell.col, row = cell.row;
+            var isSameOrg = function(c, r) {
+                var target = env.grid_map.cellAt(c, r);
+                return Boolean(target && (target.owner === org || (target.cell_owner && target.cell_owner.org === org)));
+            };
+            var isDiffOrg = function(c, r) {
+                var target = env.grid_map.cellAt(c, r);
+                if (!target) return false;
+                var targetOrg = target.owner || (target.cell_owner ? target.cell_owner.org : null);
+                return Boolean(targetOrg && targetOrg !== org);
+            };
+            hasN  = isSameOrg(col, row - 1);
+            hasS  = isSameOrg(col, row + 1);
+            hasE  = isSameOrg(col + 1, row);
+            hasW  = isSameOrg(col - 1, row);
+            hasNW = isSameOrg(col - 1, row - 1);
+            hasNE = isSameOrg(col + 1, row - 1);
+            hasSW = isSameOrg(col - 1, row + 1);
+            hasSE = isSameOrg(col + 1, row + 1);
+
+            diffN = isDiffOrg(col, row - 1);
+            diffS = isDiffOrg(col, row + 1);
+            diffE = isDiffOrg(col + 1, row);
+            diffW = isDiffOrg(col - 1, row);
+        } else if (cell.cell_owner && org && org.anatomy) {
+            var lc = cell.cell_owner.loc_col, lr = cell.cell_owner.loc_row;
+            hasN  = Boolean(org.anatomy.getLocalCell(lc, lr - 1));
+            hasS  = Boolean(org.anatomy.getLocalCell(lc, lr + 1));
+            hasE  = Boolean(org.anatomy.getLocalCell(lc + 1, lr));
+            hasW  = Boolean(org.anatomy.getLocalCell(lc - 1, lr));
+            hasNW = Boolean(org.anatomy.getLocalCell(lc - 1, lr - 1));
+            hasNE = Boolean(org.anatomy.getLocalCell(lc + 1, lr - 1));
+            hasSW = Boolean(org.anatomy.getLocalCell(lc - 1, lr + 1));
+            hasSE = Boolean(org.anatomy.getLocalCell(lc + 1, lr + 1));
+        }
+
+        // Fill solid cell body for the organism
+        if (cell.cell_owner && cell.cell_owner.custom_color) {
+            ctx.fillStyle = cell.cell_owner.custom_color;
+        } else {
+            ctx.fillStyle = this.color;
+        }
+        ctx.fillRect(x, y, sz, sz);
+
+        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#0E1318';
+
+        // 1. Cut subtle 1px gap along edges facing a DIFFERENT organism
+        var g = sz >= 6 ? 1 : 0;
+        if (g > 0) {
+            if (diffN) ctx.fillRect(x, y, sz, g);
+            if (diffS) ctx.fillRect(x, y + sz - g, sz, g);
+            if (diffW) ctx.fillRect(x, y, g, sz);
+            if (diffE) ctx.fillRect(x + sz - g, y, g, sz);
+        }
+
+        // 2. Erase outer corners (where NONE of the adjacent orthogonal or diagonal cells belong to the same organism)
+        var c = sz >= 12 ? 3 : (sz >= 6 ? 2 : 1);
+        if (!hasN && !hasW && !hasNW) ctx.fillRect(x, y, c, c);                        // Top-Left outer corner
+        if (!hasN && !hasE && !hasNE) ctx.fillRect(x + sz - c, y, c, c);                // Top-Right outer corner
+        if (!hasS && !hasW && !hasSW) ctx.fillRect(x, y + sz - c, c, c);                // Bottom-Left outer corner
+        if (!hasS && !hasE && !hasSE) ctx.fillRect(x + sz - c, y + sz - c, c, c);        // Bottom-Right outer corner
+
+        // Restore cell color for highlight
+        if (cell.cell_owner && cell.cell_owner.custom_color) {
+            ctx.fillStyle = cell.cell_owner.custom_color;
+        } else {
+            ctx.fillStyle = this.color;
+        }
+
+        // Crisp pixel art highlight dot in top-left (only on larger cells)
+        if (sz >= 6) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            var hlSize = Math.max(1, Math.floor(sz * 0.2));
+            var hlOffset = Math.max(1, Math.floor(sz * 0.22));
+            ctx.fillRect(x + hlOffset, y + hlOffset, hlSize, hlSize);
+        }
     }
 }
 
@@ -24,6 +121,18 @@ class Food extends CellState {
     constructor() {
         super('food');
         this.color = '#34593C';
+    }
+    render(ctx, cell, size) {
+        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#0E1318';
+        ctx.fillRect(cell.x, cell.y, size, size);
+        ctx.fillStyle = this.color;
+        if (size > 3) {
+            ctx.beginPath();
+            ctx.arc(cell.x + size / 2, cell.y + size / 2, (size / 2) * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillRect(cell.x, cell.y, size, size);
+        }
     }
 }
 class Wall extends CellState {
@@ -92,10 +201,9 @@ class Eye extends CellState {
         super('eye');
         this.slit_color = 'black';
     }
-    render(ctx, cell, size) {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(cell.x, cell.y, size, size);
-        if(size == 1)
+    render(ctx, cell, size, env) {
+        super.render(ctx, cell, size, env);
+        if(size <= 1)
             return;
         var half = size/2;
         var x = -(size)/8

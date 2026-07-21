@@ -49,9 +49,35 @@ const OrganismThumb: React.FC<OrganismThumbProps> = ({ cells, size = 72 }) => {
     const cs = Math.min(10, (size - 4) / Math.max(cols, rows));
     const origin_x = (size - cols * cs) / 2 - min_c * cs;
     const origin_y = (size - rows * cs) / 2 - min_r * cs;
+    const cellMap = new Set(cells.map(c => `${c.loc_col},${c.loc_row}`));
+
     for (const cell of cells) {
       ctx.fillStyle = cellColor(cell);
-      ctx.fillRect(origin_x + cell.loc_col * cs, origin_y + cell.loc_row * cs, Math.max(cs, 1), Math.max(cs, 1));
+      const px = origin_x + cell.loc_col * cs;
+      const py = origin_y + cell.loc_row * cs;
+
+      if (cs >= 3) {
+        const c = cs >= 8 ? 2 : 1;
+        const col = cell.loc_col, row = cell.loc_row;
+        const hasN  = cellMap.has(`${col},${row - 1}`);
+        const hasS  = cellMap.has(`${col},${row + 1}`);
+        const hasW  = cellMap.has(`${col - 1},${row}`);
+        const hasE  = cellMap.has(`${col + 1},${row}`);
+        const hasNW = cellMap.has(`${col - 1},${row - 1}`);
+        const hasNE = cellMap.has(`${col + 1},${row - 1}`);
+        const hasSW = cellMap.has(`${col - 1},${row + 1}`);
+        const hasSE = cellMap.has(`${col + 1},${row + 1}`);
+
+        ctx.fillRect(px, py, cs, cs);
+
+        // Erase ONLY outer corners where none of orthogonal/diagonal neighbors exist
+        if (!hasN && !hasW && !hasNW) ctx.clearRect(px, py, c, c);
+        if (!hasN && !hasE && !hasNE) ctx.clearRect(px + cs - c, py, c, c);
+        if (!hasS && !hasW && !hasSW) ctx.clearRect(px, py + cs - c, c, c);
+        if (!hasS && !hasE && !hasSE) ctx.clearRect(px + cs - c, py + cs - c, c, c);
+      } else {
+        ctx.fillRect(px, py, Math.max(cs, 1), Math.max(cs, 1));
+      }
     }
   }, [cells, size]);
 

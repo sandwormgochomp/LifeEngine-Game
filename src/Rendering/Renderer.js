@@ -66,7 +66,7 @@ class Renderer {
         if (cell.owner && cell.owner.anatomy && cell.owner.anatomy.has_chameleon) {
             this.ctx.globalAlpha = 0.4;
         }
-        cell.state.render(this.ctx, cell, this.cell_size);
+        cell.state.render(this.ctx, cell, this.cell_size, this.env);
         this.ctx.globalAlpha = 1;
 
         if (this.env && this.env.radiation_map && this.env.radiation_map.has(cell.col + "," + cell.row)) {
