@@ -116,7 +116,7 @@ function generateOrganismSprite(org, sz) {
         };
     };
 
-    // Pass 0: 16-Bit Retro Pixel Drop Shadow
+    // Pass 0: 16-Bit Retro Pixel Drop Shadow (Underneath Organism Body)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     for (var body_cell of cells) {
         var rc = body_cell.rotatedCol ? body_cell.rotatedCol(rotation) : body_cell.loc_col;
@@ -149,37 +149,42 @@ function generateOrganismSprite(org, sz) {
         if (!sameS && !sameE && !sameSE) ctx.fillRect(x + sz - cut, y + sz - cut, cut, cut);
     }
 
-    // Pass 1: Solid Cell Body & Diagonal Joint Filler
+    // Combined Pass 1: Solid Body, Diagonal Joints, Pixel Dithering & Silhouette Outlines
+    var dStep = sz >= 3 ? Math.max(1, Math.floor(sz / 5)) : 1;
+    var halfSz = Math.floor(sz / 2);
+
     for (var body_cell of cells) {
         var rc = body_cell.rotatedCol ? body_cell.rotatedCol(rotation) : body_cell.loc_col;
         var rr = body_cell.rotatedRow ? body_cell.rotatedRow(rotation) : body_cell.loc_row;
         var pos = getCellPos(rc, rr);
         var color = body_cell.custom_color || body_cell.state.color;
 
+        var sameN  = same(rc, rr - 1);
+        var sameS  = same(rc, rr + 1);
+        var sameE  = same(rc + 1, rr);
+        var sameW  = same(rc - 1, rr);
+        var sameNE = same(rc + 1, rr - 1);
+        var sameSE = same(rc + 1, rr + 1);
+        var sameNW = same(rc - 1, rr - 1);
+        var sameSW = same(rc - 1, rr + 1);
+
+        // A. Solid Cell Body & Diagonal Joint Filler
         ctx.fillStyle = color;
         ctx.fillRect(pos.x, pos.y, sz, sz);
 
-        if (same(rc + 1, rr - 1)) {
+        if (sameNE) {
             var ne = cellMap.get((rc + 1) + ',' + (rr - 1));
             var ne_color = (ne && ne.custom_color) || (ne && ne.state ? ne.state.color : color);
             drawStrand(ctx, pos.x + sz, pos.y, -1, t, color, ne_color);
         }
-        if (same(rc + 1, rr + 1)) {
+        if (sameSE) {
             var se = cellMap.get((rc + 1) + ',' + (rr + 1));
             var se_color = (se && se.custom_color) || (se && se.state ? se.state.color : color);
             drawStrand(ctx, pos.x + sz, pos.y + sz, 1, t, color, se_color);
         }
-    }
 
-    // Pass 1.5: 16-Bit Retro Pixel Dithering & Gradient Shading
-    if (sz >= 3) {
-        var dStep = Math.max(1, Math.floor(sz / 5));
-        var halfSz = Math.floor(sz / 2);
-        for (var body_cell of cells) {
-            var rc = body_cell.rotatedCol ? body_cell.rotatedCol(rotation) : body_cell.loc_col;
-            var rr = body_cell.rotatedRow ? body_cell.rotatedRow(rotation) : body_cell.loc_row;
-            var pos = getCellPos(rc, rr);
-
+        // B. 16-Bit Retro Pixel Dithering & Gradient Shading
+        if (sz >= 3) {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
             for (var py = 0; py <= halfSz; py += dStep) {
                 for (var px = 0; px <= halfSz - (py >= halfSz ? dStep : 0); px += dStep) {
@@ -202,35 +207,18 @@ function generateOrganismSprite(org, sz) {
                 }
             }
         }
-    }
 
-    // Pass 2: Silhouette Outline
-    for (var body_cell of cells) {
-        var rc = body_cell.rotatedCol ? body_cell.rotatedCol(rotation) : body_cell.loc_col;
-        var rr = body_cell.rotatedRow ? body_cell.rotatedRow(rotation) : body_cell.loc_row;
-        var pos = getCellPos(rc, rr);
-        var color = body_cell.custom_color || body_cell.state.color;
+        // C. Silhouette Outline & Corner Cutouts
         var darkColor = shade(color, 0.45);
-
-        var sameN = same(rc, rr - 1);
-        var sameS = same(rc, rr + 1);
-        var sameE = same(rc + 1, rr);
-        var sameW = same(rc - 1, rr);
-
         ctx.fillStyle = darkColor;
         if (!sameN) ctx.fillRect(pos.x, pos.y - bw, sz, bw);
         if (!sameS) ctx.fillRect(pos.x, pos.y + sz, sz, bw);
         if (!sameW) ctx.fillRect(pos.x - bw, pos.y, bw, sz);
         if (!sameE) ctx.fillRect(pos.x + sz, pos.y, bw, sz);
 
-        var sameNW = same(rc - 1, rr - 1);
-        var sameNE = same(rc + 1, rr - 1);
-        var sameSW = same(rc - 1, rr + 1);
-        var sameSE = same(rc + 1, rr + 1);
-
         if (!sameN && !sameW && !sameNW) ctx.fillRect(pos.x, pos.y, cut, cut);
         if (!sameN && !sameE && !sameNE) ctx.fillRect(pos.x + sz - cut, pos.y, cut, cut);
-        if (!sameS && !sameW && !sameSW) ctx.fillRect(pos.x + sz - cut, pos.y + sz - cut, cut, cut);
+        if (!sameS && !sameW && !sameSW) ctx.fillRect(pos.x, pos.y + sz - cut, cut, cut);
         if (!sameS && !sameE && !sameSE) ctx.fillRect(pos.x + sz - cut, pos.y + sz - cut, cut, cut);
     }
 
