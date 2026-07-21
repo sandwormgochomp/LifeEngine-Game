@@ -79,7 +79,51 @@ function drawOrganismDecorations(ctx, env) {
             return Boolean(target && (target.owner === org || (target.cell_owner && target.cell_owner.org === org)));
         };
 
-        // Pass 1: silhouette outline, drawn just outside every exposed edge.
+        var getTargetOrg = function (c, r) {
+            var target = grid.cellAt(c, r);
+            return target ? (target.owner || (target.cell_owner ? target.cell_owner.org : null)) : null;
+        };
+
+        var shadowOff = Math.max(1, Math.floor(sz / 5));
+
+        // Pass 0: 16-Bit Retro Pixel Drop Shadow (offset down-right beneath organism)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        for (var body_cell of org.anatomy.cells) {
+            var cell = org.getRealCell(body_cell);
+            if (cell == null) continue;
+            var x = Math.floor(cell.x) + shadowOff, y = Math.floor(cell.y) + shadowOff;
+            var col = cell.col, row = cell.row;
+
+            var sameN = same(col, row - 1);
+            var sameS = same(col, row + 1);
+            var sameE = same(col + 1, row);
+            var sameW = same(col - 1, row);
+
+            // Shadow body fill
+            ctx.fillRect(x, y, sz, sz);
+
+            // Shadow diagonal connections
+            if (same(col + 1, row - 1)) ctx.fillRect(x + sz - t, y - t, t * 2, t * 2);
+            if (same(col + 1, row + 1)) ctx.fillRect(x + sz - t, y + sz - t, t * 2, t * 2);
+
+            // Shadow outer outline
+            if (!sameN) ctx.fillRect(x, y - bw, sz, bw);
+            if (!sameS) ctx.fillRect(x, y + sz, sz, bw);
+            if (!sameW) ctx.fillRect(x - bw, y, bw, sz);
+            if (!sameE) ctx.fillRect(x + sz, y, bw, sz);
+
+            var sameNW = same(col - 1, row - 1);
+            var sameNE = same(col + 1, row - 1);
+            var sameSW = same(col - 1, row + 1);
+            var sameSE = same(col + 1, row + 1);
+
+            if (!sameN && !sameW && !sameNW) ctx.fillRect(x, y, cut, cut);
+            if (!sameN && !sameE && !sameNE) ctx.fillRect(x + sz - cut, y, cut, cut);
+            if (!sameS && !sameW && !sameSW) ctx.fillRect(x, y + sz - cut, cut, cut);
+            if (!sameS && !sameE && !sameSE) ctx.fillRect(x + sz - cut, y + sz - cut, cut, cut);
+        }
+
+        // Pass 1: Solid Cell Body & Diagonal Joint Filler
         for (var body_cell of org.anatomy.cells) {
             var cell = org.getRealCell(body_cell);
             if (cell == null) continue;
@@ -87,44 +131,54 @@ function drawOrganismDecorations(ctx, env) {
             var col = cell.col, row = cell.row;
             var color = body_cell.custom_color || body_cell.state.color;
 
-            var hasN = same(col, row - 1), hasS = same(col, row + 1);
-            var hasE = same(col + 1, row), hasW = same(col - 1, row);
+            // Fill solid cell body box
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, sz, sz);
 
-            ctx.fillStyle = shade(color, 0.45);
-            if (!hasN) ctx.fillRect(x, y - bw, sz, bw);
-            if (!hasS) ctx.fillRect(x, y + sz, sz, bw);
-            if (!hasW) ctx.fillRect(x - bw, y, bw, sz);
-            if (!hasE) ctx.fillRect(x + sz, y, bw, sz);
-
-            // The base renderer cuts convex corners out of the body; filling
-            // those notches with the outline shade turns the square outline
-            // into a thick rounded rim instead of leaving a background nick.
-            if (!hasN && !hasW && !same(col - 1, row - 1)) ctx.fillRect(x, y, cut, cut);
-            if (!hasN && !hasE && !same(col + 1, row - 1)) ctx.fillRect(x + sz - cut, y, cut, cut);
-            if (!hasS && !hasW && !same(col - 1, row + 1)) ctx.fillRect(x, y + sz - cut, cut, cut);
-            if (!hasS && !hasE && !same(col + 1, row + 1)) ctx.fillRect(x + sz - cut, y + sz - cut, cut, cut);
+            // Fill diagonal connection joint filler
+            if (same(col + 1, row - 1)) {
+                var ne = grid.cellAt(col + 1, row - 1);
+                var ne_color = (ne && ne.cell_owner && ne.cell_owner.custom_color) || (ne && ne.state ? ne.state.color : color);
+                drawStrand(ctx, x + sz, y, -1, t, color, ne_color);
+            }
+            if (same(col + 1, row + 1)) {
+                var se = grid.cellAt(col + 1, row + 1);
+                var se_color = (se && se.cell_owner && se.cell_owner.custom_color) || (se && se.state ? se.state.color : color);
+                drawStrand(ctx, x + sz, y + sz, 1, t, color, se_color);
+            }
         }
 
-        // Pass 2: connective tissue across diagonal touches, drawn after
-        // the outline so strands sit on top of it. Checking only NE and SE
-        // covers each diagonal pair exactly once.
-        for (var tissue_cell of org.anatomy.cells) {
-            var tcell = org.getRealCell(tissue_cell);
-            if (tcell == null) continue;
-            var tx = Math.floor(tcell.x), ty = Math.floor(tcell.y);
-            var tc = tcell.col, tr = tcell.row;
-            var own_color = tissue_cell.custom_color || tissue_cell.state.color;
+        // Pass 2: Silhouette Outline around exposed edges
+        for (var body_cell of org.anatomy.cells) {
+            var cell = org.getRealCell(body_cell);
+            if (cell == null) continue;
+            var x = Math.floor(cell.x), y = Math.floor(cell.y);
+            var col = cell.col, row = cell.row;
+            var color = body_cell.custom_color || body_cell.state.color;
+            var darkColor = shade(color, 0.45);
 
-            if (same(tc + 1, tr - 1)) {
-                var ne = grid.cellAt(tc + 1, tr - 1);
-                var ne_color = (ne.cell_owner && ne.cell_owner.custom_color) || ne.state.color;
-                drawStrand(ctx, tx + sz, ty, -1, t, own_color, ne_color);
-            }
-            if (same(tc + 1, tr + 1)) {
-                var se = grid.cellAt(tc + 1, tr + 1);
-                var se_color = (se.cell_owner && se.cell_owner.custom_color) || se.state.color;
-                drawStrand(ctx, tx + sz, ty + sz, 1, t, own_color, se_color);
-            }
+            var sameN = same(col, row - 1);
+            var sameS = same(col, row + 1);
+            var sameE = same(col + 1, row);
+            var sameW = same(col - 1, row);
+
+            ctx.fillStyle = darkColor;
+
+            if (!sameN) ctx.fillRect(x, y - bw, sz, bw);
+            if (!sameS) ctx.fillRect(x, y + sz, sz, bw);
+            if (!sameW) ctx.fillRect(x - bw, y, bw, sz);
+            if (!sameE) ctx.fillRect(x + sz, y, bw, sz);
+
+            // Corner notch fills for exposed convex outer corners
+            var sameNW = same(col - 1, row - 1);
+            var sameNE = same(col + 1, row - 1);
+            var sameSW = same(col - 1, row + 1);
+            var sameSE = same(col + 1, row + 1);
+
+            if (!sameN && !sameW && !sameNW) ctx.fillRect(x, y, cut, cut);
+            if (!sameN && !sameE && !sameNE) ctx.fillRect(x + sz - cut, y, cut, cut);
+            if (!sameS && !sameW && !sameSW) ctx.fillRect(x, y + sz - cut, cut, cut);
+            if (!sameS && !sameE && !sameSE) ctx.fillRect(x + sz - cut, y + sz - cut, cut, cut);
         }
     }
 }

@@ -30,19 +30,12 @@ class CellState{
         var org = cell.owner || (cell.cell_owner ? cell.cell_owner.org : null);
         var hasN = false, hasS = false, hasE = false, hasW = false;
         var hasNW = false, hasNE = false, hasSW = false, hasSE = false;
-        var diffN = false, diffS = false, diffE = false, diffW = false;
 
         if (env && env.grid_map && cell.col !== undefined && cell.row !== undefined) {
             var col = cell.col, row = cell.row;
             var isSameOrg = function(c, r) {
                 var target = env.grid_map.cellAt(c, r);
                 return Boolean(target && (target.owner === org || (target.cell_owner && target.cell_owner.org === org)));
-            };
-            var isDiffOrg = function(c, r) {
-                var target = env.grid_map.cellAt(c, r);
-                if (!target) return false;
-                var targetOrg = target.owner || (target.cell_owner ? target.cell_owner.org : null);
-                return Boolean(targetOrg && targetOrg !== org);
             };
             hasN  = isSameOrg(col, row - 1);
             hasS  = isSameOrg(col, row + 1);
@@ -52,11 +45,6 @@ class CellState{
             hasNE = isSameOrg(col + 1, row - 1);
             hasSW = isSameOrg(col - 1, row + 1);
             hasSE = isSameOrg(col + 1, row + 1);
-
-            diffN = isDiffOrg(col, row - 1);
-            diffS = isDiffOrg(col, row + 1);
-            diffE = isDiffOrg(col + 1, row);
-            diffW = isDiffOrg(col - 1, row);
         } else if (cell.cell_owner && org && org.anatomy) {
             var lc = cell.cell_owner.loc_col, lr = cell.cell_owner.loc_row;
             hasN  = Boolean(org.anatomy.getLocalCell(lc, lr - 1));
@@ -78,15 +66,6 @@ class CellState{
         ctx.fillRect(x, y, sz, sz);
 
         ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#0E1318';
-
-        // 1. Cut subtle 1px gap along edges facing a DIFFERENT organism
-        var g = sz >= 6 ? 1 : 0;
-        if (g > 0) {
-            if (diffN) ctx.fillRect(x, y, sz, g);
-            if (diffS) ctx.fillRect(x, y + sz - g, sz, g);
-            if (diffW) ctx.fillRect(x, y, g, sz);
-            if (diffE) ctx.fillRect(x + sz - g, y, g, sz);
-        }
 
         // 2. Erase outer corners (where NONE of the adjacent orthogonal or diagonal cells belong to the same organism)
         var c = sz >= 12 ? 3 : (sz >= 6 ? 2 : 1);
