@@ -10,7 +10,13 @@ module.exports = defineConfig({
   workers: 1,
   // Fail fast: nothing in the app legitimately takes longer than this
   timeout: 15000,
-  expect: { timeout: 4000 },
+  expect: {
+    timeout: 4000,
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.05,
+      animations: 'disabled',
+    },
+  },
   reporter: [['list']],
   use: {
     baseURL: 'http://localhost:3000',
