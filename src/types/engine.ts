@@ -71,7 +71,10 @@ export interface BrainAPI {
 
 export interface EditorOrganismAPI {
   anatomy: EditorAnatomyAPI;
-  species: { name: string } | null;
+  /* Also `undefined`, not just `null`: Organism does not assign species in its
+     constructor, so an organism exists briefly without one. EditorDock already
+     optional-chains through this. */
+  species: { name: string } | null | undefined;
   brain: BrainAPI;
   move_range: number;
   mutability: number;

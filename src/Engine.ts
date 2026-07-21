@@ -175,8 +175,12 @@ class Engine {
 
     // Full teardown (unlike stop(), which keeps a ui loop running for rendering while paused)
     dispose(): void {
-        clearInterval(this.sim_loop);
-        clearInterval(this.ui_loop);
+        /* Both handles are `number | null | undefined`; clearInterval is typed
+           for `number | undefined`. Either way an id that matches no active
+           timer is a no-op per spec, so this normalises the null rather than
+           branching. */
+        clearInterval(this.sim_loop ?? undefined);
+        clearInterval(this.ui_loop ?? undefined);
         this.ui_loop = null;
         this.running = false;
     }

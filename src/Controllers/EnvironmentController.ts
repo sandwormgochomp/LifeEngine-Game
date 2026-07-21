@@ -130,9 +130,18 @@ class EnvironmentController extends CanvasController{
     // Reading them back off the element instead would lose sub-pixel precision
     // to parseInt, and animating transform avoids the per-frame relayout that
     // top/left forces.
+    /* The `!` on this.canvas here and in defineZoomControls: the base declares
+       it nullable because the *editor's* controller genuinely binds and unbinds
+       its canvas (OrganismEditor.bindCanvas/releaseCanvas). The world's canvas
+       never is. It has exactly one construction site -- WorldEnvironment passes
+       renderer.canvas, which came from Engine, which App hands a ref to a canvas
+       it renders unconditionally -- and nothing ever unbinds it.
+       Worth knowing: the constructor still accepts null and calls
+       defineZoomControls() unconditionally, so a second, canvas-less
+       construction site added later would throw here rather than degrade. */
     applyView(): void {
         var transform = `translate(${this.pan_x}px, ${this.pan_y}px) scale(${this.scale})`;
-        this.canvas.style.transform = transform;
+        this.canvas!.style.transform = transform;
         // the overlay canvases mirror the world's pan/zoom
         if (this.env.glow_canvas)
             this.env.glow_canvas.style.transform = transform;
@@ -144,7 +153,7 @@ class EnvironmentController extends CanvasController{
         const zoom_speed = 0.7;
         const MAX = 32;
         const MIN = Math.pow(2, -3);
-        this.canvas.onwheel = (event: WheelEvent) => {
+        this.canvas!.onwheel = (event: WheelEvent) => {
             event.preventDefault();
 
             var sign = Math.sign(event.deltaY);
@@ -154,8 +163,8 @@ class EnvironmentController extends CanvasController{
             // the event rather than this.mouse_x so that consecutive wheel
             // ticks without an intervening mousemove don't zoom toward a stale
             // point (the canvas moves under the cursor on every tick).
-            this.pan_x += (this.canvas.width/2  - event.offsetX) * (new_scale - this.scale);
-            this.pan_y += (this.canvas.height/2 - event.offsetY) * (new_scale - this.scale);
+            this.pan_x += (this.canvas!.width/2  - event.offsetX) * (new_scale - this.scale);
+            this.pan_y += (this.canvas!.height/2 - event.offsetY) * (new_scale - this.scale);
 
             this.scale = new_scale;
             this.applyView();
@@ -274,7 +283,13 @@ class EnvironmentController extends CanvasController{
                             this.cur_org = this.findNearOrganism();
                         }
                         if (this.cur_org != null){
-                            this.control_panel.setEditorOrganism(this.cur_org);
+                            /* Engine builds the environment (and so this
+                               controller) and then ControlPanel, whose
+                               constructor calls setControlPanel(this) --
+                               all synchronously. A pointer event can only
+                               be dispatched on a later turn of the event
+                               loop, so this is always set by then. */
+                            this.control_panel!.setEditorOrganism(this.cur_org);
                         }
                     }
                     break;
@@ -394,18 +409,31 @@ class EnvironmentController extends CanvasController{
         var new_org = new Organism(col, row, this.env as unknown as OrganismEnv, organism);
 
         if (new_org.isClear(col, row)) {
-            let new_species = !FossilRecord.speciesIsExtant(new_org.species.name);
-            if (new_org.species.extinct) {
-                FossilRecord.resurrect(new_org.species);
+            /* Hoisted and checked rather than asserted seven times. The organism
+               inherits its species from the `organism` argument, and every
+               in-repo caller passes the editor's organism, which always has one
+               -- but this is the one entry point the React layer can reach with
+               an arbitrary object (EngineAPI types the parameter `unknown`), so
+               the invariant is not enforceable from here. Refusing the drop
+               matches the method's existing failure contract; the alternative
+               is publishing a species-less organism into env.organisms, where
+               update(), reproduce() and die() all dereference species blind. */
+            const species = new_org.species;
+            if (!species) {
+                return false;
+            }
+            let new_species = !FossilRecord.speciesIsExtant(species.name);
+            if (species.extinct) {
+                FossilRecord.resurrect(species);
             }
             else if (new_species) {
-                FossilRecord.addSpeciesObj(new_org.species);
-                new_org.species.start_tick = this.env.total_ticks;
-                new_org.species.population = 0;
+                FossilRecord.addSpeciesObj(species);
+                species.start_tick = this.env.total_ticks;
+                species.population = 0;
             }
 
             this.env.addOrganism(new_org);
-            new_org.species.addPop();
+            species.addPop();
             return true;
         }
         return false;
@@ -460,11 +488,14 @@ class EnvironmentController extends CanvasController{
     }
 
     findNearOrganism(): Organism | null {
+        /* performModeAction() -- the only caller -- returns early when
+           cur_cell is null, and nothing reassigns it in between. The
+           checker cannot carry that narrowing across the call. */
         let closest: Organism | null = null;
         let closest_dist = 100;
         for (let loc of Neighbors.inRange(WorldConfig.brush_size)){
-            let c = this.cur_cell.col + loc[0];
-            let r = this.cur_cell.row + loc[1];
+            let c = this.cur_cell!.col + loc[0];
+            let r = this.cur_cell!.row + loc[1];
             let cell = this.env.grid_map.cellAt(c, r);
             let dist = Math.abs(loc[0]) + Math.abs(loc[1]);
             if (cell != null && cell.owner != null) {
@@ -478,9 +509,12 @@ class EnvironmentController extends CanvasController{
     }
 
     killNearOrganisms(): void {
+        /* performModeAction() -- the only caller -- returns early when
+           cur_cell is null, and nothing reassigns it in between. The
+           checker cannot carry that narrowing across the call. */
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
-            var c = this.cur_cell.col + loc[0];
-            var r = this.cur_cell.row + loc[1];
+            var c = this.cur_cell!.col + loc[0];
+            var r = this.cur_cell!.row + loc[1];
             var cell = this.env.grid_map.cellAt(c, r);
             if (cell != null && cell.owner != null)
                 cell.owner.die();

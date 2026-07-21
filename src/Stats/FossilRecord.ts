@@ -13,7 +13,11 @@ export interface FossilRecordEnvLike {
 
 export interface FossilRecordOrganismLike {
     anatomy: AnatomyLike | null;
-    species: Species | null;
+    /* A write target, not a read: addSpecies() mints a Species and assigns it
+       here. Organisms legitimately arrive without one -- that is the whole
+       reason to call addSpecies -- so this accepts the absent case rather than
+       forcing callers to assert a value they are about to supply. */
+    species: Species | null | undefined;
 }
 
 /* The parallel history arrays, as they are nested under `records` by

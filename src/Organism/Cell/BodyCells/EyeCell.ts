@@ -11,8 +11,14 @@ type GridCellLike = ReturnType<BodyCellOrganism['env']['grid_map']['cellAt']>;
 class EyeCell extends BodyCell{
     /* Not set in the constructor -- one of initInherit/initRandom/initDefault
        always runs immediately afterwards (see BodyCellFactory), and
-       OrganismEditor also writes it directly when the user rotates an eye. */
-    direction: number;
+       OrganismEditor also writes it directly when the user rotates an eye.
+       The assertion is about assignment, not about the value being meaningful:
+       initInherit copies parent.direction, and on the save-load path
+       Anatomy.loadRaw feeds createInherited plain save objects, so a save that
+       predates this field assigns undefined here. That is a silent misbehaviour
+       (getAbsoluteDirection goes NaN and the eye scans its own cell), not a
+       crash, and not what this assertion is claiming. */
+    direction!: number;
 
     constructor(org: BodyCellOrganism, loc_col: number, loc_row: number){
         super(CellStates.eye, org, loc_col, loc_row);

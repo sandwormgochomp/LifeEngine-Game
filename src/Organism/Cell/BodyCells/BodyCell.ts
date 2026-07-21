@@ -2,6 +2,7 @@ import CellStates from "../CellStates";
 import type { CellState } from "../CellStates";
 import type Observation from "../../Perception/Observation";
 import Directions from "../../Directions";
+import type { Direction } from "../../Directions";
 
 /* The slice of Organism that the body-cell hierarchy reaches through. Organism
    sits far above this file in the dependency order (it imports Anatomy, which
@@ -16,7 +17,9 @@ import Directions from "../../Directions";
 export interface BodyCellOrganism {
     c: number;
     r: number;
-    rotation: number;
+    /* One of the four cardinal directions, not an arbitrary number: this feeds
+       rotatedCol/rotatedRow, whose switches are only exhaustive over Direction. */
+    rotation: Direction;
     /* Whether the organism is still alive. Read by ExplosiveCell, KillerCell and
        PoisonCell before harming a neighbour's owner. */
     living: boolean;
@@ -148,7 +151,7 @@ class BodyCell{
        literal union these switches become provably exhaustive and the inferred
        return type stays `number` under strictNullChecks -- without adding a
        default arm that would change behavior. */
-    rotatedCol(dir: number){
+    rotatedCol(dir: Direction){
         switch(dir){
             case Directions.up:
                 return this.loc_col;
@@ -161,7 +164,7 @@ class BodyCell{
         }
     }
 
-    rotatedRow(dir: number){
+    rotatedRow(dir: Direction){
         switch(dir){
             case Directions.up:
                 return this.loc_row;

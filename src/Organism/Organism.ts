@@ -3,6 +3,7 @@ import type { CellState } from "./Cell/CellStates";
 import Neighbors from "../Grid/Neighbors";
 import Hyperparams from "../Hyperparameters";
 import Directions from "./Directions";
+import type { Direction } from "./Directions";
 import Anatomy from "./Anatomy";
 import type { SerializedAnatomy } from "./Anatomy";
 import Brain from "./Perception/Brain";
@@ -123,7 +124,11 @@ class Organism {
     living: boolean;
     anatomy: Anatomy;
     direction: number;
-    rotation: number;
+    /* One of the four cardinal directions rather than an arbitrary number, so
+       that the defaultless switches in BodyCell.rotatedCol/rotatedRow are
+       exhaustive over it and cannot return undefined. SerializedOrganism keeps
+       this as a plain `number`, since a save file can hold anything. */
+    rotation: Direction;
     can_rotate: boolean;
     move_count: number;
     move_range: number;
@@ -284,7 +289,12 @@ class Organism {
                 FossilRecord.addSpecies(org, this.species as Species | null);
             }
             else {
-                org.species.addPop();
+                /* Copied from this organism by inherit() during construction, and
+                   `this` is in env.organisms, which only holds organisms that
+                   were given a species before being published. Guarding instead
+                   would silently skip population accounting, which corrupts
+                   extinction detection -- worse than failing loudly. */
+                org.species!.addPop();
             }
         }
         Math.max(this.food_collected -= this.foodNeeded(), 0);
@@ -332,12 +342,8 @@ class Organism {
         var new_r = this.r + direction_r;
         if (this.isClear(new_c, new_r)) {
             for (var cell of this.anatomy.cells) {
-                /* rotatedCol/rotatedRow have no default case, so they are typed
-                   `number | undefined`; every rotation passed here is one of the
-                   four cardinals, all of which match a case. Same assertion the
-                   converted Brain.decide() makes about getOppositeDirection. */
-                var real_c = this.c + cell.rotatedCol(this.rotation)!;
-                var real_r = this.r + cell.rotatedRow(this.rotation)!;
+                var real_c = this.c + cell.rotatedCol(this.rotation);
+                var real_r = this.r + cell.rotatedRow(this.rotation);
                 this.env.changeCell(real_c, real_r, CellStates.empty, null);
             }
             this.c = new_c;
@@ -357,8 +363,8 @@ class Organism {
         var new_rotation = Directions.getRandomDirection();
         if(this.isClear(this.c, this.r, new_rotation)){
             for (var cell of this.anatomy.cells) {
-                var real_c = this.c + cell.rotatedCol(this.rotation)!;
-                var real_r = this.r + cell.rotatedRow(this.rotation)!;
+                var real_c = this.c + cell.rotatedCol(this.rotation);
+                var real_r = this.r + cell.rotatedRow(this.rotation);
                 this.env.changeCell(real_c, real_r, CellStates.empty, null);
             }
             this.rotation = new_rotation;
@@ -411,7 +417,7 @@ class Organism {
         return cell != null && (cell.state == CellStates.empty || cell.owner == this || cell.owner == parent || cell.state == CellStates.food);
     }
 
-    isClear(col: number, row: number, rotation: number = this.rotation): boolean {
+    isClear(col: number, row: number, rotation: Direction = this.rotation): boolean {
         for(var loccell of this.anatomy.cells) {
             var cell = this.getRealCell(loccell, col, row, rotation);
             if (cell==null) {
@@ -460,20 +466,24 @@ class Organism {
             exp_cell.explode();
         }
         for (var cell of this.anatomy.cells) {
-            var real_c = this.c + cell.rotatedCol(this.rotation)!;
-            var real_r = this.r + cell.rotatedRow(this.rotation)!;
+            var real_c = this.c + cell.rotatedCol(this.rotation);
+            var real_r = this.r + cell.rotatedRow(this.rotation);
             var current_cell = this.env.grid_map.cellAt(real_c, real_r);
             if (current_cell && current_cell.owner === this) {
                 this.env.changeCell(real_c, real_r, CellStates.food, null);
             }
         }
-        this.species.decreasePop();
+        /* Same invariant as reproduce(): die() is only reachable for organisms
+           found through env.organisms or a grid cell's owner, both of which
+           only ever contain published organisms. A guard here would desync
+           Species.population. */
+        this.species!.decreasePop();
     }
 
     updateGrid(): void {
         for (var cell of this.anatomy.cells) {
-            var real_c = this.c + cell.rotatedCol(this.rotation)!;
-            var real_r = this.r + cell.rotatedRow(this.rotation)!;
+            var real_c = this.c + cell.rotatedCol(this.rotation);
+            var real_r = this.r + cell.rotatedRow(this.rotation);
             this.env.changeCell(real_c, real_r, cell.state, cell);
         }
     }
@@ -608,9 +618,9 @@ class Organism {
         return this.living;
     }
 
-    getRealCell(local_cell: BodyCell, c: number = this.c, r: number = this.r, rotation: number = this.rotation): OrganismGridCell | null {
-        var real_c = c + local_cell.rotatedCol(rotation)!;
-        var real_r = r + local_cell.rotatedRow(rotation)!;
+    getRealCell(local_cell: BodyCell, c: number = this.c, r: number = this.r, rotation: Direction = this.rotation): OrganismGridCell | null {
+        var real_c = c + local_cell.rotatedCol(rotation);
+        var real_r = r + local_cell.rotatedRow(rotation);
         return this.env.grid_map.cellAt(real_c, real_r);
     }
 
@@ -644,7 +654,11 @@ class Organism {
         org.anatomy = this.anatomy.serialize();
         if (this.anatomy.is_mover && this.anatomy.has_eyes)
             org.brain = this.brain.serialize();
-        org.species_name = this.species.name;
+        /* Serialised organisms are either the world's (published, so they have
+           a species) or the editor's (seeded by setDefaultOrg from the editor's
+           constructor). Guarding would emit a save with no species_name, which
+           WorldEnvironment.loadRaw cannot recover from. */
+        org.species_name = this.species!.name;
         return org;
     }
 

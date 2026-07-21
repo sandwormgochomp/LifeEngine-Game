@@ -23,14 +23,16 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": false,
+    "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    
-    /* Javascript support */
-    "allowJs": true,
-    "checkJs": false
+
+    /* src/ is entirely TypeScript. Leaving allowJs off means a .js file added
+       back under src/ fails the build rather than silently opting out of
+       type checking. The Playwright specs and playwright.config.js stay
+       JavaScript, and are outside `include` below. */
+    "allowJs": false
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

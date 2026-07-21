@@ -405,8 +405,12 @@ class WorldEnvironment extends Environment{
         org.anatomy.addDefaultCell(CellStates.mouth, 0, 0);
         org.anatomy.addDefaultCell(CellStates.producer, 1, 1);
         org.anatomy.addDefaultCell(CellStates.producer, -1, -1);
-        this.addOrganism(org);
+        /* Species first, then publish. Everything reachable from env.organisms
+           -- update(), reproduce(), die() -- dereferences org.species without a
+           guard, so an organism must not be visible in the world before it has
+           one. The old order left a one-statement window where it was. */
         FossilRecord.addSpecies(org, null);
+        this.addOrganism(org);
     }
 
     addOrganism(organism: Organism): void {
@@ -441,11 +445,18 @@ class WorldEnvironment extends Environment{
        Mirrors OrganismEditor.changeCell verbatim. */
     changeCell(c: number, r: number, state: CellState, owner: RenderCellOwnerLike | BodyCell | null): void {
         super.changeCell(c, r, state, owner as RenderCellOwnerLike | null);
-        this.renderer.addToRender(this.grid_map.cellAt(c, r));
+        /* cellAt is null only for out-of-range coordinates, which no caller
+           produces: every one either walks the grid's own bounds
+           (buildPetriDish, generateFood), derives coordinates from a cell it
+           already fetched (the body cells, updateGrid, die), or tests the cell
+           first (dropCellType, randomizeWalls, Organism.buildWall). The save
+           loader was the one path that could, and it now checks -- see the
+           guarded wall loop in loadRaw. */
+        this.renderer.addToRender(this.grid_map.cellAt(c, r)!);
         this.glow_dirty = true;
         this.deco_dirty = true;
         if(state == CellStates.wall || state == CellStates.invincible_wall)
-            this.walls.push(this.grid_map.cellAt(c, r));
+            this.walls.push(this.grid_map.cellAt(c, r)!);
     }
 
     // Enclose the world in a circular dish of invincible wall: life lives
@@ -609,7 +620,18 @@ class WorldEnvironment extends Environment{
         this.resizeGridColRow(cell_size, raw.grid.cols, raw.grid.rows)
         this.grid_map.loadRaw(raw.grid);
         for (let wall of raw.grid.walls) {
-            this.walls.push(this.grid_map.cellAt(wall.c, wall.r));
+            /* A save can name a wall outside the grid it declares -- both load
+               paths validate only that `grid` and `organisms` are present, so a
+               hand-edited or version-mismatched file gets here intact. cellAt
+               returns null for those, and an unchecked push put the null in
+               this.walls, where it surfaced far away and much later as a
+               TypeError in clearWalls (which reads wall.col). Skipping it
+               matches what every other wall-writing path already does:
+               randomizeWalls and dropCellType both test the cell first. */
+            let wall_cell = this.grid_map.cellAt(wall.c, wall.r);
+            if (wall_cell != null) {
+                this.walls.push(wall_cell);
+            }
         }
         // Saved worlds carry dish walls but not the glass flags; re-flag them
         if (WorldConfig.petri_dish)
@@ -626,15 +648,15 @@ class WorldEnvironment extends Environment{
         /* The cast is only the SavedOrganism view described above -- it adds the
            two position fields loadRaw reads and serialize() never writes. */
         for (let orgRaw of raw.organisms as SavedOrganism[]) {
-            /* KNOWN SAVE-FORMAT BUG, preserved verbatim: serialize() writes an
-               organism's position as `c`/`r` (Organism.serialize -> copyNonObjects),
-               never `col`/`row`, so the constructor receives undefined for both
-               here. The overwriteNonObjects call inside org.loadRaw on the next
-               line restores c/r from the save, which is the only reason this
-               works at all. Typed as the absence it really is; not fixed. */
-            let org = new Organism(orgRaw.col, orgRaw.row, this as unknown as OrganismEnv);
+            /* Reads `c`/`r`, which is what serialize() actually writes
+               (Organism.serialize -> copyNonObjects). This used to read
+               `col`/`row`, fields no save has ever contained, so the constructor
+               received undefined for both and the position was only repaired a
+               line later by the overwriteNonObjects call inside org.loadRaw --
+               it worked entirely by accident. Same end state, arrived at
+               directly. */
+            let org = new Organism(orgRaw.c, orgRaw.r, this as unknown as OrganismEnv);
             org.loadRaw(orgRaw);
-            this.addOrganism(org);
             let s = species[orgRaw.species_name];
             if (!s){ // ideally, every organisms species should exists, but there is a bug that misses some species sometimes
                 s = new Species(org.anatomy, null, raw.total_ticks);
@@ -647,6 +669,10 @@ class WorldEnvironment extends Environment{
             }
             s.name = orgRaw.species_name;
             org.species = s;
+            /* Published only once the species is bound. Everything reachable
+               from env.organisms dereferences org.species unguarded, so the
+               addOrganism call used to sit eleven statements too early. */
+            this.addOrganism(org);
         }
         for (let name in species)
             FossilRecord.addSpeciesObj(species[name]);
