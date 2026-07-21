@@ -1,7 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "useDefineForClassFields": true,
+    /* The engine classes assign every field in the constructor body, never as a
+       class field. Converting them to TS means declaring those fields for the
+       type checker only -- and under `define` semantics a declaration with no
+       initializer emits defineProperty(this, x, undefined), which runs before
+       the subclass constructor body and would wipe values set via super().
+       `false` erases bare declarations instead, matching the JS they replace.
+       Nothing here relies on `define`: there are no class fields with
+       initializers, and the React layer is entirely function components. */
+    "useDefineForClassFields": false,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
