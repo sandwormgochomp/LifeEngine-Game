@@ -48,6 +48,11 @@ interface DecoOrganismLike {
 interface DecoEnvLike {
     renderer: { cell_size: number; width: number; height: number };
     organisms: DecoOrganismLike[];
+    /* The organism under the cursor, set by CanvasController. Renderer's own
+       cell highlight paints on the world canvas, which this overlay covers, so
+       the selection was invisible on any organism large enough to have a
+       sprite -- the tint has to be applied here, to the sprite itself. */
+    highlighted_org?: DecoOrganismLike | null;
 }
 
 const shade_cache = new Map<string, string>();
@@ -276,10 +281,45 @@ function generateOrganismSprite(org: DecoOrganismLike, sz: number): OrganismSpri
     };
 }
 
-function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike): void {
+// Matches Renderer.renderCellHighlight, so a selection reads the same whether
+// it lands on bare cells or on a sprite.
+const HIGHLIGHT_COLOR = 'yellow';
+const HIGHLIGHT_ALPHA = 0.5;
+
+/* Reused across frames; only one organism is ever highlighted at a time.
+   Created lazily so importing this module stays safe without a DOM. */
+var tint_scratch: HTMLCanvasElement | null = null;
+
+/* Tints a cached sprite by compositing the highlight colour `source-atop` a
+   copy of it, so the wash follows the organism's silhouette -- including the
+   outline and connective tissue that spill outside the cell boxes -- instead
+   of painting the sprite's transparent bounding box. Assigning canvas.width
+   both sizes and clears the scratch, and resets its context state. */
+function drawHighlightedSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvasElement, x: number, y: number): void {
+    if (!tint_scratch) tint_scratch = document.createElement('canvas');
+    var scratch = tint_scratch;
+    scratch.width = sprite.width;
+    scratch.height = sprite.height;
+    var sctx = scratch.getContext('2d');
+    if (!sctx) {
+        ctx.drawImage(sprite, x, y);
+        return;
+    }
+    sctx.drawImage(sprite, 0, 0);
+    sctx.globalCompositeOperation = 'source-atop';
+    sctx.globalAlpha = HIGHLIGHT_ALPHA;
+    sctx.fillStyle = HIGHLIGHT_COLOR;
+    sctx.fillRect(0, 0, scratch.width, scratch.height);
+    ctx.drawImage(scratch, x, y);
+}
+
+/* `clear` is false only for OrganismEditor, which draws this pass onto its
+   single shared canvas rather than a dedicated overlay -- see the comment on
+   its renderFull(). */
+function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike, clear: boolean = true): void {
     var renderer = env.renderer;
     var sz = Math.floor(renderer.cell_size);
-    ctx.clearRect(0, 0, renderer.width, renderer.height);
+    if (clear) ctx.clearRect(0, 0, renderer.width, renderer.height);
     if (sz <= 2) return;
 
     for (var org of env.organisms) {
@@ -294,7 +334,10 @@ function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike
             var cache = org._spriteCache;
             var drawX = Math.floor(org.c + cache.minCol) * sz - cache.padding;
             var drawY = Math.floor(org.r + cache.minRow) * sz - cache.padding;
-            ctx.drawImage(cache.canvas, drawX, drawY);
+            if (org === env.highlighted_org)
+                drawHighlightedSprite(ctx, cache.canvas, drawX, drawY);
+            else
+                ctx.drawImage(cache.canvas, drawX, drawY);
         }
     }
 }

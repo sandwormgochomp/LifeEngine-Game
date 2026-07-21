@@ -283,6 +283,11 @@ class EnvironmentController extends CanvasController{
                     } else if (left_click) {
                         if (this.cur_org == null) {
                             this.cur_org = this.findNearOrganism();
+                            /* The base class only publishes the hover target
+                               on a direct hit, so a click that snapped to a
+                               nearby organism would send it to the editor
+                               without ever tinting it. */
+                            this.setHighlightedOrg(this.cur_org);
                         }
                         if (this.cur_org != null){
                             /* Engine builds the environment (and so this

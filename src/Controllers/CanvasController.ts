@@ -18,6 +18,12 @@ interface GridMapLike {
 interface ControllerEnvLike {
     renderer: RendererLike;
     grid_map: GridMapLike;
+    /* Both optional: only WorldEnvironment stacks a decoration overlay over its
+       cells, and only it therefore needs the hover republished for the sprite
+       tint. The editor leaves them unset (it turns highlight_org off outright)
+       and the writes below are harmless no-ops there. */
+    highlighted_org?: RenderOrganismLike | null;
+    deco_dirty?: boolean;
 }
 
 /* The control panel, as the controllers and the environment between them reach
@@ -137,6 +143,7 @@ class CanvasController{
             this.middle_click = false;
             this.right_click  = false;
             this.env.renderer.clearAllHighlights(true);
+            this.setHighlightedOrg(null);
         }.bind(this));
 
         this.canvas!.addEventListener('mouseenter', function(this: CanvasController, evt: MouseEvent) {
@@ -172,7 +179,18 @@ class CanvasController{
             else if (this.cur_cell != null) {
                 this.env.renderer.highlightCell(this.cur_cell);
             }
+            this.setHighlightedOrg(this.cur_org != null && this.highlight_org ? this.cur_org : null);
         }
+    }
+
+    /* The decoration overlay only repaints when the world marks it dirty, and a
+       hover changes no cells, so moving the cursor between organisms would
+       otherwise leave the tint on whichever one was highlighted when the world
+       last changed. */
+    setHighlightedOrg(org: RenderOrganismLike | null): void {
+        if (this.env.highlighted_org === org) return;
+        this.env.highlighted_org = org;
+        this.env.deco_dirty = true;
     }
 
     mouseMove(): void {

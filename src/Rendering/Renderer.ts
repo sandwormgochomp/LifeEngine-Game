@@ -74,9 +74,13 @@ class Renderer {
         this.width = this.canvas!.width;
     }
 
+    /* fillRect takes (x, y, width, height); the height and width arguments were
+       transposed here. On a square canvas that is invisible, which is how it
+       survived -- the bug only shows on a non-square one, where it clears a
+       square of the wrong dimension and leaves a strip of the canvas untouched. */
     clear(): void {
         this.ctx!.fillStyle = 'white';
-        this.ctx!.fillRect(0, 0, this.height, this.width);
+        this.ctx!.fillRect(0, 0, this.width, this.height);
     }
 
     renderFullGrid(grid: Cell[][]): void {

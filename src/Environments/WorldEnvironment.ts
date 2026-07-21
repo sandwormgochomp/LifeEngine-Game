@@ -122,6 +122,12 @@ class WorldEnvironment extends Environment{
        context first. Hence `| undefined` rather than a definite-assignment `!`. */
     deco_dirty: boolean | undefined;
     glow_dirty: boolean | undefined;
+    /* The hovered organism, written by CanvasController and read by the
+       decoration pass, which tints that organism's sprite. Never initialized,
+       for the same reason as the fields above: no pointer has moved yet. A
+       stale reference to an organism that has since died is harmless -- the
+       decoration pass skips non-living organisms before it reaches the tint. */
+    highlighted_org: Organism | null | undefined;
     /* Assigned from outside by Engine right after it constructs this, so absent
        for the window in between -- setNightMode() guards on it. */
     engine?: Engine;

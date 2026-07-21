@@ -68,6 +68,9 @@ class OrganismEditor extends Environment{
        renderFull() that runs with a bound context. Hence `| undefined` rather
        than a definite-assignment `!`. */
     organisms: Organism[] | undefined;
+    /* Watches the canvas container so the grid follows layout changes; null
+       whenever no canvas is bound, and on platforms without ResizeObserver. */
+    resize_observer: ResizeObserver | null;
 
     constructor() {
         super();
@@ -91,31 +94,80 @@ class OrganismEditor extends Environment{
         this.history = [];
         this.redo_stack = [];
         this.pending_snapshot = null;
+        this.resize_observer = null;
         this.setDefaultOrg();
     }
 
     bindCanvas(canvas: HTMLCanvasElement, container: HTMLElement): void {
         this.renderer.bindCanvas(canvas, container);
         this.controller.setCanvas(canvas);
+        this.observeResize(container);
         this.rebuildGrid();
     }
 
     releaseCanvas(): void {
+        this.observeResize(null);
         this.renderer.bindCanvas(null, null);
         this.controller.setCanvas(null);
     }
 
-    // Size the grid to the canvas container (odd dimensions keep the
-    // organism's center cell visually centered), then shrink the canvas to
-    // exactly the grid so there is no dead margin and CSS can center it.
-    rebuildGrid(): void {
+    /* Rebuilding the grid was previously reachable only from bindCanvas() and
+       setZoom(), so any layout change that resized the dock -- a window resize,
+       a sibling panel opening -- left a grid sized for the old box until the
+       user happened to zoom. Passing null detaches, which releaseCanvas() must
+       do: the observer holds the container, and the React panel that owns it
+       mounts and unmounts. */
+    observeResize(container: HTMLElement | null): void {
+        if (this.resize_observer) {
+            this.resize_observer.disconnect();
+            this.resize_observer = null;
+        }
+        if (!container || typeof ResizeObserver === 'undefined') return;
+        this.resize_observer = new ResizeObserver(() => {
+            /* ResizeObserver also fires once on observe(), and most resizes are
+               smaller than a cell, so compare the grid the container would
+               produce against the one already built and rebuild only on a real
+               change -- rebuildGrid() repaints every cell.
+
+               This cannot recurse: rebuildGrid() resizes the canvas, and the
+               canvas is absolutely positioned inside the observed box, so it
+               never feeds back into the container's own size. */
+            var dims = this.gridDims();
+            if (dims[0] === this.grid_map.cols && dims[1] === this.grid_map.rows) return;
+            this.rebuildGrid();
+        });
+        this.resize_observer.observe(container);
+    }
+
+    // The cell counts that fill the canvas container, odd on both axes so the
+    // organism's center cell stays visually centered. Split out from
+    // rebuildGrid() so the resize observer can ask what the grid *would* be
+    // without building it.
+    //
+    // The count rounds *up*: flooring left the canvas up to a cell short of the
+    // container on each axis, and forcing the count odd took off another whole
+    // cell, so the grid stopped short of the box edges and let the box's own
+    // background show through as letterboxing. Rounding up instead means the
+    // canvas is at worst one cell larger than the box, and .dockCanvasBox is
+    // `overflow: hidden` around a centered canvas, so the overhang is clipped
+    // symmetrically and the grid reaches all four edges.
+    gridDims(): [number, number] {
         var container = this.renderer.container;
         var w = (container && container.clientWidth) || this.renderer.width || 310;
         var h = (container && container.clientHeight) || this.renderer.height || 310;
-        var cols = Math.max(5, Math.floor(w / this.cell_size));
-        var rows = Math.max(5, Math.floor(h / this.cell_size));
-        if (cols % 2 === 0) cols--;
-        if (rows % 2 === 0) rows--;
+        var cols = Math.max(5, Math.ceil(w / this.cell_size));
+        var rows = Math.max(5, Math.ceil(h / this.cell_size));
+        if (cols % 2 === 0) cols++;
+        if (rows % 2 === 0) rows++;
+        return [cols, rows];
+    }
+
+    // Resize the grid to fit the container, then size the canvas to exactly the
+    // grid so CSS can center it.
+    rebuildGrid(): void {
+        var dims = this.gridDims();
+        var cols = dims[0];
+        var rows = dims[1];
         this.grid_map.resize(cols, rows, this.cell_size);
         if (this.renderer.canvas)
             this.renderer.fillShape(rows * this.cell_size, cols * this.cell_size);
@@ -180,10 +232,21 @@ class OrganismEditor extends Environment{
         this.needs_render = true;
     }
 
+    /* Order matters, and differs from the world's. The world gives decorations
+       their own overlay canvas stacked above the cells; the editor has a single
+       canvas, so the three passes are layered by sequence instead: flat cells,
+       then the grid over the flat empty-cell fill, then the organism sprite
+       last so the artwork sits on top of the grid rather than under it.
+       drawOrganismDecorations is told not to clear for the same reason -- on
+       its own overlay the clear is what erases the previous frame, but here it
+       would wipe the two passes below it (which is exactly what used to leave
+       only sprite + grid on screen, with the grid drawn over everything). The
+       full-grid pass repaints every cell opaquely, so it is the frame's clear. */
     renderFull(): void {
         this.needs_render = false;
         if (!this.renderer.ctx) return;
         this.renderer.renderFullGrid(this.grid_map.grid);
+        this.renderDecorations();
         this.organisms = [this.organism];
         /* Assigned on the line directly above, but the whole editor is what
            crosses the seam, so the checker cannot carry that narrowing into the
@@ -192,8 +255,7 @@ class OrganismEditor extends Environment{
            as returning `number`, while BodyCell's switches have no default arm
            and so return `number | undefined`. Spelled as the parameter type of
            the function itself rather than re-declaring its private interface. */
-        drawOrganismDecorations(this.renderer.ctx, this as unknown as Parameters<typeof drawOrganismDecorations>[1]);
-        this.renderDecorations();
+        drawOrganismDecorations(this.renderer.ctx, this as unknown as Parameters<typeof drawOrganismDecorations>[1], false);
     }
 
     // Faint grid lines plus a marker on the (immovable) center cell, so empty
@@ -208,13 +270,20 @@ class OrganismEditor extends Environment{
         ctx.strokeStyle = 'rgba(0, 255, 65, 0.07)';
         ctx.lineWidth = 1;
         ctx.beginPath();
+        /* The closing line of each axis sits at exactly the canvas dimension,
+           so the usual +0.5 pixel-centering offset pushes it one half-pixel
+           past the last row of pixels and it never rasterizes -- the grid drew
+           a left and top border but no right or bottom one. Pull those two
+           back inside the bitmap instead. */
         for (var c = 0; c <= this.grid_map.cols; c++) {
-            ctx.moveTo(c * cs + 0.5, 0);
-            ctx.lineTo(c * cs + 0.5, h);
+            var x = Math.min(c * cs + 0.5, w - 0.5);
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
         }
         for (var r = 0; r <= this.grid_map.rows; r++) {
-            ctx.moveTo(0, r * cs + 0.5);
-            ctx.lineTo(w, r * cs + 0.5);
+            var y = Math.min(r * cs + 0.5, h - 0.5);
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
         }
         ctx.stroke();
         var center = this.grid_map.getCenter();

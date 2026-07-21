@@ -217,6 +217,42 @@ test.describe('Organism Lab dock', () => {
     await clickEditorCell(page, -1, 0);
     await expect(cellCountText(page)).toHaveText(/Cell count: 3/);
   });
+
+  test('Grid covers its box and follows it when the layout resizes', async ({ page }) => {
+    const gridState = () => page.evaluate(() => {
+      const ed = window.engine.organism_editor;
+      return {
+        cols: ed.grid_map.cols,
+        canvas_w: ed.renderer.canvas.width,
+        canvas_h: ed.renderer.canvas.height,
+        box_w: ed.renderer.container.clientWidth,
+        box_h: ed.renderer.container.clientHeight,
+        observing: !!ed.resize_observer,
+      };
+    });
+
+    // The canvas covers the box on both axes: a canvas smaller than its box
+    // leaves the box's own background showing as letterboxing around the grid
+    const before = await gridState();
+    expect(before.canvas_w).toBeGreaterThanOrEqual(before.box_w);
+    expect(before.canvas_h).toBeGreaterThanOrEqual(before.box_h);
+    expect(before.observing).toBe(true);
+
+    // The dock is a fixed width, so drive the box the way a layout change would
+    await page.evaluate(() => {
+      window.engine.organism_editor.renderer.container.style.width = '480px';
+    });
+    await expect.poll(async () => (await gridState()).cols).not.toBe(before.cols);
+
+    const after = await gridState();
+    expect(after.canvas_w).toBeGreaterThanOrEqual(after.box_w);
+    expect(after.canvas_h).toBeGreaterThanOrEqual(after.box_h);
+    expect(after.cols % 2).toBe(1); // odd keeps the center cell centered
+
+    // The observer holds the container, so unmounting the dock must detach it
+    await openEditor(page); // close
+    expect(await page.evaluate(() => !!window.engine.organism_editor.resize_observer)).toBe(false);
+  });
 });
 
 test.describe('Select from world', () => {
