@@ -144,8 +144,12 @@ const FossilRecord = {
     },
 
     clear_record() {
-        this.extant_species = [];
-        this.extinct_species = [];
+        // Objects, not arrays, to match init() and every access site: these are
+        // keyed by species name (extant_species[species.name], delete, and
+        // Object.values). Arrays only ever worked here by accident, since they
+        // accept string properties too.
+        this.extant_species = {};
+        this.extinct_species = {};
         this.setData();
     },
 
