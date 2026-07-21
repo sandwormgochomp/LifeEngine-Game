@@ -148,17 +148,17 @@ class WorldEnvironment extends Environment{
         this.is_night = Boolean(isNight);
         this.day_timer = 0;
         var night_filter = this.is_night ? "brightness(0.3) hue-rotate(180deg) saturate(0.5)" : "none";
+
+        if (this.renderer && this.renderer.canvas) this.renderer.canvas.style.filter = night_filter;
+        if (this.deco_canvas) this.deco_canvas.style.filter = night_filter;
+        if (this.glow_canvas) this.glow_canvas.style.filter = night_filter;
+
         var container = this.container || (this.renderer ? this.renderer.container : null);
         if (container) {
-            container.style.filter = night_filter;
-            if (this.renderer && this.renderer.canvas) this.renderer.canvas.style.filter = "none";
-            if (this.deco_canvas) this.deco_canvas.style.filter = "none";
-            if (this.glow_canvas) this.glow_canvas.style.filter = "none";
-        } else {
-            if (this.renderer && this.renderer.canvas) this.renderer.canvas.style.filter = night_filter;
-            if (this.deco_canvas) this.deco_canvas.style.filter = night_filter;
-            if (this.glow_canvas) this.glow_canvas.style.filter = night_filter;
+            container.style.filter = "none";
+            container.style.backgroundColor = this.is_night ? '#000000' : '#05050A';
         }
+
         if (this.engine && typeof this.engine.notify === 'function') {
             this.engine.notify();
         }
