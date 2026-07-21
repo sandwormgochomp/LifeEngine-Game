@@ -38,14 +38,19 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine, onLifeformsClick })
           <span className={styles.statValue}>{lifeforms.toLocaleString()}</span>
         </button>
         <span className={styles.statDivider}>|</span>
-        <span
-          className={styles.statItem}
+        <button
+          id="day-night-toggle"
+          className={`${styles.statItem} ${styles.statButton}`}
           title={
             isNight
-              ? 'NIGHT TIME: Darkness lowers visibility and reduces food production from sunlight'
-              : 'DAY TIME: Sunlight allows producer cells to grow food and provides full visibility'
+              ? 'NIGHT TIME: Click to switch to Day mode (Sunlight)'
+              : 'DAY TIME: Click to switch to Night mode (Darkness)'
           }
-          style={{ cursor: 'help' }}
+          onClick={() => {
+            if (engine?.env?.setNightMode) {
+              engine.env.setNightMode(!isNight);
+            }
+          }}
         >
           {isNight ? (
             <span className={styles.statValue} style={{ color: '#87ceeb' }}>
@@ -58,7 +63,7 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine, onLifeformsClick })
               DAY
             </span>
           )}
-        </span>
+        </button>
       </div>
     </div>
   );

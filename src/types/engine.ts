@@ -31,6 +31,7 @@ export interface WorldEnvAPI {
   largest_cell_count: number;
   radiation_map: Set<string>;
   is_night: boolean;
+  setNightMode(isNight: boolean): void;
   grid_map: { cols: number; rows: number };
   controller: EnvControllerAPI;
   averageMutability(): number;

@@ -21,6 +21,7 @@ const GLOW_ALPHA = 0.1;
 class WorldEnvironment extends Environment{
     constructor(cell_size, canvas, container, glow_canvas=null, deco_canvas=null) {
         super();
+        this.container = container;
         this.renderer = new Renderer(canvas, container, cell_size);
         this.renderer.env = this;
         // Glow is a separate compositing pass: organisms are drawn flat onto a
@@ -134,16 +135,32 @@ class WorldEnvironment extends Environment{
         this.day_timer++;
         if (this.day_timer > 3600) { // 1 minute at 60 ticks per second
             this.day_timer = 0;
-            this.is_night = !this.is_night;
-            var night_filter = this.is_night ? "brightness(0.3) hue-rotate(180deg) saturate(0.5)" : "none"; // Blueish dark tint
-            this.renderer.canvas.style.filter = night_filter;
-            if (this.deco_canvas)
-                this.deco_canvas.style.filter = night_filter;
+            this.setNightMode(!this.is_night);
         }
 
         this.total_ticks ++;
         if (this.total_ticks % this.data_update_rate == 0) {
             FossilRecord.updateData();
+        }
+    }
+
+    setNightMode(isNight) {
+        this.is_night = Boolean(isNight);
+        this.day_timer = 0;
+        var night_filter = this.is_night ? "brightness(0.3) hue-rotate(180deg) saturate(0.5)" : "none";
+        var container = this.container || (this.renderer ? this.renderer.container : null);
+        if (container) {
+            container.style.filter = night_filter;
+            if (this.renderer && this.renderer.canvas) this.renderer.canvas.style.filter = "none";
+            if (this.deco_canvas) this.deco_canvas.style.filter = "none";
+            if (this.glow_canvas) this.glow_canvas.style.filter = "none";
+        } else {
+            if (this.renderer && this.renderer.canvas) this.renderer.canvas.style.filter = night_filter;
+            if (this.deco_canvas) this.deco_canvas.style.filter = night_filter;
+            if (this.glow_canvas) this.glow_canvas.style.filter = night_filter;
+        }
+        if (this.engine && typeof this.engine.notify === 'function') {
+            this.engine.notify();
         }
     }
 

@@ -24,7 +24,7 @@ class CellState{
         var sz = Math.floor(size);
 
         // Wipe any cursor overlay / brush preview artifacts on this cell first
-        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#0E1318';
+        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#05050A';
         ctx.fillRect(x, y, sz, sz);
 
         var org = cell.owner || (cell.cell_owner ? cell.cell_owner.org : null);
@@ -65,7 +65,7 @@ class CellState{
         }
         ctx.fillRect(x, y, sz, sz);
 
-        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#0E1318';
+        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#05050A';
 
         // 2. Erase outer corners (where NONE of the adjacent orthogonal or diagonal cells belong to the same organism)
         var c = sz >= 12 ? 3 : (sz >= 6 ? 2 : 1);
@@ -94,6 +94,7 @@ class CellState{
 class Empty extends CellState {
     constructor() {
         super('empty');
+        this.color = '#05050A';
     }
 }
 class Food extends CellState {
@@ -102,7 +103,7 @@ class Food extends CellState {
         this.color = '#34593C';
     }
     render(ctx, cell, size) {
-        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#0E1318';
+        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#05050A';
         ctx.fillRect(cell.x, cell.y, size, size);
         ctx.fillStyle = this.color;
         if (size > 3) {
