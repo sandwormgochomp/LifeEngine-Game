@@ -148,31 +148,35 @@ function drawOrganismDecorations(ctx, env) {
             }
         }
 
-        // Pass 1.5: 16-Bit Retro Pixel Dithering & Gradient Shading
-        // Top-left 50% checkerboard dither for light highlight, bottom-right 50% checkerboard dither for shadow depth
+        // Pass 1.5: 16-Bit Retro Pixel Dithering & Gradient Shading (Scaled proportionally to cell size sz)
         if (sz >= 3) {
+            var dStep = Math.max(1, Math.floor(sz / 5));
             var halfSz = Math.floor(sz / 2);
             for (var body_cell of org.anatomy.cells) {
                 var cell = org.getRealCell(body_cell);
                 if (cell == null) continue;
                 var x = Math.floor(cell.x), y = Math.floor(cell.y);
 
-                // Top-Left Highlight Dithering (50% checkerboard pixel pattern)
+                // Top-Left Highlight Dithering (50% checkerboard dither pattern)
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-                for (var py = 0; py <= halfSz; py++) {
-                    for (var px = 0; px <= halfSz - (py === halfSz ? 1 : 0); px++) {
-                        if ((px + py) % 2 === 0) {
-                            ctx.fillRect(x + px, y + py, 1, 1);
+                for (var py = 0; py <= halfSz; py += dStep) {
+                    for (var px = 0; px <= halfSz - (py >= halfSz ? dStep : 0); px += dStep) {
+                        var gridIx = Math.floor(px / dStep);
+                        var gridIy = Math.floor(py / dStep);
+                        if ((gridIx + gridIy) % 2 === 0) {
+                            ctx.fillRect(x + px, y + py, Math.min(dStep, sz - px), Math.min(dStep, sz - py));
                         }
                     }
                 }
 
-                // Bottom-Right Shadow Dithering (50% checkerboard pixel pattern)
+                // Bottom-Right Shadow Dithering (50% checkerboard dither pattern)
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-                for (var py = halfSz; py < sz; py++) {
-                    for (var px = halfSz + (py === halfSz ? 1 : 0); px < sz; px++) {
-                        if ((px + py) % 2 === 0) {
-                            ctx.fillRect(x + px, y + py, 1, 1);
+                for (var py = halfSz; py < sz; py += dStep) {
+                    for (var px = halfSz + (py <= halfSz ? dStep : 0); px < sz; px += dStep) {
+                        var gridIx = Math.floor(px / dStep);
+                        var gridIy = Math.floor(py / dStep);
+                        if ((gridIx + gridIy) % 2 === 0) {
+                            ctx.fillRect(x + px, y + py, Math.min(dStep, sz - px), Math.min(dStep, sz - py));
                         }
                     }
                 }
