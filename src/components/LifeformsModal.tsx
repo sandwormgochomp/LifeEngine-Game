@@ -2,22 +2,20 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import type Engine from '../Engine';
 import FossilRecord from '../Stats/FossilRecord';
+import type Species from '../Stats/Species';
+import type Anatomy from '../Organism/Anatomy';
 import OrganismThumb from './OrganismThumb';
-import type { ThumbCell } from './OrganismThumb';
 
-interface Species {
-  name: string;
-  population: number;
-  start_tick: number;
-  anatomy: {
-    cells: ThumbCell[];
-    serialize(): unknown;
-  };
-}
+/* Species declares its `anatomy` as the loose AnatomyLike stub in
+   Stats/Species (which predates Anatomy becoming a real class, and admits
+   null). Every species in the fossil record is minted from a real Anatomy, and
+   that is what the cards render and serialize, so the record is viewed through
+   this narrower type at the one place it is read. */
+type LiveSpecies = Species & { anatomy: Anatomy };
 
 interface Entry {
   name: string;
-  species: Species;
+  species: LiveSpecies;
   population: number;
   extinct: boolean;
 }
@@ -39,7 +37,7 @@ const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, onClose, onOpen
   const hovering = useRef(false);
 
   const refresh = useCallback(() => {
-    const live: Record<string, Species> = (FossilRecord as any).extant_species ?? {};
+    const live = (FossilRecord.extant_species ?? {}) as Record<string, LiveSpecies>;
     setEntries(prev => {
       const next: Entry[] = [];
       const seen = new Set<string>();

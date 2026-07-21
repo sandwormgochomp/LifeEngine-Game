@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
+import type { HyperparamsData, HyperparamsSingleton } from '../Hyperparameters';
 import Notifier from '../Utils/Notifier';
 
 interface EvolutionControlsModalProps {
@@ -9,9 +10,18 @@ interface EvolutionControlsModalProps {
   onClose: () => void;
 }
 
+/* The Hyperparams fields this modal can edit, split by the input that edits
+   them. Deriving the two key sets from HyperparamsData means a number field
+   pointing at a boolean parameter (or at a parameter that no longer exists)
+   fails to compile. The neighbour-list fields belong to neither set and so are
+   not editable here, which matches what GROUPS already listed. */
+type NumParamKey = { [K in keyof HyperparamsData]: HyperparamsData[K] extends number ? K : never }[keyof HyperparamsData];
+type BoolParamKey = { [K in keyof HyperparamsData]: HyperparamsData[K] extends boolean ? K : never }[keyof HyperparamsData];
+type ParamKey = NumParamKey | BoolParamKey;
+
 interface NumField {
   kind: 'num';
-  key: string;
+  key: NumParamKey;
   label: string;
   title: string;
   min?: number;
@@ -21,7 +31,7 @@ interface NumField {
 
 interface BoolField {
   kind: 'bool';
-  key: string;
+  key: BoolParamKey;
   label: string;
   title: string;
   /** Checkbox reads/writes the negation of the stored value */
@@ -29,6 +39,9 @@ interface BoolField {
 }
 
 type Field = NumField | BoolField;
+
+// Local mirror of the editable slice of Hyperparams, field types included
+type ParamMirror = Pick<HyperparamsData, ParamKey>;
 
 // Every parameter here is one the engine actually reads. Tooltips are carried
 // over from the pre-React control panel.
@@ -82,19 +95,25 @@ const GROUPS: { title: string; fields: Field[] }[] = [
 const ALL_KEYS = GROUPS.flatMap(g => g.fields.map(f => f.key));
 
 const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine, onClose }) => {
-  // Hyperparams is a plain module object; mirror it so edits re-render
-  const [params, setParams] = useState<Record<string, any>>(() =>
-    Object.fromEntries(ALL_KEYS.map(k => [k, (Hyperparams as any)[k]]))
+  // Hyperparams is a plain module object; mirror it so edits re-render.
+  // fromEntries loses the key/value pairing, so the snapshot is asserted back
+  // into the mirror shape it was built from.
+  const [params, setParams] = useState<ParamMirror>(() =>
+    Object.fromEntries(ALL_KEYS.map(k => [k, Hyperparams[k]])) as ParamMirror
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const syncFromEngine = () => {
-    setParams(Object.fromEntries(ALL_KEYS.map(k => [k, (Hyperparams as any)[k]])));
+    setParams(Object.fromEntries(ALL_KEYS.map(k => [k, Hyperparams[k]])) as ParamMirror);
     engine?.emitChange(true);
   };
 
-  const setParam = (key: string, value: number | boolean) => {
-    (Hyperparams as any)[key] = value;
+  // Generic in the key so the value type is the one that key actually holds,
+  // which is what makes the write to Hyperparams check instead of needing a
+  // cast. Indexed off the singleton rather than HyperparamsData because that is
+  // the declared type of the assignment target; for a ParamKey the two agree.
+  const setParam = <K extends ParamKey>(key: K, value: HyperparamsSingleton[K]) => {
+    Hyperparams[key] = value;
     setParams(prev => ({ ...prev, [key]: value }));
     engine?.emitChange(true);
   };
@@ -106,7 +125,7 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
   };
 
   const handleSave = () => {
-    const data = Object.fromEntries(ALL_KEYS.map(k => [k, (Hyperparams as any)[k]]));
+    const data = Object.fromEntries(ALL_KEYS.map(k => [k, Hyperparams[k]]));
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

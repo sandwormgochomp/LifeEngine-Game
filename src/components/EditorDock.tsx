@@ -161,7 +161,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
   const setOrgField = (field: 'move_range' | 'mutability' | 'healer_food_cost' | 'poison_duration', value: number) => {
     if (!editor || Number.isNaN(value)) return;
     editor.beginStroke();
-    (editor.organism as any)[field] = value;
+    editor.organism[field] = value;
     editor.commitStroke();
     touch();
   };
@@ -214,15 +214,20 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
     URL.revokeObjectURL(url);
   };
 
-  const loadRaw = (raw: any, label: string) => {
-    if (!editor || !raw?.anatomy?.cells?.length) {
+  const loadRaw = (raw: unknown, label: string) => {
+    /* Parsed out of a file the user picked, so nothing about its shape is known
+       statically. `org` is a type-only view naming just the two members this
+       function probes; the value handed to loadRawOrg stays the raw one, and
+       every access below is optional-chained exactly as it was before. */
+    const org = raw as { anatomy?: { cells?: unknown[] }; species_name?: string } | null | undefined;
+    if (!editor || !org?.anatomy?.cells?.length) {
       Notifier.notify('Not a valid organism file');
       return;
     }
     editor.loadRawOrg(raw);
-    if (!raw.species_name) editor.renameSpecies(label);
+    if (!org.species_name) editor.renameSpecies(label);
     touch();
-    Notifier.notify(`Loaded ${raw.species_name || label}`);
+    Notifier.notify(`Loaded ${org.species_name || label}`);
   };
 
   const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {

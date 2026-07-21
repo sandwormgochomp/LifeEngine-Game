@@ -34,6 +34,15 @@ import AboutTab from './Tabs/AboutTab';
 const NIGHT_FILTER = 'brightness(0.3) hue-rotate(180deg) saturate(0.5)';
 const NIGHT_VOID = '#000000';
 
+/* The Playwright suite drives the simulation through window.engine, so the
+   handle is part of the app's contract rather than a debugging leftover.
+   Optional because it is only attached once App's mount effect has run. */
+declare global {
+  interface Window {
+    engine?: Engine;
+  }
+}
+
 const PANEL_TITLES: Record<string, string> = {
   save: 'SAVE / LOAD',
   about: 'ABOUT',
@@ -68,7 +77,7 @@ const App: React.FC = () => {
       glow_canvas: glowCanvasRef.current!,
       deco_canvas: decoCanvasRef.current!,
     });
-    (window as any).engine = newEngine;
+    window.engine = newEngine;
     newEngine.start(60);
     setEngine(newEngine);
 
@@ -168,14 +177,18 @@ const App: React.FC = () => {
 
   // Shared by both pickers. Presets ship without a species name, so fall back
   // to the label the user picked.
-  const handleOpenInLab = (raw: any, name: string) => {
+  const handleOpenInLab = (raw: unknown, name: string) => {
     if (!engine) return;
-    if (!raw?.anatomy?.cells?.length) {
+    /* Parsed from a preset file or built from a fossil record entry, so its
+       shape is not known statically. `org` is a type-only view naming just the
+       two members probed here; loadRawOrg still receives the raw value. */
+    const org = raw as { anatomy?: { cells?: unknown[] }; species_name?: string } | null | undefined;
+    if (!org?.anatomy?.cells?.length) {
       Notifier.notify('Not a valid organism');
       return;
     }
     engine.organism_editor.loadRawOrg(raw);
-    if (!raw.species_name) engine.organism_editor.renameSpecies(name);
+    if (!org.species_name) engine.organism_editor.renameSpecies(name);
     engine.emitChange(true);
     setLifeformsOpen(false);
     setPresetsOpen(false);

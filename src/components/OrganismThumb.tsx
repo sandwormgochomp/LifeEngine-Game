@@ -16,9 +16,16 @@ interface OrganismThumbProps {
   size?: number;
 }
 
+/* Built from CellStates.all rather than indexing the registry by name: a
+   serialized cell's state.name is an arbitrary string, and the registry also
+   holds `all`, `living` and three methods, so keying it directly is unsound.
+   Holds the states themselves, not their colors — ColorScheme repaints
+   state.color at runtime, so the color has to be read on each lookup. */
+const CELL_STATES_BY_NAME = new Map(CellStates.all.map(s => [s.name as string, s]));
+
 const cellColor = (cell: ThumbCell): string =>
   cell.custom_color ||
-  (CellStates as any)[cell.state?.name ?? '']?.color ||
+  CELL_STATES_BY_NAME.get(cell.state?.name ?? '')?.color ||
   cell.state?.color ||
   '#888';
 

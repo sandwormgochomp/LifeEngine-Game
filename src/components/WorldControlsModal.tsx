@@ -4,6 +4,7 @@ import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
 import Modes from '../Controllers/ControlModes';
 import WorldConfig from '../WorldConfig';
+import type { WorldConfigShape } from '../WorldConfig';
 import Notifier from '../Utils/Notifier';
 
 interface WorldControlsModalProps {
@@ -38,8 +39,10 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
   const [rows, setRows] = useState(100);
   const [numRandom, setNumRandom] = useState(100);
 
-  const setFlag = (key: keyof typeof config, value: number | boolean) => {
-    (WorldConfig as any)[key] = value;
+  // Generic in the key so `value` is the type that flag actually holds
+  // (boolean for the toggles, number for brush_size) rather than a union
+  const setFlag = <K extends keyof typeof config>(key: K, value: WorldConfigShape[K]) => {
+    WorldConfig[key] = value;
     setConfig(prev => ({ ...prev, [key]: value }));
     engine?.emitChange(true);
   };

@@ -34,7 +34,7 @@ const AboutTab: React.FC = () => {
 
       <h4>Cell types</h4>
       <div className={styles.legendGrid}>
-        {CellStates.living.map((cell: any) => (
+        {CellStates.living.map(cell => (
           <div key={cell.name} className={styles.legendRow} title={CELL_INFO[cell.name]}>
             <span className={styles.legendSwatch} style={{ backgroundColor: cell.color }}></span>
             <span className={styles.legendName}>{cell.name}</span>

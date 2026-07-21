@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import type Engine from '../Engine';
 import CellStates from '../Organism/Cell/CellStates';
+import type { CellName } from '../Organism/Cell/CellStates';
 import Notifier from '../Utils/Notifier';
 
 interface BrainModalProps {
@@ -10,9 +11,18 @@ interface BrainModalProps {
 }
 
 // Cell types an eye can observe and therefore react to
-const OBSERVABLE = ['food', 'wall', ...CellStates.living.map((c: any) => c.name)];
+const OBSERVABLE: CellName[] = ['food', 'wall', ...CellStates.living.map(c => c.name)];
 
-const ACTIONS = [
+/* `requires` names the Anatomy flag that has to be set for the action to do
+   anything; typing it means a badge for a flag Anatomy does not have fails to
+   compile. */
+interface BrainActionOption {
+  value: string;
+  label: string;
+  requires?: 'has_explosive' | 'has_healer' | 'has_shooter';
+}
+
+const ACTIONS: BrainActionOption[] = [
   { value: '', label: 'no action' },
   { value: 'explode', label: 'explode', requires: 'has_explosive' },
   { value: 'heal', label: 'heal', requires: 'has_healer' },
@@ -24,12 +34,14 @@ const ACTIONS = [
 const CONDITIONS = ['Health', 'Food', 'Always'];
 const OPERATORS = ['<', '>', '='];
 
-const cellColor = (name: string) => (CellStates as any)[name]?.color || '#888';
+// Every CellName is a key of the registry holding a CellState, so this lookup
+// cannot land on the registry's `all`/`living`/method members.
+const cellColor = (name: CellName) => CellStates[name]?.color || '#888';
 
 const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
   const editor = engine?.organism_editor;
-  const brain: any = editor?.organism?.brain;
-  const anatomy: any = editor?.organism?.anatomy;
+  const brain = editor?.organism?.brain;
+  const anatomy = editor?.organism?.anatomy;
 
   const [activeState, setActiveState] = useState(0);
   // The brain is mutated in place rather than replaced, so nothing React can
@@ -74,8 +86,8 @@ const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
       // Drop transitions pointing at the removed state and reindex the rest
       for (const s of brain.states) {
         s.transitions = (s.transitions || [])
-          .filter((t: any) => t.target !== index)
-          .map((t: any) => ({ ...t, target: t.target > index ? t.target - 1 : t.target }));
+          .filter(t => t.target !== index)
+          .map(t => ({ ...t, target: t.target > index ? t.target - 1 : t.target }));
       }
       if (brain.active_state_index >= brain.states.length) brain.active_state_index = 0;
       setActiveState(Math.max(0, index - 1));
@@ -105,7 +117,7 @@ const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
           )}
 
           <div className={styles.brainStateTabs}>
-            {states.map((s: any, i: number) => (
+            {states.map((s, i) => (
               <button
                 key={i}
                 className={`brain-state-tab ${styles.brainStateTab} ${i === index ? styles.active : ''}`}
@@ -137,7 +149,7 @@ const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
           {(state.transitions || []).length === 0 && (
             <p className={styles.ctrlNote}>No transitions: the organism stays in this state.</p>
           )}
-          {(state.transitions || []).map((t: any, ti: number) => (
+          {(state.transitions || []).map((t, ti) => (
             <div key={ti} className={`brain-transition ${styles.brainTransition}`}>
               <span>When</span>
               <select
@@ -178,7 +190,7 @@ const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
                 onChange={e => edit(() => { t.target = parseInt(e.target.value); })}
                 title="State to switch to"
               >
-                {states.map((s: any, i: number) => <option key={i} value={i}>{s.name}</option>)}
+                {states.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
               </select>
               <button
                 className={styles.brainRemove}

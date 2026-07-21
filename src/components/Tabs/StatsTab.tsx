@@ -3,6 +3,7 @@ import styles from '../styles/Hud.module.css';
 import useEngineValue from '../useEngineValue';
 import type Engine from '../../Engine';
 import FossilRecord from '../../Stats/FossilRecord';
+import type Species from '../../Stats/Species';
 
 interface StatsTabProps {
   engine: Engine | null;
@@ -39,8 +40,8 @@ const StatsTab: React.FC<StatsTabProps> = ({ engine }) => {
   const avgMut = useEngineValue(engine, e => Math.round(e.env.averageMutability() * 100) / 100, 0);
   const speciesCount = useEngineValue(engine, () => FossilRecord.numExtantSpecies(), 0);
   const topSpecies = useEngineValue(engine, () => {
-    let top: any = null;
-    for (const species of Object.values(FossilRecord.extant_species) as any[]) {
+    let top: Species | null = null;
+    for (const species of Object.values(FossilRecord.extant_species)) {
       if (!top || species.population > top.population) top = species;
     }
     return top ? `${top.name} (${top.population})` : '—';
