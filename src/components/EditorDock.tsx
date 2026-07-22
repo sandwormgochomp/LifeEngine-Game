@@ -348,6 +348,12 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
             <button id="random-btn" title="Generate a random organism" onClick={run(editor?.randomOrganism.bind(editor))}>
               <i className="fa-solid fa-dice"></i>
             </button>
+            <button id="rotate-btn" title="Rotate 90°" onClick={run(editor?.rotateOrganism.bind(editor))}>
+              <i className="fa-solid fa-arrows-spin"></i>
+            </button>
+            <button id="flip-btn" title="Mirror horizontally" onClick={run(editor?.flipOrganism.bind(editor))}>
+              <i className="fa-solid fa-left-right"></i>
+            </button>
           </div>
           <div className={styles.dockBrainOverlay}>
             <button id="open-brain" title="Edit this organism's brain: what it chases, flees, and does" onClick={onOpenBrain}>
@@ -364,16 +370,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
       </div>
 
       <div className={`${styles.panelBody} ${styles.dockBody}`}>
-        <h4>Actions</h4>
-        <div className={styles.buttonGroup}>
-          <button id="rotate-btn" title="Rotate 90°" onClick={run(editor?.rotateOrganism.bind(editor))}>
-            <i className="fa-solid fa-arrows-spin"></i>
-          </button>
-          <button id="flip-btn" title="Mirror horizontally" onClick={run(editor?.flipOrganism.bind(editor))}>
-            <i className="fa-solid fa-left-right"></i>
-          </button>
-        </div>
-
         <h4>Organism</h4>
         <div id="edit-organism-details" className={styles.dockInfoCard}>
           <input
