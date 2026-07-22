@@ -4,6 +4,7 @@ import type Engine from '../Engine';
 import CellStates from '../Organism/Cell/CellStates';
 import type { CellName } from '../Organism/Cell/CellStates';
 import Notifier from '../Utils/Notifier';
+import PixelSlider from './PixelSlider';
 
 interface BrainModalProps {
   engine: Engine | null;
@@ -221,8 +222,7 @@ const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
             <div key={name} className={`brain-row ${styles.brainRow}`} data-cell={name}>
               <span className={styles.brainSwatch} style={{ backgroundColor: cellColor(name) }}></span>
               <span className={styles.brainCellName}>{name}</span>
-              <input
-                type="range"
+              <PixelSlider
                 className={styles.brainSlider}
                 id={`weight-${name}`}
                 min={-10}

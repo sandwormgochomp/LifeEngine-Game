@@ -8,6 +8,7 @@ import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
 import { CELL_INFO } from './cellInfo';
 import CellSwatch from './CellSwatch';
+import PixelSlider from './PixelSlider';
 
 interface EditorDockProps {
   engine: Engine | null;
@@ -400,20 +401,20 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
           )}
           <label className={styles.ctrlRow} title="Cells to move before randomly changing direction. Overridden by brain decisions.">
             <span className={styles.ctrlLabel}>Move range</span>
-            <input type="range" id="move-range" min={1} max={100} value={moveRange}
+            <PixelSlider id="move-range" min={1} max={100} value={moveRange}
               onChange={e => setOrgField('move_range', parseInt(e.target.value))} />
             <span className={styles.ctrlValue}>{moveRange}</span>
           </label>
           <label className={styles.ctrlRow} title="Probability that this organism's offspring mutate">
             <span className={styles.ctrlLabel}>Mutation rate</span>
-            <input type="range" id="mutation-rate" min={0} max={100} value={mutability}
+            <PixelSlider id="mutation-rate" min={0} max={100} value={mutability}
               onChange={e => setOrgField('mutability', parseFloat(e.target.value))} />
             <span className={styles.ctrlValue}>{mutability}</span>
           </label>
           {hasHealer && (
             <label className={styles.ctrlRow} title="Food this organism's healer cells spend to repair 1 damage">
               <span className={styles.ctrlLabel}>Healer food cost</span>
-              <input type="range" id="healer-cost" min={0} max={1000} value={healerCost}
+              <PixelSlider id="healer-cost" min={0} max={1000} value={healerCost}
                 onChange={e => setOrgField('healer_food_cost', parseFloat(e.target.value))} />
               <span className={styles.ctrlValue}>{healerCost}</span>
             </label>
@@ -421,7 +422,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
           {hasPoison && (
             <label className={styles.ctrlRow} title="How many ticks this organism's poison lasts on its victims">
               <span className={styles.ctrlLabel}>Poison duration</span>
-              <input type="range" id="poison-duration" min={1} max={1000} value={poisonDuration}
+              <PixelSlider id="poison-duration" min={1} max={1000} value={poisonDuration}
                 onChange={e => setOrgField('poison_duration', parseInt(e.target.value))} />
               <span className={styles.ctrlValue}>{poisonDuration}</span>
             </label>

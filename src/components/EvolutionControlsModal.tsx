@@ -4,6 +4,7 @@ import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
 import type { HyperparamsData, HyperparamsSingleton } from '../Hyperparameters';
 import Notifier from '../Utils/Notifier';
+import PixelSlider from './PixelSlider';
 
 interface EvolutionControlsModalProps {
   engine: Engine | null;
@@ -170,8 +171,7 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
     return (
       <label key={field.key} className={styles.ctrlRow} title={field.title}>
         <span className={styles.ctrlLabel}>{field.label}</span>
-        <input
-          type="range"
+        <PixelSlider
           id={field.key}
           value={params[field.key]}
           min={field.min}

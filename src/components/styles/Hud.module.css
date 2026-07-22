@@ -185,7 +185,6 @@
 .toolPaletteBrush input[type="range"] {
   flex: 1;
   min-width: 0;
-  accent-color: #00FF41;
 }
 
 .toolPaletteBrushValue {
@@ -604,7 +603,6 @@
 
 .sliderGroup input[type="range"] {
   width: 100%;
-  accent-color: #00FF41;
   max-width: unset;
 }
 
@@ -740,7 +738,6 @@
 
 .speedSliderRow input[type="range"] {
   flex: 1;
-  accent-color: #00FF41;
   max-width: unset;
 }
 
@@ -1419,7 +1416,6 @@
 .ctrlRow input[type="range"] {
   flex: 1;
   min-width: 60px;
-  accent-color: #00FF41;
 }
 
 .ctrlBtn {
@@ -1577,7 +1573,6 @@
 .brainSlider {
   flex: 1;
   min-width: 90px;
-  accent-color: #00FF41;
 }
 
 .brainWeight {

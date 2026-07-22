@@ -68,6 +68,97 @@ body{
     image-rendering: crisp-edges;
 }
 
+/* Pixel-art sliders ("dither + bevel" pick from
+   concepts/pixel-slider-options.html): checkerboard-dithered fill with a
+   raised bevel knob that presses in while dragging. Global because every
+   slider in the app is HUD chrome; the CSS modules keep only per-context
+   layout (flex/width). The lit portion of the track comes from --fill, which
+   the PixelSlider component derives from its controlled value. */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 22px;
+    background: transparent;
+    cursor: pointer;
+    --fill: 0%;
+}
+
+input[type="range"]:focus {
+    outline: none;
+}
+
+/* Track: 4px checkerboard dither over a fill gradient; the mask keeps the
+   dither bright up to --fill and fades it (and the border) past it */
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 14px;
+    border: 2px solid rgba(0, 255, 65, 0.4);
+    background:
+        conic-gradient(from 0deg at 2px 2px,
+            rgba(0, 255, 65, 0.85) 25%, transparent 0) 0 0 / 4px 4px,
+        linear-gradient(to right,
+            rgba(0, 255, 65, 0.35) var(--fill), rgba(0, 255, 65, 0.06) var(--fill));
+    -webkit-mask: linear-gradient(to right, #000 var(--fill), rgba(0, 0, 0, 0.35) var(--fill));
+    mask: linear-gradient(to right, #000 var(--fill), rgba(0, 0, 0, 0.35) var(--fill));
+}
+
+input[type="range"]::-moz-range-track {
+    height: 14px;
+    border: 2px solid rgba(0, 255, 65, 0.4);
+    background:
+        conic-gradient(from 0deg at 2px 2px,
+            rgba(0, 255, 65, 0.85) 25%, transparent 0) 0 0 / 4px 4px,
+        linear-gradient(to right,
+            rgba(0, 255, 65, 0.35) var(--fill), rgba(0, 255, 65, 0.06) var(--fill));
+    mask: linear-gradient(to right, #000 var(--fill), rgba(0, 0, 0, 0.35) var(--fill));
+}
+
+/* Knob: pixel bevel — light top-left, dark bottom-right */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    margin-top: -4px;
+    border-radius: 0;
+    background: #0a3316;
+    border: 2px solid var(--crt-green);
+    box-shadow:
+        inset 3px 3px 0 rgba(0, 255, 65, 0.55),
+        inset -3px -3px 0 rgba(0, 0, 0, 0.7);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 0;
+    background: #0a3316;
+    border: 2px solid var(--crt-green);
+    box-shadow:
+        inset 3px 3px 0 rgba(0, 255, 65, 0.55),
+        inset -3px -3px 0 rgba(0, 0, 0, 0.7);
+}
+
+/* Grabbing the knob presses the bevel in */
+input[type="range"]:active::-webkit-slider-thumb {
+    box-shadow:
+        inset 3px 3px 0 rgba(0, 0, 0, 0.7),
+        inset -3px -3px 0 rgba(0, 255, 65, 0.55);
+}
+
+input[type="range"]:active::-moz-range-thumb {
+    box-shadow:
+        inset 3px 3px 0 rgba(0, 0, 0, 0.7),
+        inset -3px -3px 0 rgba(0, 255, 65, 0.55);
+}
+
+/* Keyboard focus: glow the knob instead of a default outline */
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+    filter: drop-shadow(0 0 6px var(--crt-cyan));
+}
+
+input[type="range"]:focus-visible::-moz-range-thumb {
+    filter: drop-shadow(0 0 6px var(--crt-cyan));
+}
+
 /* uPlot renders its legend/cursor chrome as global-class HTML; theme it to
    match the CRT HUD here since CSS modules can't reach it. */
 .u-legend {

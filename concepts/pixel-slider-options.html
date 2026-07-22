@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Slider Options — LifeEngine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --crt-green: #00FF41;
+  --crt-cyan: #43e8e0;
+  --pixel-corners: polygon(
+    0 6px, 6px 6px, 6px 0,
+    calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
+  );
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #020604;
+  font-family: 'VT323', monospace;
+  color: var(--crt-green);
+  padding: 40px 20px 80px;
+}
+
+/* CRT scanlines over the whole page */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 2px,
+    rgba(0, 0, 0, 0.25) 2px, rgba(0, 0, 0, 0.25) 4px
+  );
+  z-index: 10;
+}
+
+h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--crt-cyan);
+  text-align: center;
+  margin: 0 0 8px;
+  text-shadow: 0 0 8px rgba(67, 232, 224, 0.5);
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 18px;
+  color: rgba(0, 255, 65, 0.6);
+  margin-bottom: 40px;
+}
+
+.panel {
+  max-width: 640px;
+  margin: 0 auto 28px;
+  background: rgba(0, 10, 5, 0.92);
+  border: 2px solid rgba(0, 255, 65, 0.35);
+  clip-path: var(--pixel-corners);
+  padding: 20px 24px 24px;
+}
+
+.panel h2 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--crt-green);
+  margin: 0 0 6px;
+}
+
+.panel h2 .tag {
+  color: var(--crt-cyan);
+}
+
+.panel p {
+  font-size: 17px;
+  color: rgba(0, 255, 65, 0.55);
+  margin: 0 0 18px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.row:last-child { margin-bottom: 0; }
+
+.row label {
+  font-size: 18px;
+  width: 90px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.row output {
+  font-size: 18px;
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+  color: var(--crt-cyan);
+}
+
+/* ============ shared reset for every option ============ */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+  --fill: 50%;   /* JS keeps this in sync */
+}
+input[type="range"]:focus { outline: none; }
+
+/* =====================================================
+   OPTION A — NOTCHED RAIL
+   Thin double rail with tick notches; chunky square thumb
+   ===================================================== */
+.opt-a { height: 24px; }
+
+.opt-a::-webkit-slider-runnable-track {
+  height: 8px;
+  background:
+    /* tick notches every 10% */
+    repeating-linear-gradient(to right,
+      rgba(0, 255, 65, 0.5) 0 2px, transparent 2px 10%),
+    /* top + bottom rail lines */
+    linear-gradient(to bottom,
+      rgba(0, 255, 65, 0.5) 0 2px, transparent 2px 6px,
+      rgba(0, 255, 65, 0.5) 6px 8px);
+  background-size: calc(100% - 2px) 100%, 100% 100%;
+}
+.opt-a::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 20px;
+  margin-top: -6px;
+  background: #020604;
+  border: 2px solid var(--crt-green);
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 255, 65, 0.35),
+    0 0 6px rgba(0, 255, 65, 0.6);
+}
+.opt-a::-moz-range-track {
+  height: 8px;
+  background:
+    repeating-linear-gradient(to right,
+      rgba(0, 255, 65, 0.5) 0 2px, transparent 2px 10%),
+    linear-gradient(to bottom,
+      rgba(0, 255, 65, 0.5) 0 2px, transparent 2px 6px,
+      rgba(0, 255, 65, 0.5) 6px 8px);
+  background-size: calc(100% - 2px) 100%, 100% 100%;
+}
+.opt-a::-moz-range-thumb {
+  width: 10px;
+  height: 16px;
+  border-radius: 0;
+  background: #020604;
+  border: 2px solid var(--crt-green);
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 255, 65, 0.35),
+    0 0 6px rgba(0, 255, 65, 0.6);
+}
+.opt-a:hover::-webkit-slider-thumb { background: rgba(0, 255, 65, 0.25); }
+.opt-a:hover::-moz-range-thumb { background: rgba(0, 255, 65, 0.25); }
+
+/* =====================================================
+   OPTION B — LED SEGMENT BAR
+   Discrete blocky segments fill up like a retro EQ meter;
+   the thumb is nearly invisible (the fill IS the indicator)
+   ===================================================== */
+.opt-b { height: 24px; }
+
+.opt-b::-webkit-slider-runnable-track {
+  height: 20px;
+  border: 2px solid rgba(0, 255, 65, 0.45);
+  background:
+    /* lit segments up to --fill, gaps punched by repeating transparent stripes */
+    linear-gradient(to right,
+      var(--crt-green) var(--fill), rgba(0, 255, 65, 0.10) var(--fill));
+  background-clip: padding-box;
+  -webkit-mask: repeating-linear-gradient(to right,
+      #000 0 6%, transparent 6% 8%);
+  mask: repeating-linear-gradient(to right,
+      #000 0 6%, transparent 6% 8%);
+  box-shadow: inset 0 0 8px rgba(0, 255, 65, 0.25);
+}
+.opt-b::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 4px;
+  height: 20px;
+  background: transparent;
+}
+.opt-b::-moz-range-track {
+  height: 20px;
+  border: 2px solid rgba(0, 255, 65, 0.45);
+  background: linear-gradient(to right,
+      var(--crt-green) var(--fill), rgba(0, 255, 65, 0.10) var(--fill));
+  mask: repeating-linear-gradient(to right,
+      #000 0 6%, transparent 6% 8%);
+  box-shadow: inset 0 0 8px rgba(0, 255, 65, 0.25);
+}
+.opt-b::-moz-range-thumb {
+  width: 4px;
+  height: 20px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+/* border needs to stay visible outside the mask: draw it on a wrapper */
+.seg-frame {
+  flex: 1;
+  border: 2px solid rgba(0, 255, 65, 0.45);
+  padding: 2px 3px;
+  display: flex;
+  clip-path: var(--pixel-corners);
+  transition: border-color 0.12s;
+}
+.seg-frame:hover { border-color: var(--crt-green); }
+.seg-frame input { flex: 1; }
+.seg-frame .opt-b::-webkit-slider-runnable-track { border: none; box-shadow: none; }
+.seg-frame .opt-b::-moz-range-track { border: none; box-shadow: none; }
+
+/* =====================================================
+   OPTION C — DITHERED FILL + BEVEL KNOB
+   Checkerboard-dither fill (classic pixel-art shading)
+   with a raised 3D bevel knob like an old console button
+   ===================================================== */
+.opt-c { height: 26px; }
+
+.opt-c::-webkit-slider-runnable-track {
+  height: 14px;
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  background:
+    /* solid fill layer under the dither, up to --fill */
+    conic-gradient(from 0deg at 2px 2px,
+      rgba(0,255,65,0.85) 25%, transparent 0) 0 0 / 4px 4px,
+    linear-gradient(to right,
+      rgba(0, 255, 65, 0.35) var(--fill), rgba(0, 255, 65, 0.06) var(--fill));
+  background-blend-mode: normal;
+  -webkit-mask: linear-gradient(to right, #000 var(--fill), rgba(0,0,0,0.35) var(--fill));
+  mask: linear-gradient(to right, #000 var(--fill), rgba(0,0,0,0.35) var(--fill));
+}
+.opt-c::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -4px;
+  background: #0a3316;
+  border: 2px solid var(--crt-green);
+  /* pixel bevel: light top-left, dark bottom-right */
+  box-shadow:
+    inset 3px 3px 0 rgba(0, 255, 65, 0.55),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.7);
+}
+.opt-c::-moz-range-track {
+  height: 14px;
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  background:
+    conic-gradient(from 0deg at 2px 2px,
+      rgba(0,255,65,0.85) 25%, transparent 0) 0 0 / 4px 4px,
+    linear-gradient(to right,
+      rgba(0, 255, 65, 0.35) var(--fill), rgba(0, 255, 65, 0.06) var(--fill));
+  mask: linear-gradient(to right, #000 var(--fill), rgba(0,0,0,0.35) var(--fill));
+}
+.opt-c::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: #0a3316;
+  border: 2px solid var(--crt-green);
+  box-shadow:
+    inset 3px 3px 0 rgba(0, 255, 65, 0.55),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.7);
+}
+.opt-c:active::-webkit-slider-thumb {
+  /* press the bevel in */
+  box-shadow:
+    inset 3px 3px 0 rgba(0, 0, 0, 0.7),
+    inset -3px -3px 0 rgba(0, 255, 65, 0.55);
+}
+.opt-c:active::-moz-range-thumb {
+  box-shadow:
+    inset 3px 3px 0 rgba(0, 0, 0, 0.7),
+    inset -3px -3px 0 rgba(0, 255, 65, 0.55);
+}
+
+/* =====================================================
+   OPTION D — CURSOR BRACKET
+   Bare dotted rail; the thumb is a bright block flanked by
+   cyan target brackets, like a selection cursor
+   ===================================================== */
+.opt-d { height: 26px; }
+
+.opt-d::-webkit-slider-runnable-track {
+  height: 4px;
+  background: repeating-linear-gradient(to right,
+    rgba(0, 255, 65, 0.55) 0 4px, transparent 4px 10px);
+}
+.opt-d::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 22px;
+  margin-top: -9px;
+  background:
+    /* center block */
+    linear-gradient(var(--crt-green), var(--crt-green)) 50% 50% / 8px 14px no-repeat,
+    /* left bracket [ */
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 0 0    / 6px 2px no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 0 50%  / 2px 100% no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 0 100% / 6px 2px no-repeat,
+    /* right bracket ] */
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 100% 0    / 6px 2px no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 100% 50%  / 2px 100% no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 100% 100% / 6px 2px no-repeat;
+  filter: drop-shadow(0 0 4px rgba(0, 255, 65, 0.7));
+}
+.opt-d::-moz-range-track {
+  height: 4px;
+  background: repeating-linear-gradient(to right,
+    rgba(0, 255, 65, 0.55) 0 4px, transparent 4px 10px);
+}
+.opt-d::-moz-range-thumb {
+  width: 26px;
+  height: 22px;
+  border: none;
+  border-radius: 0;
+  background:
+    linear-gradient(var(--crt-green), var(--crt-green)) 50% 50% / 8px 14px no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 0 0    / 6px 2px no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 0 50%  / 2px 100% no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 0 100% / 6px 2px no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 100% 0    / 6px 2px no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 100% 50%  / 2px 100% no-repeat,
+    linear-gradient(var(--crt-cyan), var(--crt-cyan)) 100% 100% / 6px 2px no-repeat;
+  filter: drop-shadow(0 0 4px rgba(0, 255, 65, 0.7));
+}
+
+/* =====================================================
+   OPTION E — PIPBOY GAUGE
+   Solid fill bar with a hard scanline texture and an
+   arrow-pointer thumb riding on top of the track
+   ===================================================== */
+.opt-e { height: 30px; }
+
+.opt-e::-webkit-slider-runnable-track {
+  height: 12px;
+  margin-top: 10px;
+  border: 2px solid rgba(0, 255, 65, 0.45);
+  background:
+    repeating-linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.45) 0 2px, transparent 2px 4px),
+    linear-gradient(to right,
+      var(--crt-green) var(--fill), rgba(0, 255, 65, 0.08) var(--fill));
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.25);
+}
+.opt-e::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 26px;
+  margin-top: -12px;
+  background: var(--crt-cyan);
+  /* pixel down-arrow pointer */
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 50% 100%, 0 45%);
+  filter: drop-shadow(0 0 4px rgba(67, 232, 224, 0.8));
+}
+.opt-e::-moz-range-track {
+  height: 12px;
+  border: 2px solid rgba(0, 255, 65, 0.45);
+  background:
+    repeating-linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.45) 0 2px, transparent 2px 4px),
+    linear-gradient(to right,
+      var(--crt-green) var(--fill), rgba(0, 255, 65, 0.08) var(--fill));
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.25);
+}
+.opt-e::-moz-range-thumb {
+  width: 14px;
+  height: 26px;
+  border: none;
+  border-radius: 0;
+  background: var(--crt-cyan);
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 50% 100%, 0 45%);
+  filter: drop-shadow(0 0 4px rgba(67, 232, 224, 0.8));
+  transform: translateY(-8px);
+}
+
+/* =====================================================
+   OPTION F — STEPPED BLOCKS (discrete)
+   For low-cardinality traits: each step is its own block,
+   filled blocks show the value; snaps hard between steps
+   ===================================================== */
+.opt-f { height: 26px; }
+
+.opt-f::-webkit-slider-runnable-track {
+  height: 18px;
+  /* 10 blocks: filled to --fill, hollow after */
+  background:
+    linear-gradient(to right,
+      var(--crt-green) var(--fill), transparent var(--fill)),
+    repeating-linear-gradient(to right,
+      rgba(0, 255, 65, 0.35) 0 2px, rgba(0, 255, 65, 0.12) 2px calc(10% - 2px),
+      rgba(0, 255, 65, 0.35) calc(10% - 2px) 10%);
+  -webkit-mask: repeating-linear-gradient(to right,
+      #000 0 calc(10% - 4px), transparent calc(10% - 4px) 10%);
+  mask: repeating-linear-gradient(to right,
+      #000 0 calc(10% - 4px), transparent calc(10% - 4px) 10%);
+}
+.opt-f::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 6px;
+  height: 18px;
+  background: transparent;
+}
+.opt-f::-moz-range-track {
+  height: 18px;
+  background:
+    linear-gradient(to right,
+      var(--crt-green) var(--fill), transparent var(--fill)),
+    repeating-linear-gradient(to right,
+      rgba(0, 255, 65, 0.35) 0 2px, rgba(0, 255, 65, 0.12) 2px calc(10% - 2px),
+      rgba(0, 255, 65, 0.35) calc(10% - 2px) 10%);
+  mask: repeating-linear-gradient(to right,
+      #000 0 calc(10% - 4px), transparent calc(10% - 4px) 10%);
+}
+.opt-f::-moz-range-thumb {
+  width: 6px;
+  height: 18px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.footer-note {
+  max-width: 640px;
+  margin: 40px auto 0;
+  text-align: center;
+  font-size: 16px;
+  color: rgba(0, 255, 65, 0.4);
+}
+</style>
+</head>
+<body>
+
+<h1>PIXEL SLIDER LAB</h1>
+<div class="subtitle">&gt; SELECT SPECIMEN CONTROL STYLE_</div>
+
+<div class="panel">
+  <h2>OPTION A <span class="tag">// NOTCHED RAIL</span></h2>
+  <p>Thin double rail with tick notches, hollow square thumb. Quietest option — good if the sliders shouldn't compete with the canvas.</p>
+  <div class="row">
+    <label>Size</label>
+    <input type="range" class="opt-a" min="0" max="100" value="35">
+    <output>35</output>
+  </div>
+  <div class="row">
+    <label>Mutation</label>
+    <input type="range" class="opt-a" min="0" max="100" value="70">
+    <output>70</output>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>OPTION B <span class="tag">// LED SEGMENTS</span></h2>
+  <p>Discrete lit segments like a retro EQ meter. No visible thumb — the fill edge is the value. Reads great at a glance.</p>
+  <div class="row">
+    <label>Size</label>
+    <div class="seg-frame"><input type="range" class="opt-b" min="0" max="100" value="35"></div>
+    <output>35</output>
+  </div>
+  <div class="row">
+    <label>Mutation</label>
+    <div class="seg-frame"><input type="range" class="opt-b" min="0" max="100" value="70"></div>
+    <output>70</output>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>OPTION C <span class="tag">// DITHER + BEVEL</span></h2>
+  <p>Checkerboard-dithered fill (classic pixel-art shading) with a raised bevel knob that presses in when you grab it.</p>
+  <div class="row">
+    <label>Size</label>
+    <input type="range" class="opt-c" min="0" max="100" value="35">
+    <output>35</output>
+  </div>
+  <div class="row">
+    <label>Mutation</label>
+    <input type="range" class="opt-c" min="0" max="100" value="70">
+    <output>70</output>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>OPTION D <span class="tag">// CURSOR BRACKET</span></h2>
+  <p>Dotted rail with a selection-cursor thumb — green block flanked by cyan targeting brackets. Most "game UI" of the bunch.</p>
+  <div class="row">
+    <label>Size</label>
+    <input type="range" class="opt-d" min="0" max="100" value="35">
+    <output>35</output>
+  </div>
+  <div class="row">
+    <label>Mutation</label>
+    <input type="range" class="opt-d" min="0" max="100" value="70">
+    <output>70</output>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>OPTION E <span class="tag">// PIPBOY GAUGE</span></h2>
+  <p>Solid scanline-textured fill bar with a cyan arrow pointer riding above the track. Strong instrument-panel feel.</p>
+  <div class="row">
+    <label>Size</label>
+    <input type="range" class="opt-e" min="0" max="100" value="35">
+    <output>35</output>
+  </div>
+  <div class="row">
+    <label>Mutation</label>
+    <input type="range" class="opt-e" min="0" max="100" value="70">
+    <output>70</output>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>OPTION F <span class="tag">// STEPPED BLOCKS</span></h2>
+  <p>Ten discrete blocks, snaps between steps (step=10 here). Best fit for low-range integer traits where exact values matter.</p>
+  <div class="row">
+    <label>Size</label>
+    <input type="range" class="opt-f" min="0" max="100" value="30" step="10">
+    <output>30</output>
+  </div>
+  <div class="row">
+    <label>Mutation</label>
+    <input type="range" class="opt-f" min="0" max="100" value="70" step="10">
+    <output>70</output>
+  </div>
+</div>
+
+<div class="footer-note">All options are a plain &lt;input type="range"&gt; + CSS — any of them drops straight into Hud.module.css.</div>
+
+<script>
+// Keep --fill (used by the filled-track options) and the readout in sync
+document.querySelectorAll('input[type="range"]').forEach(el => {
+  const update = () => {
+    const pct = (el.value - el.min) / (el.max - el.min) * 100;
+    el.style.setProperty('--fill', pct + '%');
+    const out = el.closest('.row').querySelector('output');
+    if (out) out.textContent = el.value;
+  };
+  el.addEventListener('input', update);
+  update();
+});
+</script>
+
+</body>
+</html>

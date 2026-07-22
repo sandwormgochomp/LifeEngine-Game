@@ -5,6 +5,7 @@ import type Engine from '../Engine';
 import Modes from '../Controllers/ControlModes';
 import WorldConfig from '../WorldConfig';
 import Notifier from '../Utils/Notifier';
+import PixelSlider from './PixelSlider';
 
 interface HudToolPaletteProps {
   engine: Engine | null;
@@ -97,8 +98,7 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
       </div>
       <label className={styles.toolPaletteBrush} title="Size of the brush for food, walls, radiation, life and killing">
         <span className={styles.toolPaletteBrushLabel}>Brush</span>
-        <input
-          type="range"
+        <PixelSlider
           id="brush-slider"
           min={0}
           max={15}
