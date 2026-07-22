@@ -63,6 +63,10 @@ class Engine {
     sim_delta_time: number;
     ui_last_update: number;
     ui_delta_time: number;
+    /* Measured render rate: the spacing of necessaryUpdate() calls, whichever
+       loop is driving them. Stays live while paused, since the ui loop keeps
+       repainting for panning and editing. */
+    render_last_update: number;
     actual_fps: number;
     listeners: Set<EngineListener>;
     last_emit: number;
@@ -103,6 +107,7 @@ class Engine {
         this.ui_last_update = Date.now();
         this.ui_delta_time = 0;
 
+        this.render_last_update = Date.now();
         this.actual_fps = 0;
 
         this.listeners = new Set();
@@ -215,7 +220,6 @@ class Engine {
     }
 
     environmentUpdate(): void {
-        this.actual_fps = (1000/this.sim_delta_time);
         this.env.update(this.sim_delta_time);
         if(this.ui_loop == null) {
             this.necessaryUpdate();
@@ -224,6 +228,9 @@ class Engine {
     }
 
     necessaryUpdate(): void {
+        const now = Date.now();
+        this.actual_fps = 1000 / (now - this.render_last_update);
+        this.render_last_update = now;
         this.env.render();
         this.organism_editor.update();
         this.emitChange();
