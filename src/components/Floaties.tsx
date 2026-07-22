@@ -124,17 +124,6 @@ const SPRITES: Record<string, number[][]> = {
     [0, 1, 0, 0, 1, 0, 0, 1, 0],
     [1, 0, 0, 0, 1, 0, 0, 0, 1],
   ],
-  big_volvox: [
-    [0, 0, 1, 1, 1, 1, 1, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 1, 0],
-    [1, 0, 2, 2, 0, 2, 2, 0, 1],
-    [1, 0, 2, 2, 0, 2, 2, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 2, 2, 0, 2, 2, 0, 1],
-    [1, 0, 2, 2, 0, 2, 2, 0, 1],
-    [0, 1, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 1, 1, 1, 1, 1, 0, 0],
-  ],
   big_flagellate: [
     [0, 0, 1, 1, 1, 0, 0],
     [0, 1, 2, 2, 2, 1, 0],
@@ -157,7 +146,7 @@ const SPRITES: Record<string, number[][]> = {
   ],
 };
 
-const GIANT_SPRITES = ['giant_amoeba', 'giant_paramecium', 'giant_radiolarian', 'big_volvox', 'big_flagellate', 'big_filament'];
+const GIANT_SPRITES = ['giant_amoeba', 'giant_paramecium', 'giant_radiolarian', 'big_flagellate', 'big_filament'];
 const REGULAR_SPRITES = Object.keys(SPRITES).filter(k => !GIANT_SPRITES.includes(k));
 
 interface Mote {
@@ -187,6 +176,23 @@ const wrap = (v: number, lo: number, hi: number) => {
   if (!(span > 0)) return v;
   return lo + ((((v - lo) % span) + span) % span);
 };
+
+// Deterministic PRNG (mulberry32). Only used in the test-only "static" mode
+// below, so visual snapshots don't flake on the random mote layout; production
+// keeps Math.random for organic variety.
+const mulberry32 = (seed: number): (() => number) => {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+// The frozen clock used in static mode: any constant works, it just has to be
+// the same every run so the wriggle/pulse phase is reproducible.
+const STATIC_T = 12.34;
 
 const drawPixelSprite = (
   ctx: CanvasRenderingContext2D,
@@ -245,6 +251,12 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
     let raf = 0;
     const mouse = { x: -1000, y: -1000 };
 
+    // Test-only static mode: the harness loads the page with ?floaties=static
+    // to pin the layout (seeded RNG) and freeze all motion, so zero-tolerance
+    // visual snapshots don't flake on drifting dust. Untouched in production.
+    const deterministic = new URLSearchParams(window.location.search).get('floaties') === 'static';
+    const rand = deterministic ? mulberry32(0xc0ffee) : Math.random;
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -254,27 +266,27 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
     const motes: Mote[] = Array.from({ length: NUM_MOTES }, (_, i) => {
       const isGiant = i % 4 === 0;
       const spriteList = isGiant ? GIANT_SPRITES : REGULAR_SPRITES;
-      const spriteName = spriteList[Math.floor(Math.random() * spriteList.length)];
-      
+      const spriteName = spriteList[Math.floor(rand() * spriteList.length)];
+
       const basePixelSize = isGiant
-        ? Math.floor(2 + Math.random() * 2)
-        : Math.floor(1 + Math.random() * 2);
+        ? Math.floor(2 + rand() * 2)
+        : Math.floor(1 + rand() * 2);
 
       return {
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: isGiant ? 3.0 + Math.random() * 2 : 0.8 + Math.random() * 2.0,
+        x: rand() * canvas.width,
+        y: rand() * canvas.height,
+        r: isGiant ? 3.0 + rand() * 2 : 0.8 + rand() * 2.0,
         // Slow ambient drift
-        vx: (Math.random() - 0.5) * (isGiant ? 0.05 : 0.10),
-        vy: (Math.random() - 0.5) * (isGiant ? 0.05 : 0.10),
-        phase: Math.random() * Math.PI * 2,
+        vx: (rand() - 0.5) * (isGiant ? 0.05 : 0.10),
+        vy: (rand() - 0.5) * (isGiant ? 0.05 : 0.10),
+        phase: rand() * Math.PI * 2,
         pan_x: 0,
         pan_y: 0,
         pvx: 0,
         pvy: 0,
-        stiffness: PAN_STIFFNESS * (1 + (Math.random() - 0.5) * SPRING_SPREAD),
+        stiffness: PAN_STIFFNESS * (1 + (rand() - 0.5) * SPRING_SPREAD),
         spriteName,
-        color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+        color: PALETTE[Math.floor(rand() * PALETTE.length)],
         basePixelSize,
         isGiant,
       };
@@ -292,7 +304,7 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
 
     const tick = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const t = performance.now() / 1000;
+      const t = deterministic ? STATIC_T : performance.now() / 1000;
 
       const controller = engineRef.current?.env?.controller;
       const scale = controller?.scale || 1;
@@ -343,9 +355,12 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
         const mOriginX = m.pan_x + W / 2 - scale * (W / 2);
         const mOriginY = m.pan_y + H / 2 - scale * (H / 2);
 
-        // Slow, gentle floating motion
-        m.x += (m.vx + Math.sin(t * 0.3 + m.phase) * 0.03) / scale;
-        m.y += (m.vy + Math.cos(t * 0.25 + m.phase) * 0.03) / scale;
+        // Slow, gentle floating motion. Frozen in static mode so the motes
+        // hold their seeded positions and the snapshot is reproducible.
+        if (!deterministic) {
+          m.x += (m.vx + Math.sin(t * 0.3 + m.phase) * 0.03) / scale;
+          m.y += (m.vy + Math.cos(t * 0.25 + m.phase) * 0.03) / scale;
+        }
 
         // Wrap against the expanded world extent
         m.x = wrap(m.x, left, right);

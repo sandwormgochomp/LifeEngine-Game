@@ -9,6 +9,9 @@ import FossilRecord from "../Stats/FossilRecord";
 import WorldConfig from "../WorldConfig";
 import Hyperparams from "../Hyperparameters";
 import Perlin from "../Utils/Perlin";
+import RandomOrganismGenerator from "../Organism/RandomOrganismGenerator";
+import type { GeneratorEnv } from "../Organism/RandomOrganismGenerator";
+import Species from "../Stats/Species";
 import type Cell from "../Organism/Cell/GridCell";
 import type BodyCell from "../Organism/Cell/BodyCells/BodyCell";
 
@@ -77,7 +80,13 @@ interface EnvControllerEnvLike {
 }
 
 // Modes where the click affects a brush_size-radius area
-const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill];
+const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill, Modes.SeedLife];
+
+// Seed Life paints sparsely: each brush cell has this chance of spawning a
+// random organism per paint tick, so a drag lays down scattered life rather
+// than a solid wall of bodies. Attempts are also capped per tick.
+const SEED_LIFE_DENSITY = 0.02;
+const SEED_LIFE_MAX_PER_TICK = 6;
 
 const MODE_CURSORS: Record<number, string> = {
     [Modes.Drag]: 'grab',
@@ -270,6 +279,14 @@ class EnvironmentController extends CanvasController{
                         break;
                 case Modes.ClickKill:
                     if (left_click) {
+                        this.killNearOrganisms();
+                    }
+                    break;
+
+                case Modes.SeedLife:
+                    if (left_click) {
+                        this.seedRandomLife();
+                    } else if (right_click) {
                         this.killNearOrganisms();
                     }
                     break;
@@ -525,6 +542,30 @@ class EnvironmentController extends CanvasController{
             var cell = this.env.grid_map.cellAt(c, r);
             if (cell != null && cell.owner != null)
                 cell.owner.die();
+        }
+    }
+
+    // Scatter freshly generated random organisms across the brush footprint.
+    // Each candidate cell has a small chance of spawning; dropOrganism refuses
+    // spots that aren't clear, so overlapping bodies never stack. The world
+    // env doubles as the generator env -- its grid_map carries getCenter, the
+    // one method RandomOrganismGenerator needs beyond Organism's own view.
+    seedRandomLife(): void {
+        /* performModeAction() -- the only caller -- returns early when
+           cur_cell is null, and nothing reassigns it in between. */
+        var gen_env = this.env as unknown as GeneratorEnv;
+        var spawned = 0;
+        for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
+            if (spawned >= SEED_LIFE_MAX_PER_TICK) break;
+            if (Math.random() > SEED_LIFE_DENSITY) continue;
+            var c = this.cur_cell!.col + loc[0];
+            var r = this.cur_cell!.row + loc[1];
+            if (c < 0 || c >= this.env.num_cols || r < 0 || r >= this.env.num_rows)
+                continue;
+            var organism = RandomOrganismGenerator.generate(gen_env);
+            organism.species = new Species(organism.anatomy, null, this.env.total_ticks);
+            if (this.dropOrganism(organism, c, r))
+                spawned++;
         }
     }
 

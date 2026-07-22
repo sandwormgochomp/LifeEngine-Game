@@ -12,6 +12,8 @@ test.describe('World controls', () => {
       window.engine.env.grid_map.grid.flat().filter(c => c.state.name.includes('wall')).length);
     expect(before).toBeGreaterThan(0);
 
+    // Clear Walls moved to the always-on palette; dismiss the modal covering it
+    await closeModal(page, 'world-modal');
     await page.locator('#clear-walls').click();
 
     const after = await page.evaluate(() =>
@@ -65,13 +67,23 @@ test.describe('World controls', () => {
     expect(after.total - before).toBe(1);
   });
 
-  test('Seeding random organisms repopulates the world', async ({ page }) => {
-    await page.locator('#num-random-orgs').fill('12');
-    await page.locator('#reset-random').click();
+  test('Seed Life paints random organisms into the world', async ({ page }) => {
+    // Seed Life is a brush tool in the palette now; a wide brush scatters a few
+    // random organisms per click. Dismiss the modal so the canvas is clickable.
+    await closeModal(page, 'world-modal');
+    await page.locator('#brush-slider').fill('15');
+    await page.locator('#seed-life').click();
 
-    const count = await page.evaluate(() => window.engine.env.organisms.length);
-    expect(count).toBeGreaterThan(0);
-    expect(count).toBeLessThanOrEqual(12);
+    const before = await page.evaluate(() => window.engine.env.organisms.length);
+
+    // A few clicks over open space reliably spawns life (each cell spawns
+    // sparsely, so one click alone can draw a blank)
+    const canvas = page.locator('#env-canvas');
+    for (let i = 0; i < 4; i++)
+      await canvas.click({ position: { x: 300, y: 200 } });
+
+    const after = await page.evaluate(() => window.engine.env.organisms.length);
+    expect(after).toBeGreaterThan(before);
   });
 
   test('Resizing the grid rebuilds the world and keeps the dish', async ({ page }) => {

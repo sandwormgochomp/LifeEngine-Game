@@ -8,7 +8,6 @@ import WorldConfig from '../WorldConfig';
 interface HudBottomBarProps {
   engine: Engine | null;
   activePanel: string | null;
-  selectArmed: boolean;
   editorOpen: boolean;
   rulesOpen: boolean;
   worldOpen: boolean;
@@ -16,7 +15,6 @@ interface HudBottomBarProps {
 }
 
 const toolbarItems = [
-  { id: 'tool-select', iconClass: 'fa-arrow-pointer', label: 'SELECT', item: 'select', title: 'Pick an organism from the world to inspect it in the Organism Lab' },
   { id: 'tool-save', iconClass: 'fa-floppy-disk', label: 'SAVE', item: 'save', title: 'Save or load a snapshot of the whole world' },
   { id: 'tool-edit', iconClass: 'fa-flask', label: 'EDIT', item: 'edit', title: 'Open the Organism Lab: design, edit, and deploy life forms' },
   { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
@@ -97,6 +95,12 @@ function renderClickHint(mode: number, brushSize: number) {
           <MouseLeftIcon /> kill organism · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
+    case Modes.SeedLife:
+      return (
+        <span>
+          <MouseLeftIcon /> paint random life · <MouseRightIcon /> clear life · <MouseMiddleIcon /> pan · brush {brush}
+        </span>
+      );
     case Modes.Drag:
       return (
         <span>
@@ -112,14 +116,13 @@ function renderClickHint(mode: number, brushSize: number) {
   }
 }
 
-const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, selectArmed, editorOpen, rulesOpen, worldOpen, onItemClick }) => {
+const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editorOpen, rulesOpen, worldOpen, onItemClick }) => {
   const envMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // hint bar tracks the slider
   const brushSize = useEngineValue(engine, () => WorldConfig.brush_size, WorldConfig.brush_size);
 
   const isActive = (item: string) => {
-    if (item === 'select') return selectArmed;
     if (item === 'edit') return editorOpen;
     if (item === 'rules') return rulesOpen;
     if (item === 'environment') return worldOpen;

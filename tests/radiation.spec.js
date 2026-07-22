@@ -1,4 +1,4 @@
-const { test, expect, openWorldControls } = require('./helpers/fixtures');
+const { test, expect } = require('./helpers/fixtures');
 
 test.describe('Radiation Tool', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe('Radiation Tool', () => {
     const radCount = await page.evaluate(() => window.engine.env.radiation_map.size);
     expect(radCount).toBeGreaterThan(0);
 
-    await openWorldControls(page);
+    // Clear Radiation now lives in the always-on palette, no modal needed
     await page.locator('#clear-radiation').click();
 
     const newRadCount = await page.evaluate(() => window.engine.env.radiation_map.size);

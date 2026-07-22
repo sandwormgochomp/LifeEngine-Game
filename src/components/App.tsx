@@ -153,6 +153,7 @@ const App: React.FC = () => {
         case 'f': setMode(Modes.FoodDrop); break;
         case 'g': setMode(Modes.ClickKill); break;
         case 'r': setMode(Modes.RadiationDrop); break;
+        case 'l': setMode(Modes.SeedLife); break;
         case 'h': toggleHeadless(); break;
         case 'b':
           engine.env.clearWalls();
@@ -212,8 +213,6 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorOrganism]);
 
-  const selectArmed = useEngineValue(engine, e => e.env.controller.mode === Modes.Select, false);
-
   // Modals are mutually exclusive; the dock and popups can coexist with them
   const closeModals = () => {
     setRulesOpen(false);
@@ -238,12 +237,6 @@ const App: React.FC = () => {
       closeModals();
       setWorldOpen(next);
       setActivePanel(null);
-    } else if (item === 'select') {
-      if (!engine) return;
-      engine.env.controller.mode = selectArmed ? Modes.None : Modes.Select;
-      engine.emitChange(true);
-      if (!selectArmed)
-        Notifier.notify('Click an organism in the world to load it');
     } else {
       setActivePanel(prev => prev === item ? null : item);
     }
@@ -287,7 +280,6 @@ const App: React.FC = () => {
       <HudBottomBar
         engine={engine}
         activePanel={activePanel}
-        selectArmed={selectArmed}
         editorOpen={editorOpen}
         rulesOpen={rulesOpen}
         worldOpen={worldOpen}

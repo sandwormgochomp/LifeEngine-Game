@@ -25,7 +25,6 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
   const [fillWindow, setFillWindow] = useState(true);
   const [cols, setCols] = useState(100);
   const [rows, setRows] = useState(100);
-  const [numRandom, setNumRandom] = useState(100);
 
   // Generic in the key so `value` is the type that flag actually holds
   // (boolean for the toggles) rather than a union
@@ -71,14 +70,6 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
     Notifier.notify('All organisms cleared');
   };
 
-  const handleRandomOrgs = () => {
-    if (!engine) return;
-    engine.organism_editor.resetWithRandomOrgs(engine.env, numRandom);
-    if (WorldConfig.petri_dish) engine.env.buildPetriDish();
-    engine.emitChange(true);
-    Notifier.notify(`Seeded ${numRandom} random organisms`);
-  };
-
   return (
     <div className={styles.modalBackdrop} onClick={onClose} data-testid="world-modal">
       <div className={styles.pickerModal} onClick={e => e.stopPropagation()}>
@@ -95,17 +86,6 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
         <div className={styles.ctrlBody}>
           <section className={styles.ctrlGroup}>
             <h4>Terrain</h4>
-            <div className={styles.buttonGroup}>
-              <button className={styles.ctrlBtn} id="randomize-walls-btn" title="Generate organic wall shapes using Perlin noise" onClick={() => { engine?.env?.controller?.randomizeWalls(); engine?.emitChange(true); }}>
-                Random Walls
-              </button>
-              <button className={styles.ctrlBtn} id="clear-walls" title="Remove every wall in the world. Hotkey: B" onClick={() => { engine?.env?.clearWalls(); engine?.emitChange(true); }}>
-                Clear Walls
-              </button>
-              <button className={styles.ctrlBtn} id="clear-radiation" title="Remove all radiation zones" onClick={() => { engine?.env?.radiation_map.clear(); engine?.emitChange(true); }}>
-                Clear Radiation
-              </button>
-            </div>
             <label className={styles.ctrlRow} title="Enclose the world in a circular dish of indestructible glass (turning it off removes all walls)">
               <span className={styles.ctrlLabel}>Petri dish world</span>
               <input type="checkbox" id="petri-dish-toggle" checked={config.petri_dish} onChange={e => handlePetriToggle(e.target.checked)} />
@@ -153,15 +133,6 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
               </button>
               <button className={styles.ctrlBtn} id="clear-env" title="Remove every organism but keep walls, food and layout" onClick={handleClear}>
                 Clear Life
-              </button>
-            </div>
-            <label className={styles.ctrlRow} title="Number of random organisms to seed">
-              <span className={styles.ctrlLabel}>Random organisms</span>
-              <input type="number" id="num-random-orgs" className={styles.ctrlNumber} min={1} value={numRandom} onChange={e => setNumRandom(parseInt(e.target.value) || 1)} />
-            </label>
-            <div className={styles.buttonGroup}>
-              <button className={styles.ctrlBtn} id="reset-random" title="Reset the world and fill it with random organisms" onClick={handleRandomOrgs}>
-                Seed Random Life
               </button>
             </div>
           </section>

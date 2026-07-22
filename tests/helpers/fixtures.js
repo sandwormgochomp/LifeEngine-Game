@@ -7,7 +7,9 @@ const test = base.test.extend({
     page.on('console', msg => {
       if (msg.type() === 'error') console.log('BROWSER CONSOLE ERROR:', msg.text());
     });
-    await page.goto('/');
+    // ?floaties=static pins the decorative dust layer (seeded + frozen) so
+    // zero-tolerance visual snapshots don't flake on drifting motes.
+    await page.goto('/?floaties=static');
     await page.waitForSelector('div[data-engine-ready="true"]');
     await use(page);
   },

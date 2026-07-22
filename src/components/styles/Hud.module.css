@@ -196,6 +196,36 @@
   text-align: right;
 }
 
+.toolPaletteActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(0, 255, 65, 0.25);
+  padding-top: 8px;
+}
+
+.toolPaletteAction {
+  padding: 5px 6px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.12s, border-color 0.12s;
+  min-width: unset;
+}
+
+.toolPaletteAction:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
 /* ---- Top-Center: Stats Bar ---- */
 .topCenter {
   position: fixed;

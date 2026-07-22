@@ -290,9 +290,9 @@ test.describe('Select from world', () => {
   test('Picking a world organism loads it into the editor and opens the dock', async ({ page }) => {
     await pauseEngine(page);
 
-    // Arm select from the toolbar (no popup panel)
+    // Arm select from the always-on tool palette (no popup panel)
     await page.locator('#tool-select').click();
-    await expect(page.locator('#tool-select')).toHaveClass(/toolbarBtnActive/);
+    await expect(page.locator('#tool-select')).toHaveClass(/toolPaletteBtnActive/);
     await expect(page.getByTestId('editor-dock')).toBeHidden();
 
     // Click on a known living organism
@@ -305,7 +305,7 @@ test.describe('Select from world', () => {
     await page.locator('#env-canvas').click({ position: pos });
 
     await expect(page.getByTestId('editor-dock')).toBeVisible();
-    await expect(page.locator('#tool-select')).not.toHaveClass(/toolbarBtnActive/);
+    await expect(page.locator('#tool-select')).not.toHaveClass(/toolPaletteBtnActive/);
 
     const counts = await page.evaluate(() => ({
       world: window.engine.env.organisms[0].anatomy.cells.length,
@@ -376,10 +376,10 @@ test.describe('Select from world', () => {
   test('Right-click cancels select mode without picking', async ({ page }) => {
     await pauseEngine(page);
     await page.locator('#tool-select').click();
-    await expect(page.locator('#tool-select')).toHaveClass(/toolbarBtnActive/);
+    await expect(page.locator('#tool-select')).toHaveClass(/toolPaletteBtnActive/);
 
     await page.locator('#env-canvas').click({ button: 'right', position: { x: 300, y: 200 } });
-    await expect(page.locator('#tool-select')).not.toHaveClass(/toolbarBtnActive/);
+    await expect(page.locator('#tool-select')).not.toHaveClass(/toolPaletteBtnActive/);
     await expect(page.getByTestId('editor-dock')).toBeHidden();
   });
 });

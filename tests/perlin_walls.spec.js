@@ -25,7 +25,7 @@ const wallStats = page => page.evaluate(() => {
 test.describe('Perlin wall generation', () => {
   test.beforeEach(async ({ page }) => {
     await pauseEngine(page);
-    await openWorldControls(page);
+    // Random Walls lives in the always-on tool palette, no modal to open
   });
 
   // Regression: Perlin's two caches were indexed with a bare array --
