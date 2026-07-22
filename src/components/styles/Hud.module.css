@@ -1039,11 +1039,16 @@
   cursor: help;
 }
 
-.dockBadges {
+/* Ability badges floating over the canvas corner, mirroring the zoom cluster */
+.dockBadgeOverlay {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  max-width: 65%;
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 4px;
+  pointer-events: none;
 }
 
 .dockBadge {
@@ -1051,6 +1056,7 @@
   font-size: 7px;
   color: rgba(0, 255, 65, 0.85);
   border: 1px solid rgba(0, 255, 65, 0.35);
+  background: rgba(0, 0, 0, 0.55);
   padding: 3px 5px;
   letter-spacing: 1px;
 }

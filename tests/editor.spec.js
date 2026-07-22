@@ -1,6 +1,5 @@
-const { test, expect, openEditor, loadPreset, pauseEngine, clickEditorCell, localCellState } = require('./helpers/fixtures');
+const { test, expect, openEditor, loadPreset, pauseEngine, clickEditorCell, expectCellCount, localCellState } = require('./helpers/fixtures');
 
-const cellCountText = (page) => page.locator('#edit-organism-details .cell-count');
 
 const localCellColor = (page, dc, dr) => page.evaluate(([dc, dr]) => {
   return window.engine.organism_editor.organism.anatomy.getLocalCell(dc, dr)?.custom_color ?? null;
@@ -33,7 +32,7 @@ test.describe('Organism Lab dock', () => {
     await expect(page.locator('.cell-type#common')).toHaveClass(/dockCellBtnActive/);
 
     await clickEditorCell(page, 1, 0);
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
     expect(await localCellState(page, 1, 0)).toBe('common');
 
     // Choosing a cell type from another tool switches back to Draw
@@ -47,22 +46,22 @@ test.describe('Organism Lab dock', () => {
   test('Erase tool, right-click erase, and the protected center cell', async ({ page }) => {
     await clickEditorCell(page, 1, 0);
     await clickEditorCell(page, 2, 0);
-    await expect(cellCountText(page)).toHaveText(/Cell count: 3/);
+    await expectCellCount(page, 3);
 
     // Erase tool with left click
     await page.locator('#erase-tool').click();
     await clickEditorCell(page, 1, 0);
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
 
     // Right-click erases even with the Draw tool active
     await page.locator('#draw-tool').click();
     await clickEditorCell(page, 2, 0, 'right');
-    await expect(cellCountText(page)).toHaveText(/Cell count: 1/);
+    await expectCellCount(page, 1);
 
     // The center cell refuses removal with a toast
     await clickEditorCell(page, 0, 0, 'right');
     await expect(page.getByTestId('hud-notifications')).toContainText('Cannot remove center cell');
-    await expect(cellCountText(page)).toHaveText(/Cell count: 1/);
+    await expectCellCount(page, 1);
   });
 
   test('Paint tool recolors a cell', async ({ page }) => {
@@ -80,23 +79,23 @@ test.describe('Organism Lab dock', () => {
 
     await clickEditorCell(page, 1, 0);
     await clickEditorCell(page, 0, 1);
-    await expect(cellCountText(page)).toHaveText(/Cell count: 3/);
+    await expectCellCount(page, 3);
 
     await page.locator('#undo-btn').click();
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
 
     await page.locator('#undo-btn').click();
-    await expect(cellCountText(page)).toHaveText(/Cell count: 1/);
+    await expectCellCount(page, 1);
     await expect(page.locator('#undo-btn')).toBeDisabled();
 
     await page.locator('#redo-btn').click();
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
 
     // Keyboard shortcuts drive the same history
     await page.keyboard.press('Control+z');
-    await expect(cellCountText(page)).toHaveText(/Cell count: 1/);
+    await expectCellCount(page, 1);
     await page.keyboard.press('Control+y');
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
   });
 
   test('Rotate and flip transform the anatomy, eyes included', async ({ page }) => {
@@ -107,7 +106,7 @@ test.describe('Organism Lab dock', () => {
     // Clicking a placed eye rotates it in place instead of replacing it
     await clickEditorCell(page, 0, -1);
     expect(await eyeDirection(page, 0, -1)).toBe(1); // right
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
 
     // 90° clockwise: (0,-1) -> (1,0), eye direction right -> down
     await page.locator('#rotate-btn').click();
@@ -157,11 +156,12 @@ test.describe('Organism Lab dock', () => {
     expect(await cellSize()).toBeLessThan(initial);
 
     await page.locator('#species-name').fill('Testosaurus');
-    await expect(page.locator('#edit-organism-details')).toContainText('EATS');
 
+    // Ability badges float over the editor canvas
+    await expect(page.locator('#editor-env')).toContainText('EATS');
     await page.locator('.cell-type#mover').click();
     await clickEditorCell(page, 1, 0);
-    await expect(page.locator('#edit-organism-details')).toContainText('MOVES');
+    await expect(page.locator('#editor-env')).toContainText('MOVES');
 
     // The chosen name survives edits
     await expect(page.locator('#species-name')).toHaveValue('Testosaurus');
@@ -173,7 +173,7 @@ test.describe('Organism Lab dock', () => {
     // Bob is ~10k cells; loading used to hard-freeze the tab (O(n²) anatomy rebuild)
     const start = Date.now();
     await loadPreset(page, 'Bob');
-    await expect(cellCountText(page)).toHaveText(/Cell count: 10783/);
+    await expectCellCount(page, 10783);
     expect(Date.now() - start).toBeLessThan(5000);
 
     // The editor is still responsive: place one more cell at the center's edge
@@ -200,7 +200,7 @@ test.describe('Organism Lab dock', () => {
   test('Presets load and Save downloads the organism as JSON', async ({ page }) => {
     await loadPreset(page, 'hunter');
     await expect(page.locator('#species-name')).toHaveValue('Hunter');
-    await expect(cellCountText(page)).toHaveText(/Cell count: 5/);
+    await expectCellCount(page, 5);
     expect(await localCellState(page, 0, 0)).toBe('mover');
 
     const downloadPromise = page.waitForEvent('download');
@@ -236,17 +236,17 @@ test.describe('Organism Lab dock', () => {
   test('Editor keeps working after closing and reopening the dock', async ({ page }) => {
     await page.locator('.cell-type#producer').click();
     await clickEditorCell(page, 1, 0);
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
 
     await openEditor(page); // close
     await expect(page.locator('#editor-canvas')).toBeHidden();
     await openEditor(page); // reopen: fresh canvas is bound
-    await expect(cellCountText(page)).toHaveText(/Cell count: 2/);
+    await expectCellCount(page, 2);
 
     // Tool and cell type selection live on the engine and survive the remount
     await expect(page.locator('.cell-type#producer')).toHaveClass(/dockCellBtnActive/);
     await clickEditorCell(page, -1, 0);
-    await expect(cellCountText(page)).toHaveText(/Cell count: 3/);
+    await expectCellCount(page, 3);
   });
 
   test('Grid covers its box and follows it when the layout resizes', async ({ page }) => {
@@ -327,7 +327,9 @@ test.describe('Select from world', () => {
     await expect(page.getByTestId('lifeforms-modal')).toBeHidden();
     await expect(page.getByTestId('editor-dock')).toBeVisible();
     await expect(page.locator('#species-name')).toHaveValue(cardName);
-    await expect(page.locator('#edit-organism-details .cell-count')).toHaveText(/Cell count: [1-9]/);
+    await expect.poll(() =>
+      page.evaluate(() => window.engine.organism_editor.organism.anatomy.cells.length)
+    ).toBeGreaterThan(0);
   });
 
   test('Lifeforms list updates live as species appear and die', async ({ page }) => {

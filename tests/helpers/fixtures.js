@@ -68,6 +68,14 @@ async function clickEditorCell(page, dc, dr, button = 'left') {
   await page.locator('#editor-canvas').click({ position, button });
 }
 
+// Assert the editor organism's cell count, polled from engine state (the
+// dock no longer displays a cell count label)
+async function expectCellCount(page, count) {
+  await base.expect.poll(() =>
+    page.evaluate(() => window.engine.organism_editor.organism.anatomy.cells.length)
+  ).toBe(count);
+}
+
 // Names of the anatomy cell at (dc, dr), or null if empty
 async function localCellState(page, dc, dr) {
   return await page.evaluate(([dc, dr]) => {
@@ -76,4 +84,4 @@ async function localCellState(page, dc, dr) {
   }, [dc, dr]);
 }
 
-module.exports = { test, expect: base.expect, openPanel, openEditor, openNewGame, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, localCellState };
+module.exports = { test, expect: base.expect, openPanel, openEditor, openNewGame, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, expectCellCount, localCellState };

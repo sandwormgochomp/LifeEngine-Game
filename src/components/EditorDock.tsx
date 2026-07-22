@@ -99,7 +99,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
   const tool = useEngineValue(engine, e => e.organism_editor.controller.mode, Modes.Edit);
   const cellTypeName = useEngineValue(engine, e => e.organism_editor.controller.edit_cell_type?.name ?? '', '');
   const paintColor = useEngineValue(engine, e => e.organism_editor.controller.custom_color, '#ff00ff');
-  const cellCount = useEngineValue(engine, e => e.organism_editor.organism?.anatomy?.cells?.length || 0, 0);
   const speciesName = useEngineValue(engine, e => e.organism_editor.organism?.species?.name ?? '', '');
   const canUndo = useEngineValue(engine, e => e.organism_editor.canUndo(), false);
   const canRedo = useEngineValue(engine, e => e.organism_editor.canRedo(), false);
@@ -125,7 +124,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
   );
 
   const deployArmed = envMode === Modes.Clone;
-  const selectArmed = envMode === Modes.Select;
 
   const setTool = (mode: number) => {
     if (!controller) return;
@@ -252,17 +250,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
     touch();
   };
 
-  const toggleSelect = () => {
-    if (!engine) return;
-    if (selectArmed) {
-      engine.env.controller.mode = Modes.None;
-    } else {
-      engine.env.controller.mode = Modes.Select;
-      Notifier.notify('Click an organism in the world to load it');
-    }
-    touch();
-  };
-
   return (
     <div className={styles.dockWrap} data-testid="editor-dock">
       {/* Cell palette rail: every type visible at once, no scrolling */}
@@ -319,6 +306,16 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
       <div className={styles.dockCanvasSection}>
         <div id="editor-env" ref={containerRef} className={styles.dockCanvasBox}>
           <canvas id="editor-canvas" ref={canvasRef}></canvas>
+          {abilities && (
+            <div className={styles.dockBadgeOverlay}>
+              {/* `abilities` is the ABILITY_BADGES keys joined into a string, so
+                  that useEngineValue can compare it by value rather than by array
+                  identity; splitting it recovers the same keys. */}
+              {(abilities.split(',') as LivingCellName[]).map(name => (
+                <span key={name} className={styles.dockBadge}>{ABILITY_BADGES[name]}</span>
+              ))}
+            </div>
+          )}
           <div className={styles.dockZoomOverlay}>
             <button id="zoom-out" title="Zoom out" onClick={run(editor?.zoomOut.bind(editor))} disabled={!canZoomOut}>−</button>
             <span className={styles.zoomPixelLabel} title="Cell pixel size">{cellSize}px</span>
@@ -406,21 +403,11 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
             spellCheck={false}
             title="Species name"
           />
-          <p className="cell-count">Cell count: {cellCount}</p>
           {!isNatural && (
             <p id="unnatural-warning" className={styles.dockWarning} title="This organism has overlapping cells or no center cell, so it could not arise or reproduce naturally">
               <i className="fa-solid fa-biohazard"></i> Unnatural organism
             </p>
           )}
-          <div className={styles.dockBadges}>
-            {/* `abilities` is the ABILITY_BADGES keys joined into a string, so
-                that useEngineValue can compare it by value rather than by array
-                identity; splitting it recovers the same keys. */}
-            {(abilities.split(',').filter(Boolean) as LivingCellName[]).map(name => (
-              <span key={name} className={styles.dockBadge}>{ABILITY_BADGES[name]}</span>
-            ))}
-          </div>
-
           <label className={styles.ctrlRow} title="Cells to move before randomly changing direction. Overridden by brain decisions.">
             <span className={styles.ctrlLabel}>Move range</span>
             <input type="number" id="move-range" className={styles.ctrlNumber} min={1} max={100} value={moveRange}
@@ -445,23 +432,12 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
                 onChange={e => setOrgField('poison_duration', parseInt(e.target.value))} />
             </label>
           )}
-
-          <div className={styles.buttonGroup} style={{ marginTop: '8px' }}>
-            <button id="seed-world" title="Clear the world and start it from this organism" onClick={handleSeedWorld}>
-              <i className="fa-solid fa-seedling"></i> Seed World
-            </button>
-          </div>
         </div>
       </div>
 
       <div className={styles.dockDeployRow}>
-          <button
-            id="select-org"
-            className={selectArmed ? styles.active : ''}
-            title="Pick an organism from the world to edit"
-            onClick={toggleSelect}
-          >
-            <i className="fa-solid fa-arrow-pointer"></i> {selectArmed ? 'Click an organism…' : 'Select from world'}
+          <button id="seed-world" title="Clear the world and start it from this organism" onClick={handleSeedWorld}>
+            <i className="fa-solid fa-seedling"></i> Seed World
           </button>
           <button
             id="deploy-org"
