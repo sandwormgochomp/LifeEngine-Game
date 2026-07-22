@@ -1,14 +1,6 @@
 import type Cell from "../Organism/Cell/GridCell";
 import type { RenderEnvLike } from "../Organism/Cell/CellStates";
 
-/* The environment that owns this renderer. WorldEnvironment assigns it after
-   construction (`this.renderer.env = this`) and OrganismEditor never does, so
-   it stays optional -- and stays structural for the same reason: both classes
-   construct a Renderer, so it cannot name either one. */
-interface RendererEnvLike extends RenderEnvLike {
-    radiation_map?: Set<string>;
-}
-
 /* Models only what the renderer reaches through. The body cells are opaque
    here -- they are only ever handed straight back to getRealCell() -- so this
    deliberately stays looser than the real Organism/Anatomy. */
@@ -38,8 +30,9 @@ class Renderer {
     container!: HTMLElement | null;
     ctx!: CanvasRenderingContext2D | null;
     /* Bolted on from outside by WorldEnvironment after construction; the
-       editor's renderer never gets one. */
-    env?: RendererEnvLike;
+       editor's renderer never gets one. It stays structural because both
+       classes construct a Renderer, so it cannot name either one. */
+    env?: RenderEnvLike;
 
     constructor(canvas: HTMLCanvasElement | null, container: HTMLElement | null, cell_size: number) {
         this.cell_size = cell_size;
@@ -106,15 +99,9 @@ class Renderer {
         }
         cell.state.render(this.ctx!, cell, this.cell_size, this.env);
         this.ctx!.globalAlpha = 1;
-
-        // Radiation is a niche tool, so the map is empty on the vast majority of
-        // frames. Gate on its size first: that skips the per-cell key string that
-        // would otherwise be built for every rendered cell every frame.
-        if (this.env && this.env.radiation_map && this.env.radiation_map.size
-            && this.env.radiation_map.has(cell.col + "," + cell.row)) {
-            this.ctx!.fillStyle = 'rgba(0, 255, 0, 0.2)';
-            this.ctx!.fillRect(cell.x, cell.y, this.cell_size, this.cell_size);
-        }
+        // Radiation is not drawn here: the RadiationSmoke overlay renders the
+        // zones as animated pixel smoke on its own layer, so the dirty-cell
+        // world canvas never has a tint to paint or un-paint.
     }
 
     renderOrganism(org: RendererOrganismLike): void {
