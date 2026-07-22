@@ -15,7 +15,9 @@ test.describe('Organism details', () => {
     await page.locator('#mutation-rate').fill('17');
     expect(await org(page, 'mutability')).toBe(17);
 
-    await page.locator('#undo-btn').click();
+    // Ctrl+Z is ignored while a number input has focus, so blur it first
+    await page.evaluate(() => document.activeElement.blur());
+    await page.keyboard.press('Control+z');
     expect(await org(page, 'mutability')).toBe(5);
   });
 

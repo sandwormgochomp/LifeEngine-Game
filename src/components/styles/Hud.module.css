@@ -947,7 +947,9 @@
 }
 
 /* Zoom cluster floating over the canvas corner */
-.dockZoomOverlay {
+.dockZoomOverlay,
+.dockToolOverlay,
+.dockBrainOverlay {
   position: absolute;
   right: 6px;
   bottom: 6px;
@@ -959,7 +961,21 @@
   border: 1px solid rgba(0, 255, 65, 0.25);
 }
 
-.dockZoomOverlay button {
+/* Clear/random cluster mirrors zoom in the opposite corner */
+.dockToolOverlay {
+  left: 6px;
+  right: auto;
+}
+
+/* Brain floats top-right, clear of the ability badges on the left */
+.dockBrainOverlay {
+  top: 6px;
+  bottom: auto;
+}
+
+.dockZoomOverlay button,
+.dockToolOverlay button,
+.dockBrainOverlay button {
   font-family: 'Press Start 2P', monospace !important;
   font-size: 10px !important;
   width: 24px !important;
@@ -977,7 +993,9 @@
   box-shadow: none !important;
 }
 
-.dockZoomOverlay button:hover:not(:disabled) {
+.dockZoomOverlay button:hover:not(:disabled),
+.dockToolOverlay button:hover:not(:disabled),
+.dockBrainOverlay button:hover:not(:disabled) {
   background: rgba(0, 255, 65, 0.2) !important;
   border-color: #00FF41 !important;
 }

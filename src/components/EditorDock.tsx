@@ -100,8 +100,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
   const cellTypeName = useEngineValue(engine, e => e.organism_editor.controller.edit_cell_type?.name ?? '', '');
   const paintColor = useEngineValue(engine, e => e.organism_editor.controller.custom_color, '#ff00ff');
   const speciesName = useEngineValue(engine, e => e.organism_editor.organism?.species?.name ?? '', '');
-  const canUndo = useEngineValue(engine, e => e.organism_editor.canUndo(), false);
-  const canRedo = useEngineValue(engine, e => e.organism_editor.canRedo(), false);
   const canZoomIn = useEngineValue(engine, e => e.organism_editor.canZoomIn(), true);
   const canZoomOut = useEngineValue(engine, e => e.organism_editor.canZoomOut(), true);
   const cellSize = useEngineValue(engine, e => e.organism_editor.cell_size, 14);
@@ -343,11 +341,24 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
             <button id="zoom-in" title="Zoom in" onClick={run(editor?.zoomIn.bind(editor))} disabled={!canZoomIn}>+</button>
             <button id="zoom-fit" title="Fit organism to view" onClick={run(editor?.zoomToFit.bind(editor))}>▣</button>
           </div>
+          <div className={styles.dockToolOverlay}>
+            <button id="clear-editor" title="Reset to a single mouth cell" onClick={run(editor?.clearOrganism.bind(editor))}>
+              <i className="fa-solid fa-trash-can"></i>
+            </button>
+            <button id="random-btn" title="Generate a random organism" onClick={run(editor?.randomOrganism.bind(editor))}>
+              <i className="fa-solid fa-dice"></i>
+            </button>
+          </div>
+          <div className={styles.dockBrainOverlay}>
+            <button id="open-brain" title="Edit this organism's brain: what it chases, flees, and does" onClick={onOpenBrain}>
+              <i className="fa-solid fa-brain"></i>
+            </button>
+          </div>
         </div>
 
         <div className={styles.dockCanvasBar}>
           <span className={styles.dockHint}>
-            <MouseLeftIcon /> apply · <MouseRightIcon /> erase
+            <MouseLeftIcon /> apply · <MouseRightIcon /> erase · ctrl+z undo · ctrl+y redo
           </span>
         </div>
       </div>
@@ -355,26 +366,11 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
       <div className={`${styles.panelBody} ${styles.dockBody}`}>
         <h4>Actions</h4>
         <div className={styles.buttonGroup}>
-          <button id="undo-btn" title="Undo (Ctrl+Z)" onClick={run(editor?.undo.bind(editor))} disabled={!canUndo}>
-            <i className="fa-solid fa-rotate-left"></i>
-          </button>
-          <button id="redo-btn" title="Redo (Ctrl+Y)" onClick={run(editor?.redo.bind(editor))} disabled={!canRedo}>
-            <i className="fa-solid fa-rotate-right"></i>
-          </button>
           <button id="rotate-btn" title="Rotate 90°" onClick={run(editor?.rotateOrganism.bind(editor))}>
             <i className="fa-solid fa-arrows-spin"></i>
           </button>
           <button id="flip-btn" title="Mirror horizontally" onClick={run(editor?.flipOrganism.bind(editor))}>
             <i className="fa-solid fa-left-right"></i>
-          </button>
-          <button id="clear-editor" title="Reset to a single mouth cell" onClick={run(editor?.clearOrganism.bind(editor))}>
-            Clear
-          </button>
-          <button id="random-btn" title="Generate a random organism" onClick={run(editor?.randomOrganism.bind(editor))}>
-            Random
-          </button>
-          <button id="open-brain" title="Edit this organism's brain: what it chases, flees, and does" onClick={onOpenBrain}>
-            <i className="fa-solid fa-brain"></i> Brain
           </button>
         </div>
 

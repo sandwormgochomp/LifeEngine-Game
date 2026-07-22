@@ -73,26 +73,27 @@ test.describe('Organism Lab dock', () => {
   });
 
   test('Undo and redo walk the edit history', async ({ page }) => {
-    await expect(page.locator('#undo-btn')).toBeDisabled();
+    // Undo with an empty history is a no-op
+    await page.keyboard.press('Control+z');
+    await expectCellCount(page, 1);
 
     await clickEditorCell(page, 1, 0);
     await clickEditorCell(page, 0, 1);
     await expectCellCount(page, 3);
 
-    await page.locator('#undo-btn').click();
+    await page.keyboard.press('Control+z');
     await expectCellCount(page, 2);
 
-    await page.locator('#undo-btn').click();
-    await expectCellCount(page, 1);
-    await expect(page.locator('#undo-btn')).toBeDisabled();
-
-    await page.locator('#redo-btn').click();
-    await expectCellCount(page, 2);
-
-    // Keyboard shortcuts drive the same history
     await page.keyboard.press('Control+z');
     await expectCellCount(page, 1);
+
     await page.keyboard.press('Control+y');
+    await expectCellCount(page, 2);
+
+    // Shift+Ctrl+Z redoes as well
+    await page.keyboard.press('Control+z');
+    await expectCellCount(page, 1);
+    await page.keyboard.press('Control+Shift+z');
     await expectCellCount(page, 2);
   });
 
@@ -119,7 +120,7 @@ test.describe('Organism Lab dock', () => {
     expect(await eyeDirection(page, -1, 0)).toBe(2);
 
     // Transforms are undoable
-    await page.locator('#undo-btn').click();
+    await page.keyboard.press('Control+z');
     expect(await localCellState(page, 1, 0)).toBe('eye');
   });
 
