@@ -800,6 +800,33 @@
   flex-shrink: 0;
 }
 
+/* Thin rule separating the cell types from the paint tool below them */
+.dockRailSep {
+  flex-shrink: 0;
+  height: 1px;
+  margin: 4px 2px;
+  background: rgba(0, 255, 65, 0.25);
+}
+
+/* The paint tool's color input doubles as its palette swatch */
+.dockPaintSwatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.dockPaintSwatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.dockPaintSwatch::-webkit-color-swatch {
+  border: none;
+}
+
 .dockRailBtn:hover {
   border-color: rgba(0, 255, 65, 0.7);
   background: rgba(0, 255, 65, 0.08);

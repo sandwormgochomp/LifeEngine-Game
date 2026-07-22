@@ -266,6 +266,27 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
             <span className={styles.dockCellName}>{cellState.name}</span>
           </button>
         ))}
+
+        {/* Paint lives with the cells: pick a color, click cells to recolor.
+            A div rather than a button so the color input nested inside stays
+            clickable; clicking either the swatch or the label arms Paint. */}
+        <div className={styles.dockRailSep} />
+        <div
+          id="paint-tool"
+          className={`${styles.dockRailBtn} ${tool === Modes.Paint ? styles.dockCellBtnActive : ''}`}
+          title="Recolor cells with the chosen color"
+          onClick={() => setTool(Modes.Paint)}
+        >
+          <input
+            type="color"
+            id="cell-color-picker"
+            className={styles.dockPaintSwatch}
+            title="Paint color"
+            value={paintColor}
+            onChange={handleColorChange}
+          />
+          <span className={styles.dockCellName}>paint</span>
+        </div>
       </div>
 
       <div className={styles.dock}>
@@ -332,41 +353,6 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
       </div>
 
       <div className={`${styles.panelBody} ${styles.dockBody}`}>
-        <h4>Tools</h4>
-        <div className={styles.buttonGroup}>
-          <button
-            id="draw-tool"
-            className={tool === Modes.Edit ? styles.active : ''}
-            title="Place the selected cell type"
-            onClick={() => setTool(Modes.Edit)}
-          >
-            <i className="fa-solid fa-pen"></i> Draw{cellTypeName ? ` · ${cellTypeName}` : ''}
-          </button>
-          <button
-            id="erase-tool"
-            className={tool === Modes.Erase ? styles.active : ''}
-            title="Remove cells"
-            onClick={() => setTool(Modes.Erase)}
-          >
-            <i className="fa-solid fa-eraser"></i> Erase
-          </button>
-          <button
-            id="paint-tool"
-            className={tool === Modes.Paint ? styles.active : ''}
-            title="Recolor cells with the chosen color"
-            onClick={() => setTool(Modes.Paint)}
-          >
-            <i className="fa-solid fa-fill-drip"></i> Paint
-          </button>
-          <input
-            type="color"
-            id="cell-color-picker"
-            title="Paint color"
-            value={paintColor}
-            onChange={handleColorChange}
-          />
-        </div>
-
         <h4>Actions</h4>
         <div className={styles.buttonGroup}>
           <button id="undo-btn" title="Undo (Ctrl+Z)" onClick={run(editor?.undo.bind(editor))} disabled={!canUndo}>

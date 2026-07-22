@@ -10,7 +10,6 @@ const Modes = {
     InvincibleWallDrop: 8,
     Paint: 9,
     RadiationDrop: 10,
-    Erase: 11,
     SeedLife: 12,
 }
 

@@ -26,37 +26,34 @@ test.describe('Organism Lab dock', () => {
     await openEditor(page);
   });
 
-  test('Opens ready to draw, and picking a cell type re-arms the Draw tool', async ({ page }) => {
-    // Draw + a default cell type are pre-selected: no mode fiddling needed
-    await expect(page.locator('#draw-tool')).toHaveClass(/active/);
+  test('Opens ready to draw, and picking a cell type disarms Paint', async ({ page }) => {
+    // A default cell type is pre-selected: no mode fiddling needed
     await expect(page.locator('.cell-type#common')).toHaveClass(/dockCellBtnActive/);
 
     await clickEditorCell(page, 1, 0);
     await expectCellCount(page, 2);
     expect(await localCellState(page, 1, 0)).toBe('common');
 
-    // Choosing a cell type from another tool switches back to Draw
-    await page.locator('#erase-tool').click();
-    await expect(page.locator('#erase-tool')).toHaveClass(/active/);
+    // Choosing a cell type while Paint is armed switches back to drawing
+    // (the span dodges the color input, whose click opens the native picker)
+    await page.locator('#paint-tool span').click();
+    await expect(page.locator('#paint-tool')).toHaveClass(/dockCellBtnActive/);
     await page.locator('.cell-type#producer').click();
-    await expect(page.locator('#draw-tool')).toHaveClass(/active/);
+    await expect(page.locator('#paint-tool')).not.toHaveClass(/dockCellBtnActive/);
     await expect(page.locator('.cell-type#producer')).toHaveClass(/dockCellBtnActive/);
   });
 
-  test('Erase tool, right-click erase, and the protected center cell', async ({ page }) => {
+  test('Right-click erases, and the center cell is protected', async ({ page }) => {
     await clickEditorCell(page, 1, 0);
     await clickEditorCell(page, 2, 0);
     await expectCellCount(page, 3);
 
-    // Erase tool with left click
-    await page.locator('#erase-tool').click();
-    await clickEditorCell(page, 1, 0);
+    // Right-click erases without disturbing the armed cell type
+    await clickEditorCell(page, 1, 0, 'right');
     await expectCellCount(page, 2);
-
-    // Right-click erases even with the Draw tool active
-    await page.locator('#draw-tool').click();
     await clickEditorCell(page, 2, 0, 'right');
     await expectCellCount(page, 1);
+    await expect(page.locator('.cell-type#common')).toHaveClass(/dockCellBtnActive/);
 
     // The center cell refuses removal with a toast
     await clickEditorCell(page, 0, 0, 'right');
@@ -67,8 +64,9 @@ test.describe('Organism Lab dock', () => {
   test('Paint tool recolors a cell', async ({ page }) => {
     await clickEditorCell(page, 1, 0);
 
+    // Picking a color arms Paint by itself
     await page.locator('#cell-color-picker').fill('#123456');
-    await expect(page.locator('#paint-tool')).toHaveClass(/active/);
+    await expect(page.locator('#paint-tool')).toHaveClass(/dockCellBtnActive/);
     await clickEditorCell(page, 1, 0);
 
     expect(await localCellColor(page, 1, 0)).toBe('#123456');

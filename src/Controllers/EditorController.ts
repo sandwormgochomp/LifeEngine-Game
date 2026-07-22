@@ -111,12 +111,8 @@ class EditorController extends CanvasController{
 
     applyCursor(): void {
         if (!this.canvas) return;
-        var cursor = this.mode === Modes.Erase
-            // little eraser block so erase mode reads instantly at the cursor
-            ? `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect x='2' y='5' width='12' height='9' fill='%23ff5555' stroke='%23ffffff' stroke-width='1.5'/></svg>") 8 10, not-allowed`
-            : 'crosshair';
-        if (this.canvas.style.cursor !== cursor)
-            this.canvas.style.cursor = cursor;
+        if (this.canvas.style.cursor !== 'crosshair')
+            this.canvas.style.cursor = 'crosshair';
     }
 
     getCurLocalCell(): EditorBodyCellLike | null {
@@ -138,9 +134,6 @@ class EditorController extends CanvasController{
             return;
 
         switch (this.mode) {
-            case Modes.Erase:
-                this.env.removeCellFromOrg(this.mouse_c, this.mouse_r);
-                break;
             case Modes.Paint:
                 if (loc_cell != null)
                     this.env.paintCell(this.mouse_c, this.mouse_r, this.custom_color);
@@ -174,8 +167,6 @@ class EditorController extends CanvasController{
         var color: string | null = null;
         if (this.mode === Modes.Edit && this.edit_cell_type != null)
             color = this.edit_cell_type.color;
-        else if (this.mode === Modes.Erase && loc_cell != null)
-            color = '#ff3333';
         else if (this.mode === Modes.Paint && loc_cell != null)
             color = this.custom_color;
         if (color == null)
