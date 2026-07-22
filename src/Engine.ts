@@ -18,19 +18,20 @@ export interface EngineCanvases {
 /* Notified on every emitChange(); the React HUD subscribes with a re-render. */
 export type EngineListener = () => void;
 
-// If the simulation speed is below this value, a new interval will be created to handle ui rendering
-// at a reasonable speed. If it is above, the simulation interval will be used to update the ui.
-const min_render_speed = 60;
+// The sim interval always fires at this rate; speed multiplies the number of
+// ticks run per firing rather than the firing rate, so no speed setting can
+// oversubscribe the timer (240Hz intervals sat at the browser's ~4ms clamp
+// and thrashed -- the reason 10x once ran slower than 2x).
+const base_tick_rate = 60;
 
 /* The playback ladder. Index 0 is stopped -- pause is the bottom of the speed
    scale rather than a separate flag, so "is the sim running, and how fast" has
    exactly one representation, and each control is an absolute destination.
 
-   The multipliers stop at 4x because that is where the machine does: measured
-   tick rates plateau around 120/sec with rendering on and 220/sec headless, so
-   the 5x and 10x steps this replaced delivered nothing over 2x -- and 10x ran
-   *slower* than 2x (99/sec), the interval oversubscribing until it thrashed.
-   4x is the last step that is real, and only headless makes it fully so. */
+   Rendering runs on its own requestAnimationFrame loop and never shares the
+   sim interval, so ticks stop paying the render cost (measured before the
+   split: 81 ticks/sec at 4x rendered vs 212 headless on the same world). The
+   ladder still stops at 4x: past that the tick budget itself is the wall. */
 export interface SpeedMode {
     label: string;
     icon: string;
@@ -62,11 +63,9 @@ class Engine {
     colorscheme: ColorScheme;
     sim_last_update: number;
     sim_delta_time: number;
-    ui_last_update: number;
-    ui_delta_time: number;
-    /* Measured render rate: how often necessaryUpdate() actually runs,
-       whichever loop is driving it. Stays live while paused, since the ui
-       loop keeps repainting for panning and editing.
+    /* Measured render rate: how often necessaryUpdate() actually runs. Stays
+       live while paused, since the rAF loop keeps repainting for panning and
+       editing.
 
        Both rates are computed by counting events over a ~500ms window rather
        than smoothing instantaneous 1000/delta readings: averaging rates is
@@ -84,17 +83,20 @@ class Engine {
     actual_tps: number;
     listeners: Set<EngineListener>;
     last_emit: number;
-    /* Genuinely absent for a real window: the constructor never touches either
-       handle, and start()/setUiLoop() read them (`if (this.sim_loop)`,
-       `if (this.ui_loop != null)`) before anything has assigned one -- so the
-       first read of each really does see undefined, not null. Hence `| null |
+    /* Genuinely absent for a real window: the constructor never touches this
+       handle before applyLoops() reads it (`if (this.sim_loop)`) -- so the
+       first read really does see undefined, not null. Hence `| null |
        undefined` rather than a definite-assignment `!`.
 
        ReturnType<typeof setInterval> rather than `number` or `NodeJS.Timeout`:
        which of the two overloads is in scope depends on whether node types are
        present, and this follows whichever one the build actually resolves. */
     sim_loop: ReturnType<typeof setInterval> | null | undefined;
-    ui_loop: ReturnType<typeof setInterval> | null | undefined;
+    /* The rAF handle for the render loop, which runs from construction until
+       dispose() regardless of playback state: the world must keep repainting
+       for panning and editing while paused, and the display can't use more
+       than its own refresh rate of frames while running. */
+    render_loop: number | null;
 
     // env_canvas/env_container: the world canvas and its containing element.
     // glow_canvas: overlay the world environment composites organism glow onto.
@@ -118,9 +120,6 @@ class Engine {
         this.sim_last_update = Date.now();
         this.sim_delta_time = 0;
 
-        this.ui_last_update = Date.now();
-        this.ui_delta_time = 0;
-
         this.frame_count = 0;
         this.frame_window_start = Date.now();
         this.actual_fps = 0;
@@ -130,6 +129,19 @@ class Engine {
 
         this.listeners = new Set();
         this.last_emit = 0;
+
+        // Rendering is on its own clock from the start; playback only ever
+        // touches the sim interval.
+        this.render_loop = null;
+        this.startRenderLoop();
+    }
+
+    startRenderLoop(): void {
+        const frame = () => {
+            this.necessaryUpdate();
+            this.render_loop = requestAnimationFrame(frame);
+        };
+        this.render_loop = requestAnimationFrame(frame);
     }
 
     // UI change notification. Listeners are called at most every 100ms
@@ -149,8 +161,8 @@ class Engine {
     }
 
     /* Both derived, so there is no second copy of either to drift out of sync
-       with the ladder. fps is zero while paused -- applyLoops() reads that as
-       "no sim interval". */
+       with the ladder. fps is the *target* tick rate (zero while paused);
+       applyLoops() reconciles the sim interval from the same ladder entry. */
     get running(): boolean {
         return this.speed_index > 0;
     }
@@ -187,66 +199,48 @@ class Engine {
             this.start();
     }
 
-    /* The single reconciler for both intervals: what they should be is entirely
-       a function of speed_index, so tear down whatever is there and rebuild what
-       that speed implies. The ui loop keeps running while stopped, so the world
-       still repaints for panning, editing and tool overlays. */
+    /* The single reconciler for the sim interval: what it should be is
+       entirely a function of speed_index, so tear down whatever is there and
+       rebuild what that speed implies. Rendering is untouched -- the rAF loop
+       runs from construction to dispose() regardless of playback state.
+
+       The interval always fires at base_tick_rate; speed runs more ticks per
+       firing instead of firing more often, so 4x costs four tick budgets
+       inside one 16.7ms period rather than a 4ms interval the browser clamps
+       and thrashes. */
     applyLoops(): void {
         if (this.sim_loop) {
             clearInterval(this.sim_loop);
             this.sim_loop = null;
         }
-        const fps = this.fps;
-        if (fps === 0)
+        const multiplier = SPEED_MODES[this.speed_index].multiplier;
+        if (multiplier === 0) {
             this.actual_tps = 0; // read as "not ticking", not a stale rate
-        if (fps > 0) {
-            /* Rebase before the first tick: otherwise the delta spans the whole
-               pause, and the world would take one enormous step on resume.
-               The tick-rate window rebases for the same reason. */
-            this.sim_last_update = Date.now();
-            this.tick_count = 0;
-            this.tick_window_start = this.sim_last_update;
-            this.sim_loop = setInterval(()=>{
-                this.updateSimDeltaTime();
+            return;
+        }
+        /* Rebase before the first tick: otherwise the delta spans the whole
+           pause, and the world would take one enormous step on resume.
+           The tick-rate window rebases for the same reason. */
+        this.sim_last_update = Date.now();
+        this.tick_count = 0;
+        this.tick_window_start = this.sim_last_update;
+        this.sim_loop = setInterval(()=>{
+            this.updateSimDeltaTime();
+            for (let i = 0; i < multiplier; i++)
                 this.environmentUpdate();
-            }, 1000/fps);
-        }
-        if (fps >= min_render_speed) {
-            if (this.ui_loop != null) {
-                clearInterval(this.ui_loop);
-                this.ui_loop = null;
-            }
-        }
-        else
-            this.setUiLoop();
-    }
-
-    setUiLoop(): void {
-        if (!this.ui_loop) {
-            this.ui_loop = setInterval(()=> {
-                this.updateUIDeltaTime();
-                this.necessaryUpdate();
-            }, 1000/min_render_speed);
-        }
+        }, 1000/base_tick_rate);
     }
 
     updateSimDeltaTime(): void {
         this.sim_delta_time = Date.now() - this.sim_last_update;
         this.sim_last_update = Date.now();
-        if (!this.ui_loop) // if the ui loop isn't running, use the sim delta time
-            this.ui_delta_time = this.sim_delta_time;
-    }
-
-    updateUIDeltaTime(): void {
-        this.ui_delta_time = Date.now() - this.ui_last_update;
-        this.ui_last_update = Date.now();
     }
 
     environmentUpdate(): void {
         const t0 = Perf.begin();
         this.env.update(this.sim_delta_time);
         Perf.end('tick', t0);
-        Perf.commit(); // flush the sim buckets before any render probe runs
+        Perf.commit(); // one committed sample per tick, even at 4 ticks/firing
         // Windowed tick counting; the rate refreshes about twice a second.
         this.tick_count++;
         const tick_elapsed = Date.now() - this.tick_window_start;
@@ -255,10 +249,6 @@ class Engine {
             this.tick_count = 0;
             this.tick_window_start = Date.now();
         }
-        if(this.ui_loop == null) {
-            this.necessaryUpdate();
-        }
-
     }
 
     necessaryUpdate(): void {
@@ -285,16 +275,18 @@ class Engine {
         Perf.commit(); // flush the frame buckets
     }
 
-    // Full teardown (unlike stop(), which keeps a ui loop running for rendering while paused)
+    // Full teardown (unlike stop(), which keeps the rAF loop rendering while paused)
     dispose(): void {
-        /* Both handles are `number | null | undefined`; clearInterval is typed
+        /* The handle is `number | null | undefined`; clearInterval is typed
            for `number | undefined`. Either way an id that matches no active
            timer is a no-op per spec, so this normalises the null rather than
            branching. */
         clearInterval(this.sim_loop ?? undefined);
-        clearInterval(this.ui_loop ?? undefined);
         this.sim_loop = null;
-        this.ui_loop = null;
+        if (this.render_loop != null) {
+            cancelAnimationFrame(this.render_loop);
+            this.render_loop = null;
+        }
         this.speed_index = 0;
     }
 

@@ -84,6 +84,11 @@ const GLOW_DOWNSCALE = 6;
 const GLOW_SPREAD = 1.5;
 const GLOW_ALPHA = 0.1;
 
+/* Floor between decoration repaints (~30Hz). Organisms move at most one cell
+   per tick, so an outline lagging its body by a frame or two is invisible in
+   motion -- and the cap halves the cost of the most expensive render pass. */
+const DECO_MIN_REPAINT_MS = 33;
+
 class WorldEnvironment extends Environment{
     /* No initializers anywhere below: useDefineForClassFields is false and these
        must stay bare declarations, so the constructor assignments remain the
@@ -123,6 +128,13 @@ class WorldEnvironment extends Environment{
        context first. Hence `| undefined` rather than a definite-assignment `!`. */
     deco_dirty: boolean | undefined;
     glow_dirty: boolean | undefined;
+    /* When the decoration pass last repainted. In a busy world something
+       changes every tick, so deco_dirty alone means "repaint every frame" --
+       and the pass is a full clear + one drawImage per organism, the largest
+       single item in the measured render cost. Repaints are therefore also
+       capped at DECO_MIN_REPAINT_MS; the dirty flag stays set in between, so
+       nothing is lost, just deferred a frame or two. */
+    last_deco_repaint: number;
     /* The hovered organism, written by CanvasController and read by the
        decoration pass, which tints that organism's sprite. Never initialized,
        for the same reason as the fields above: no pointer has moved yet. A
@@ -132,6 +144,13 @@ class WorldEnvironment extends Environment{
     /* Assigned from outside by Engine right after it constructs this, so absent
        for the window in between -- setNightMode() guards on it. */
     engine?: Engine;
+    /* Spatial index over living organisms for pheromone broadcasts, rebuilt
+       lazily at most once per tick and only on ticks where something is
+       damaged. Wrapped in one object on purpose: serialize() copies own
+       non-object properties, so a bare `tick` stamp would round-trip through
+       saves and could collide with a restored total_ticks, presenting an
+       empty index as fresh. An object is skipped wholesale. */
+    pheromone_index: { tick: number; bucket: number; map: Map<number, Organism[]> };
 
     constructor(cell_size: number, canvas: HTMLCanvasElement | null, container: HTMLElement | null, glow_canvas: HTMLCanvasElement | null = null, deco_canvas: HTMLCanvasElement | null = null) {
         super();
@@ -153,6 +172,7 @@ class WorldEnvironment extends Environment{
         // canvas would clip and smear them.
         this.deco_canvas = deco_canvas;
         this.deco_ctx = deco_canvas ? deco_canvas.getContext('2d') : null;
+        this.last_deco_repaint = 0;
         this.syncOverlaySizes();
         /* The controller declares its own structural view of this environment,
            and the two cannot unify today: that view's renderer types
@@ -179,7 +199,45 @@ class WorldEnvironment extends Environment{
         this.radiation_map = new Set();
         this.day_timer = 0;
         this.is_night = false;
+        this.pheromone_index = { tick: -1, bucket: 0, map: new Map() };
         FossilRecord.setEnv(this);
+    }
+
+    /* The buckets an organism at (c, r) must scan to see every living organism
+       within `radius` (manhattan): bucket side = radius, so the 3x3 block of
+       buckets around the caller's own covers the whole range. Rebuilt on first
+       use each tick -- ticks with no damaged organisms never pay for it. The
+       index snapshots positions as of that first use; an organism moving later
+       the same tick can drift one cell across a bucket edge, which is inside
+       the noise of a broadcast whose radius is a gameplay heuristic. */
+    getOrganismsNear(c: number, r: number, radius: number): Organism[][] {
+        const idx = this.pheromone_index;
+        const bucket = Math.max(1, radius);
+        if (idx.tick !== this.total_ticks || idx.bucket !== bucket) {
+            idx.tick = this.total_ticks;
+            idx.bucket = bucket;
+            idx.map.clear();
+            for (const org of this.organisms) {
+                if (!org.living) continue;
+                const key = Math.floor(org.c / bucket) * 100003 + Math.floor(org.r / bucket);
+                let arr = idx.map.get(key);
+                if (!arr) {
+                    arr = [];
+                    idx.map.set(key, arr);
+                }
+                arr.push(org);
+            }
+        }
+        const bc = Math.floor(c / bucket);
+        const br = Math.floor(r / bucket);
+        const out: Organism[][] = [];
+        for (let dc = -1; dc <= 1; dc++) {
+            for (let dr = -1; dr <= 1; dr++) {
+                const arr = idx.map.get((bc + dc) * 100003 + (br + dr));
+                if (arr) out.push(arr);
+            }
+        }
+        return out;
     }
 
     /* Engine calls this as `env.update(this.sim_delta_time)` and always has, but
@@ -340,6 +398,11 @@ class WorldEnvironment extends Environment{
         // Like glow, only repaint when the world changed; pan/zoom move the
         // overlay via its CSS transform instead.
         if (!this.deco_dirty) return;
+        // Rate cap: leave the flag set so the deferred repaint still happens
+        // on a later frame -- see the field comment on last_deco_repaint.
+        const now = Date.now();
+        if (now - this.last_deco_repaint < DECO_MIN_REPAINT_MS) return;
+        this.last_deco_repaint = now;
         this.deco_dirty = false;
         drawOrganismDecorations(this.deco_ctx, this);
     }

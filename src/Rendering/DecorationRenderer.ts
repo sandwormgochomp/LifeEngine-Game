@@ -33,6 +33,18 @@ export interface OrganismSpriteCache {
     hash: string;
 }
 
+/* All four rotations of an organism's sprite, filled on demand. Movers cycle
+   their rotation constantly; caching one rotation at a time meant every turn
+   re-rendered the sprite from scratch, and at a few hundred movers that was
+   the decoration pass's whole cost (measured >20ms per repaint at ~700
+   organisms, almost all of it regeneration). Four slots make a turn a cache
+   hit after the first cycle. Keyed by Directions' 0-3 rotation values. */
+export interface OrganismSpriteSet {
+    sz: number;
+    hash: string;
+    by_rotation: (OrganismSpriteCache | null)[];
+}
+
 interface DecoOrganismLike {
     c: number;
     r: number;
@@ -40,10 +52,10 @@ interface DecoOrganismLike {
     living?: boolean;
     anatomy?: { cells: DecoBodyCellLike[] } | null;
     /* Injected from here: drawOrganismDecorations caches each organism's
-       rendered sprite on the organism instance itself. Organism.ts MUST
+       rendered sprites on the organism instance itself. Organism.ts MUST
        declare this field when Organism.js converts, or that write stops
        type-checking. */
-    _spriteCache?: OrganismSpriteCache | null;
+    _spriteCache?: OrganismSpriteSet | null;
 }
 
 interface DecoEnvLike {
@@ -521,8 +533,16 @@ function drawHighlightedSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvas
 
 /* `clear` is false only for OrganismEditor, which draws this pass onto its
    single shared canvas rather than a dedicated overlay -- see the comment on
-   its renderFull(). */
-function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike, clear: boolean = true): void {
+   its renderFull().
+
+   `verify_anatomy` is true only for the editor as well: its one organism is
+   the only place anatomy changes after construction (cells added/removed,
+   colors picked, eyes rotated), so it must re-hash every frame. World
+   organisms get their anatomy exactly once, in the constructor -- mutate()
+   runs on the child inside reproduce(), before addOrganism publishes it --
+   so re-hashing every organism every frame bought nothing and was the single
+   largest string-allocation source in the render path. */
+function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike, clear: boolean = true, verify_anatomy: boolean = false): void {
     var renderer = env.renderer;
     var sz = Math.floor(renderer.cell_size);
     if (clear) ctx.clearRect(0, 0, renderer.width, renderer.height);
@@ -531,13 +551,22 @@ function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike
     for (var org of env.organisms) {
         if (!org.living) continue;
 
-        var hash = getAnatomyHash(org);
-        if (!org._spriteCache || org._spriteCache.sz !== sz || org._spriteCache.rotation !== org.rotation || org._spriteCache.hash !== hash) {
-            org._spriteCache = generateOrganismSprite(org, sz);
+        var set = org._spriteCache;
+        if (!set || set.sz !== sz || (verify_anatomy && set.hash !== getAnatomyHash(org))) {
+            set = org._spriteCache = {
+                sz: sz,
+                hash: getAnatomyHash(org),
+                by_rotation: [null, null, null, null],
+            };
+        }
+        var rotation = org.rotation ?? 0;
+        var cache = set.by_rotation[rotation];
+        if (!cache) {
+            cache = generateOrganismSprite(org, sz);
+            set.by_rotation[rotation] = cache;
         }
 
-        if (org._spriteCache && org._spriteCache.canvas) {
-            var cache = org._spriteCache;
+        if (cache && cache.canvas) {
             var drawX = Math.floor(org.c + cache.minCol) * sz - cache.padding;
             var drawY = Math.floor(org.r + cache.minRow) * sz - cache.padding;
             if (org === env.highlighted_org)

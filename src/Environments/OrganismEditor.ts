@@ -255,7 +255,9 @@ class OrganismEditor extends Environment{
            as returning `number`, while BodyCell's switches have no default arm
            and so return `number | undefined`. Spelled as the parameter type of
            the function itself rather than re-declaring its private interface. */
-        drawOrganismDecorations(this.renderer.ctx, this as unknown as Parameters<typeof drawOrganismDecorations>[1], false);
+        /* verify_anatomy: the editor organism is the one whose cells change in
+           place, so its sprite cache must be re-checked against the anatomy. */
+        drawOrganismDecorations(this.renderer.ctx, this as unknown as Parameters<typeof drawOrganismDecorations>[1], false, true);
     }
 
     // Faint grid lines plus a marker on the (immovable) center cell, so empty

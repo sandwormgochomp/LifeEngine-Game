@@ -15,7 +15,7 @@ import Observation from "./Perception/Observation";
 import type BodyCell from "./Cell/BodyCells/BodyCell";
 import type ExplosiveCell from "./Cell/BodyCells/ExplosiveCell";
 import type Species from "../Stats/Species";
-import type { OrganismSpriteCache } from "../Rendering/DecorationRenderer";
+import type { OrganismSpriteSet } from "../Rendering/DecorationRenderer";
 
 /* A grid cell as Organism reaches through it. Structural rather than a real
    GridCell import: GridMap is typed but its cell class is only described
@@ -75,6 +75,11 @@ export interface OrganismEnv {
        the call never executes. Declared optional to keep that in-progress call
        site intact and type-checking. */
     addDeathEffect?(org: Organism): void;
+    /* Spatial index query for pheromone broadcasts. Optional because
+       OrganismEditor lacks it -- but the editor never ticks its organism, so
+       emitPheromoneSignal's fallback to the flat list is for the checker, not
+       a path that runs. */
+    getOrganismsNear?(c: number, r: number, radius: number): Organism[][];
 }
 
 export interface SerializedBrain {
@@ -153,9 +158,10 @@ class Organism {
        position) and can be reached before any update() has run. */
     in_radiation: boolean | undefined;
     /* Written from outside this class: DecorationRenderer.drawOrganismDecorations
-       caches each organism's pre-rendered sprite here (commit 1814294). Nothing
-       in Organism reads it -- do not delete it as dead. */
-    _spriteCache?: OrganismSpriteCache | null;
+       caches each organism's pre-rendered sprites here (commit 1814294), one
+       slot per rotation. Nothing in Organism reads it -- do not delete it as
+       dead. */
+    _spriteCache?: OrganismSpriteSet | null;
 
     constructor(col: number, row: number, env: OrganismEnv, parent: Organism | null = null) {
         this.c = col;
@@ -530,7 +536,14 @@ class Organism {
 
     emitPheromoneSignal(state_to_emit: CellState): void {
         var max_dist = Hyperparams.lookRange * 2;
-        for (var other_org of this.env.organisms) {
+        /* Only the 3x3 block of index buckets around this organism can hold
+           anything within max_dist; the flat all-organisms scan this replaces
+           made a busy world's damage ticks scale with population squared. */
+        var groups = this.env.getOrganismsNear
+            ? this.env.getOrganismsNear(this.c, this.r, max_dist)
+            : [this.env.organisms];
+        for (var group of groups)
+        for (var other_org of group) {
             if (other_org === this || !other_org.living) continue;
             if (other_org.species === this.species) {
                 var dx = this.c - other_org.c;
