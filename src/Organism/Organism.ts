@@ -9,6 +9,7 @@ import type { SerializedAnatomy } from "./Anatomy";
 import Brain from "./Perception/Brain";
 import type { BrainState } from "./Perception/Brain";
 import FossilRecord from "../Stats/FossilRecord";
+import Perf from "../Stats/Perf";
 import SerializeHelper from "../Utils/SerializeHelper";
 import Observation from "./Perception/Observation";
 import type BodyCell from "./Cell/BodyCells/BodyCell";
@@ -573,7 +574,13 @@ class Organism {
             if (!this.living) return false;
         }
         if (this.damage > 0) {
+            /* Own bucket: this scans every organism in the world per damaged
+               organism per tick, so it is the one section whose cost can grow
+               with population squared -- it has to be separable from the rest
+               of the organism loop to justify (or acquit) a spatial index. */
+            var t = Perf.begin();
             this.emitPheromoneSignal(CellStates.pheromone);
+            Perf.end('pheromone', t);
         }
 
         // Brain acts first to allow hibernation
@@ -594,13 +601,20 @@ class Organism {
             this.reproduce();
         }
 
+        /* These spans accumulate across every organism this tick; Perf.commit()
+           at the end of the engine tick folds them into one sample each. */
+        var t_cells = Perf.begin();
         for (var cell of this.anatomy.cells) {
             cell.performFunction();
-            if (!this.living)
-                return this.living
+            if (!this.living) {
+                Perf.end('org_cells', t_cells);
+                return this.living;
+            }
         }
+        Perf.end('org_cells', t_cells);
 
         if (this.anatomy.is_mover) {
+            var t_move = Perf.begin();
             this.move_count++;
             if (this.ignore_brain_for > 0) {
                 this.ignore_brain_for --;
@@ -614,6 +628,7 @@ class Organism {
                         this.ignore_brain_for = this.move_range + 1;
                 }
             }
+            Perf.end('org_move', t_move);
         }
         return this.living;
     }

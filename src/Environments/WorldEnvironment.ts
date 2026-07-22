@@ -7,6 +7,7 @@ import CellStates from '../Organism/Cell/CellStates';
 import EnvironmentController from '../Controllers/EnvironmentController';
 import Hyperparams from '../Hyperparameters.js';
 import FossilRecord from '../Stats/FossilRecord';
+import Perf from '../Stats/Perf';
 import WorldConfig from '../WorldConfig';
 import SerializeHelper from '../Utils/SerializeHelper';
 import Species from '../Stats/Species';
@@ -187,6 +188,7 @@ class WorldEnvironment extends Environment{
        without changing either side's behaviour; the base class declares
        update() with no parameters, and widening in an override is sound. */
     update(_sim_delta_time?: number): void {
+        var t = Perf.begin();
         var to_remove: string[] = [];
         for (var i in this.organisms) {
             var org: Organism = this.organisms[i];
@@ -195,10 +197,12 @@ class WorldEnvironment extends Environment{
             }
         }
         this.removeOrganisms(to_remove);
+        Perf.end('organisms', t);
         if (Hyperparams.foodDropProb > 0) {
             this.generateFood();
         }
 
+        t = Perf.begin();
         // Update active explosions
         var remaining_explosions: { col: number; row: number; ticks: number }[] = [];
         for (var exp of this.active_explosions) {
@@ -257,6 +261,7 @@ class WorldEnvironment extends Environment{
             }
         }
         this.active_projectiles = remaining_projectiles;
+        Perf.end('fx', t);
 
         // Day/Night Cycle
         this.day_timer++;
@@ -267,7 +272,9 @@ class WorldEnvironment extends Environment{
 
         this.total_ticks ++;
         if (this.total_ticks % this.data_update_rate == 0) {
+            t = Perf.begin();
             FossilRecord.updateData();
+            Perf.end('fossil', t);
         }
     }
 
@@ -289,15 +296,26 @@ class WorldEnvironment extends Environment{
     }
 
     render(): void {
+        // Sampled before the headless early-out clears the set, so the gauge
+        // stays honest about how much churn each tick produces either way.
+        Perf.gauge('dirty_cells', this.renderer.cells_to_render.size);
         if (WorldConfig.headless) {
             this.renderer.cells_to_render.clear();
             return;
         }
+        var t = Perf.begin();
         this.renderer.renderCells();
+        Perf.end('cells_draw', t);
         this.renderer.renderHighlights();
         this.controller.renderCursorOverlay();
+        /* Both overlay passes early-out on their dirty flags, so their avg
+           stays near zero; the max column is what shows the repaint spike. */
+        t = Perf.begin();
         this.renderDecorations();
+        Perf.end('deco', t);
+        t = Perf.begin();
         this.renderGlow();
+        Perf.end('glow', t);
     }
 
     syncOverlaySizes(): void {

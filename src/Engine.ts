@@ -3,6 +3,7 @@ import ControlPanel from './Controllers/ControlPanel';
 import OrganismEditor from './Environments/OrganismEditor';
 import ColorScheme from './Rendering/ColorScheme';
 import WorldConfig from './WorldConfig';
+import Perf from './Stats/Perf';
 
 /* The canvases and container the React layer hands the engine on construction.
    Declared nullable to match what WorldEnvironment accepts -- App passes live
@@ -63,11 +64,24 @@ class Engine {
     sim_delta_time: number;
     ui_last_update: number;
     ui_delta_time: number;
-    /* Measured render rate: the spacing of necessaryUpdate() calls, whichever
-       loop is driving them. Stays live while paused, since the ui loop keeps
-       repainting for panning and editing. */
-    render_last_update: number;
+    /* Measured render rate: how often necessaryUpdate() actually runs,
+       whichever loop is driving it. Stays live while paused, since the ui
+       loop keeps repainting for panning and editing.
+
+       Both rates are computed by counting events over a ~500ms window rather
+       than smoothing instantaneous 1000/delta readings: averaging rates is
+       biased upward under timer jitter (a 2ms/6ms alternation averages to
+       333/s when the true rate is 250/s), and this readout exists to be
+       honest about what the machine delivers. */
+    frame_count: number;
+    frame_window_start: number;
     actual_fps: number;
+    /* Measured sim tick rate, same windowed count. Distinct from the fps
+       *target* (the getter below): this is what the machine actually
+       delivers, which plateaus well under 240 at 4x. Zeroed while paused. */
+    tick_count: number;
+    tick_window_start: number;
+    actual_tps: number;
     listeners: Set<EngineListener>;
     last_emit: number;
     /* Genuinely absent for a real window: the constructor never touches either
@@ -107,8 +121,12 @@ class Engine {
         this.ui_last_update = Date.now();
         this.ui_delta_time = 0;
 
-        this.render_last_update = Date.now();
+        this.frame_count = 0;
+        this.frame_window_start = Date.now();
         this.actual_fps = 0;
+        this.tick_count = 0;
+        this.tick_window_start = Date.now();
+        this.actual_tps = 0;
 
         this.listeners = new Set();
         this.last_emit = 0;
@@ -179,10 +197,15 @@ class Engine {
             this.sim_loop = null;
         }
         const fps = this.fps;
+        if (fps === 0)
+            this.actual_tps = 0; // read as "not ticking", not a stale rate
         if (fps > 0) {
             /* Rebase before the first tick: otherwise the delta spans the whole
-               pause, and the world would take one enormous step on resume. */
+               pause, and the world would take one enormous step on resume.
+               The tick-rate window rebases for the same reason. */
             this.sim_last_update = Date.now();
+            this.tick_count = 0;
+            this.tick_window_start = this.sim_last_update;
             this.sim_loop = setInterval(()=>{
                 this.updateSimDeltaTime();
                 this.environmentUpdate();
@@ -220,7 +243,18 @@ class Engine {
     }
 
     environmentUpdate(): void {
+        const t0 = Perf.begin();
         this.env.update(this.sim_delta_time);
+        Perf.end('tick', t0);
+        Perf.commit(); // flush the sim buckets before any render probe runs
+        // Windowed tick counting; the rate refreshes about twice a second.
+        this.tick_count++;
+        const tick_elapsed = Date.now() - this.tick_window_start;
+        if (tick_elapsed >= 500) {
+            this.actual_tps = this.tick_count * 1000 / tick_elapsed;
+            this.tick_count = 0;
+            this.tick_window_start = Date.now();
+        }
         if(this.ui_loop == null) {
             this.necessaryUpdate();
         }
@@ -228,12 +262,27 @@ class Engine {
     }
 
     necessaryUpdate(): void {
-        const now = Date.now();
-        this.actual_fps = 1000 / (now - this.render_last_update);
-        this.render_last_update = now;
+        // Same windowed counting as the tick rate above.
+        this.frame_count++;
+        const frame_elapsed = Date.now() - this.frame_window_start;
+        if (frame_elapsed >= 500) {
+            this.actual_fps = this.frame_count * 1000 / frame_elapsed;
+            this.frame_count = 0;
+            this.frame_window_start = Date.now();
+        }
+        let t = Perf.begin();
         this.env.render();
+        Perf.end('render', t);
+        t = Perf.begin();
         this.organism_editor.update();
+        Perf.end('editor', t);
+        /* `emit` sees only the synchronous listener portion -- React commits
+           its re-render later -- and is a no-op most frames thanks to the
+           100ms throttle. Still worth a row: a slow subscriber shows up here. */
+        t = Perf.begin();
         this.emitChange();
+        Perf.end('emit', t);
+        Perf.commit(); // flush the frame buckets
     }
 
     // Full teardown (unlike stop(), which keeps a ui loop running for rendering while paused)

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/App.module.css';
 import Engine from '../Engine';
 import FossilRecord, { type FossilRecordType } from '../Stats/FossilRecord';
+import Perf from '../Stats/Perf';
 import { generateOrganismName } from '../Utils/NameGenerator';
 import type { CellCountMap } from '../Stats/Species';
 import Modes from '../Controllers/ControlModes';
@@ -25,6 +26,7 @@ import WorldsModal from './WorldsModal';
 import Floaties from './Floaties';
 import RadiationSmoke from './RadiationSmoke';
 import MicroscopeOverlay from './MicroscopeOverlay';
+import PerfPanel from './PerfPanel';
 
 // Tab content
 import SaveTab from './Tabs/SaveTab';
@@ -50,6 +52,9 @@ declare global {
     fossilRecord?: FossilRecordType;
     // Pure body-plan -> name function, exposed for the naming test suite.
     generateOrganismName?: (cell_counts: CellCountMap) => string;
+    // Timing instrumentation singleton, for the perf test suite and for
+    // reading numbers from the console while profiling.
+    perf?: typeof Perf;
   }
 }
 
@@ -69,6 +74,7 @@ const App: React.FC = () => {
   const [newGameOpen, setNewGameOpen] = useState(false);
   const [brainOpen, setBrainOpen] = useState(false);
   const [headless, setHeadless] = useState(WorldConfig.headless);
+  const [perfOpen, setPerfOpen] = useState(false);
   // Derived as a boolean, so this only re-renders App when night actually
   // flips — not on every engine emit.
   const isNight = useEngineValue(engine, e => Boolean(e.env?.is_night), false);
@@ -90,6 +96,7 @@ const App: React.FC = () => {
     window.engine = newEngine;
     window.fossilRecord = FossilRecord;
     window.generateOrganismName = generateOrganismName;
+    window.perf = Perf;
     newEngine.start();
     setEngine(newEngine);
 
@@ -117,6 +124,8 @@ const App: React.FC = () => {
         envController.mode = Modes.None;
         envController.org_to_clone = null;
         engine.emitChange(true);
+      } else if (perfOpen) {
+        setPerfOpen(false);
       } else if (activePanel) {
         setActivePanel(null);
       } else if (editorOpen) {
@@ -125,7 +134,7 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, brainOpen, worldsOpen, newGameOpen]);
+  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, brainOpen, worldsOpen, newGameOpen, perfOpen]);
 
   // Headless skips all drawing so the simulation runs far faster; repaint
   // everything on the way back so the canvas isn't left stale.
@@ -175,6 +184,7 @@ const App: React.FC = () => {
           setMode(engine.env.controller.mode === Modes.Select ? Modes.None : Modes.Select);
           break;
         case 'x': setEditorOpen(open => !open); break;
+        case 'p': setPerfOpen(open => !open); break;
         case 'c':
           engine.env.controller.org_to_clone = engine.organism_editor.organism;
           setMode(Modes.Clone);
@@ -290,7 +300,7 @@ const App: React.FC = () => {
       {/* HUD Regions */}
       <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />
       <HudTopCenter engine={engine} onLifeformsClick={() => setLifeformsOpen(open => !open)} />
-      <HudTopRight engine={engine} />
+      <HudTopRight engine={engine} onTogglePerf={() => setPerfOpen(open => !open)} />
       <HudToolPalette engine={engine} />
       <HudBottomBar
         engine={engine}
@@ -300,6 +310,10 @@ const App: React.FC = () => {
         onItemClick={handleToolbarClick}
       />
       <HudNotifications />
+
+      {/* Mounting the perf panel enables the timing probes; unmounting turns
+          them off and clears the buckets (see PerfPanel's mount effect). */}
+      {perfOpen && <PerfPanel engine={engine} />}
 
       {headless && (
         <div className={styles.headlessNotice} data-testid="headless-notice" onClick={toggleHeadless} title="Click to resume rendering">
