@@ -105,7 +105,7 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
           value={brushSize}
           onChange={e => setBrush(parseInt(e.target.value))}
         />
-        <span className={styles.toolPaletteBrushValue}>{brushSize * 2 + 1}×{brushSize * 2 + 1}</span>
+        <span className={styles.toolPaletteBrushValue}>r{brushSize}</span>
       </label>
       <div className={styles.toolPaletteActions}>
         <button className={styles.toolPaletteAction} id="randomize-walls-btn" title="Generate organic wall shapes using Perlin noise" onClick={randomizeWalls}>

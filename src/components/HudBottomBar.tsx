@@ -49,8 +49,7 @@ const MouseRightIcon: React.FC = () => (
 );
 
 function renderClickHint(mode: number, brushSize: number) {
-  const b = brushSize * 2 + 1;
-  const brush = `⌀${b}`;
+  const brush = `r${brushSize}`;
   switch (mode) {
     case Modes.Clone:
       return (

@@ -33,14 +33,14 @@ test.describe('Navigation and UI', () => {
   test('Hint bar reflects the mode and live brush size', async ({ page }) => {
     // Paint tools + brush live in the always-on bottom-left palette
     await page.locator('#wall').click();
-    await expect(page.getByText(/place wall .* brush ⌀5/)).toBeVisible();
+    await expect(page.getByText(/place wall .* brush r2/)).toBeVisible();
 
     await page.locator('#kill').click();
-    await expect(page.getByText(/kill organism .* brush ⌀5/)).toBeVisible();
+    await expect(page.getByText(/kill organism .* brush r2/)).toBeVisible();
 
     // The brush slider feeds both the hint bar and the engine
     await page.locator('#brush-slider').fill('4');
-    await expect(page.getByText(/kill organism .* brush ⌀9/)).toBeVisible();
+    await expect(page.getByText(/kill organism .* brush r4/)).toBeVisible();
     expect(await page.evaluate(() => window.engine.env.controller.mode)).toBeDefined();
   });
 
