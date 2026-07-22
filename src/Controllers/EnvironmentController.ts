@@ -390,7 +390,12 @@ class EnvironmentController extends CanvasController{
             var b = WorldConfig.brush_size;
             ctx.strokeStyle = is_kill ? 'rgba(255, 60, 60, 0.7)' : 'rgba(0, 255, 65, 0.55)';
             ctx.lineWidth = 1;
-            ctx.strokeRect((this.mouse_c - b) * cs + 0.5, (this.mouse_r - b) * cs + 0.5, (b * 2 + 1) * cs - 1, (b * 2 + 1) * cs - 1);
+            // Ring the disc: centre on the hovered cell, radius to the painted edge
+            var centre_x = (this.mouse_c + 0.5) * cs;
+            var centre_y = (this.mouse_r + 0.5) * cs;
+            ctx.beginPath();
+            ctx.arc(centre_x, centre_y, (b + 0.5) * cs, 0, Math.PI * 2);
+            ctx.stroke();
         }
         else if (this.mode === Modes.Clone && this.org_to_clone != null) {
             // Mirrors Organism.isClear for a fresh (rotation: up) copy
