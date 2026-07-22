@@ -1,19 +1,19 @@
-const { test, expect, openWorldControls, closeModal, pauseEngine } = require('./helpers/fixtures');
+const { test, expect, pauseEngine } = require('./helpers/fixtures');
 
-test.describe('World controls', () => {
+// The world paint tools and one-shot terrain actions live in the always-on
+// bottom-left palette. These used to sit behind the World Controls modal, which
+// has since been folded into the palette (tools) and New Game (world setup).
+test.describe('World tools palette', () => {
   test.beforeEach(async ({ page }) => {
     await pauseEngine(page);
-    await openWorldControls(page);
   });
 
-  test('Clear walls empties the world of walls', async ({ page }) => {
+  test('Clear Walls empties the world of walls', async ({ page }) => {
     // The petri dish seeds the world with invincible walls
     const before = await page.evaluate(() =>
       window.engine.env.grid_map.grid.flat().filter(c => c.state.name.includes('wall')).length);
     expect(before).toBeGreaterThan(0);
 
-    // Clear Walls moved to the always-on palette; dismiss the modal covering it
-    await closeModal(page, 'world-modal');
     await page.locator('#clear-walls').click();
 
     const after = await page.evaluate(() =>
@@ -21,36 +21,21 @@ test.describe('World controls', () => {
     expect(after).toBe(0);
   });
 
-  test('Pause on extinction halts the sim when everything dies', async ({ page }) => {
-    await page.locator('#auto-pause').check();
+  test('Clear Life removes every organism but keeps the walls', async ({ page }) => {
+    expect(await page.evaluate(() => window.engine.env.organisms.length)).toBeGreaterThan(0);
 
-    // Kill everything and let the sim tick so removeOrganisms sees extinction
-    await page.evaluate(() => {
-      window.engine.start();
-      window.engine.env.organisms.forEach(o => o.die());
-    });
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#clear-life').click();
 
-    await expect.poll(() => page.evaluate(() => window.engine.running)).toBe(false);
-  });
-
-  test('Reset on extinction restarts and counts', async ({ page }) => {
-    await page.locator('#auto-pause').uncheck();
-    await page.locator('#auto-reset').check();
-    await expect(page.locator('#reset-count')).toContainText('Auto reset count: 0');
-
-    await page.evaluate(() => {
-      window.engine.start();
-      window.engine.env.organisms.forEach(o => o.die());
-    });
-
-    await expect.poll(() => page.evaluate(() => window.engine.env.reset_count)).toBeGreaterThan(0);
-    await expect(page.locator('#reset-count')).not.toContainText('Auto reset count: 0');
+    const state = await page.evaluate(() => ({
+      organisms: window.engine.env.organisms.length,
+      walls: window.engine.env.grid_map.grid.flat().filter(c => c.state.name.includes('wall')).length,
+    }));
+    expect(state.organisms).toBe(0);
+    expect(state.walls).toBeGreaterThan(0); // dish survives
   });
 
   test('Brush size slider drives the engine brush', async ({ page }) => {
-    // Brush + paint tools moved to the always-on palette; the modal only covers
-    // the canvas here, so dismiss it before painting
-    await closeModal(page, 'world-modal');
     await page.locator('#brush-slider').fill('0');
     await page.locator('#food').click();
 
@@ -68,9 +53,7 @@ test.describe('World controls', () => {
   });
 
   test('Seed Life paints random organisms into the world', async ({ page }) => {
-    // Seed Life is a brush tool in the palette now; a wide brush scatters a few
-    // random organisms per click. Dismiss the modal so the canvas is clickable.
-    await closeModal(page, 'world-modal');
+    // A wide brush scatters a few random organisms per click.
     await page.locator('#brush-slider').fill('15');
     await page.locator('#seed-life').click();
 
@@ -84,18 +67,5 @@ test.describe('World controls', () => {
 
     const after = await page.evaluate(() => window.engine.env.organisms.length);
     expect(after).toBeGreaterThan(before);
-  });
-
-  test('Resizing the grid rebuilds the world and keeps the dish', async ({ page }) => {
-    page.once('dialog', dialog => dialog.accept());
-    await page.locator('#cell-size').fill('10');
-    await page.locator('#resize').click();
-
-    const state = await page.evaluate(() => ({
-      cellSize: window.engine.env.grid_map.cell_size,
-      corner: window.engine.env.grid_map.cellAt(0, 0).state.name,
-    }));
-    expect(state.cellSize).toBe(10);
-    expect(state.corner).toBe('invincible_wall');
   });
 });

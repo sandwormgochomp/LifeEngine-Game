@@ -1,4 +1,4 @@
-const { test, expect, openPanel, openWorldControls } = require('./helpers/fixtures');
+const { test, expect, openPanel, openNewGame } = require('./helpers/fixtures');
 
 test.describe('Simulation Controls', () => {
   test('Each speed button sets its rate, and shows as the active one', async ({ page }) => {
@@ -32,21 +32,21 @@ test.describe('Simulation Controls', () => {
     await expect(page.locator('#speed-3')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('Clear Life removes organisms; Restart reseeds one', async ({ page }) => {
+  test('Clear Life empties the world; New Game reseeds one', async ({ page }) => {
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBeGreaterThan(0);
 
-    await openWorldControls(page);
+    // Clear Life is a one-shot palette action, sibling of Clear Walls/Radiation
     page.once('dialog', dialog => dialog.accept());
-    await page.locator('#clear-env').click();
+    await page.locator('#clear-life').click();
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBe(0);
 
-    // Restart is a distinct action: it reseeds the origin organism
-    page.once('dialog', dialog => dialog.accept());
-    await page.locator('#reset-env').click();
+    // New Game with life on reseeds a single origin organism
+    await openNewGame(page);
+    await page.locator('#newgame-start').click();
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBe(1);
   });
 
-  test('World is a circular petri dish by default, and it can be toggled off', async ({ page }) => {
+  test('World is a circular petri dish by default and survives a reset', async ({ page }) => {
     const states = await page.evaluate(() => {
       const env = window.engine.env;
       const center = env.grid_map.getCenter();
@@ -62,11 +62,6 @@ test.describe('Simulation Controls', () => {
     await page.evaluate(() => window.engine.env.reset(true));
     const cornerAfterReset = await page.evaluate(() => window.engine.env.grid_map.cellAt(0, 0).state.name);
     expect(cornerAfterReset).toBe('invincible_wall');
-
-    await openWorldControls(page);
-    await page.locator('#petri-dish-toggle').uncheck();
-    const corner = await page.evaluate(() => window.engine.env.grid_map.cellAt(0, 0).state.name);
-    expect(corner).toBe('empty');
   });
 
   test('Save panel downloads a world snapshot', async ({ page }) => {

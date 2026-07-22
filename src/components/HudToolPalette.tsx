@@ -67,6 +67,17 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
     Notifier.notify('Radiation cleared');
   };
 
+  // Wipe every organism but keep the terrain. reset(false) empties the world
+  // without reseeding, so unlike the Kill brush it clears the whole population
+  // at once and unlike New Game it leaves your walls in place.
+  const clearLife = () => {
+    if (!engine) return;
+    if (!window.confirm('Remove every organism? Walls are kept.')) return;
+    engine.env.reset(false);
+    engine.emitChange(true);
+    Notifier.notify('All organisms cleared');
+  };
+
   return (
     <div className={styles.toolPalette} data-testid="tool-palette">
       <span className={styles.toolPaletteTitle}>TOOLS</span>
@@ -105,6 +116,9 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
         </button>
         <button className={styles.toolPaletteAction} id="clear-radiation" title="Remove all radiation zones" onClick={clearRadiation}>
           Clear Radiation
+        </button>
+        <button className={styles.toolPaletteAction} id="clear-life" title="Wipe every organism and start from an empty world (walls are kept)" onClick={clearLife}>
+          Clear Life
         </button>
       </div>
     </div>

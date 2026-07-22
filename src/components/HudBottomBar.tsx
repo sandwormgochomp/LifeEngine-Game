@@ -10,7 +10,6 @@ interface HudBottomBarProps {
   activePanel: string | null;
   editorOpen: boolean;
   rulesOpen: boolean;
-  worldOpen: boolean;
   onItemClick: (item: string) => void;
 }
 
@@ -18,7 +17,6 @@ const toolbarItems = [
   { id: 'tool-save', iconClass: 'fa-floppy-disk', label: 'SAVE', item: 'save', title: 'Save or load a snapshot of the whole world' },
   { id: 'tool-edit', iconClass: 'fa-flask', label: 'EDIT', item: 'edit', title: 'Open the Organism Lab: design, edit, and deploy life forms' },
   { id: 'tool-rules', iconClass: 'fa-dna', label: 'EVOLUTION', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
-  { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', item: 'environment', title: 'World tools: food, walls, radiation, and terrain generation' },
   { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats', title: 'Population, species, and evolution charts over time' },
   { id: 'tool-about', iconClass: 'fa-circle-info', label: 'ABOUT', item: 'about', title: 'What the cells do, the hotkeys, and project links' },
 ];
@@ -116,7 +114,7 @@ function renderClickHint(mode: number, brushSize: number) {
   }
 }
 
-const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editorOpen, rulesOpen, worldOpen, onItemClick }) => {
+const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editorOpen, rulesOpen, onItemClick }) => {
   const envMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // hint bar tracks the slider
@@ -125,7 +123,6 @@ const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editor
   const isActive = (item: string) => {
     if (item === 'edit') return editorOpen;
     if (item === 'rules') return rulesOpen;
-    if (item === 'environment') return worldOpen;
     return activePanel === item;
   };
 

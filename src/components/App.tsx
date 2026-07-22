@@ -24,7 +24,6 @@ import MicroscopeOverlay from './MicroscopeOverlay';
 
 // Tab content
 import SaveTab from './Tabs/SaveTab';
-import WorldControlsModal from './WorldControlsModal';
 import NewGameModal from './NewGameModal';
 import EvolutionControlsModal from './EvolutionControlsModal';
 import StatsTab from './Tabs/StatsTab';
@@ -58,7 +57,6 @@ const App: React.FC = () => {
   const [lifeformsOpen, setLifeformsOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [worldOpen, setWorldOpen] = useState(false);
   const [newGameOpen, setNewGameOpen] = useState(false);
   const [brainOpen, setBrainOpen] = useState(false);
   const [headless, setHeadless] = useState(WorldConfig.headless);
@@ -102,8 +100,6 @@ const App: React.FC = () => {
         setPresetsOpen(false);
       } else if (rulesOpen) {
         setRulesOpen(false);
-      } else if (worldOpen) {
-        setWorldOpen(false);
       } else if (lifeformsOpen) {
         setLifeformsOpen(false);
       } else if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select)) {
@@ -118,7 +114,7 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, worldOpen, brainOpen, worldsOpen, newGameOpen]);
+  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, brainOpen, worldsOpen, newGameOpen]);
 
   // Headless skips all drawing so the simulation runs far faster; repaint
   // everything on the way back so the canvas isn't left stale.
@@ -220,7 +216,6 @@ const App: React.FC = () => {
   // Modals are mutually exclusive; the dock and popups can coexist with them
   const closeModals = () => {
     setRulesOpen(false);
-    setWorldOpen(false);
     setPresetsOpen(false);
     setLifeformsOpen(false);
     setBrainOpen(false);
@@ -242,11 +237,6 @@ const App: React.FC = () => {
       const next = !rulesOpen;
       closeModals();
       setRulesOpen(next);
-      setActivePanel(null);
-    } else if (item === 'environment') {
-      const next = !worldOpen;
-      closeModals();
-      setWorldOpen(next);
       setActivePanel(null);
     } else {
       setActivePanel(prev => prev === item ? null : item);
@@ -293,7 +283,6 @@ const App: React.FC = () => {
         activePanel={activePanel}
         editorOpen={editorOpen}
         rulesOpen={rulesOpen}
-        worldOpen={worldOpen}
         onItemClick={handleToolbarClick}
       />
       <HudNotifications />
@@ -335,10 +324,6 @@ const App: React.FC = () => {
 
       {rulesOpen && (
         <EvolutionControlsModal engine={engine} onClose={() => setRulesOpen(false)} />
-      )}
-
-      {worldOpen && (
-        <WorldControlsModal engine={engine} onClose={() => setWorldOpen(false)} />
       )}
 
       {newGameOpen && (

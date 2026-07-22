@@ -1,4 +1,4 @@
-const { test, expect, openWorldControls, pauseEngine } = require('./helpers/fixtures');
+const { test, expect, openNewGame, pauseEngine } = require('./helpers/fixtures');
 
 // Fraction of wall cells that touch another wall cell orthogonally. This, not
 // the wall count, is what distinguishes a real noise field from static: a
@@ -63,14 +63,12 @@ test.describe('Fossil record reset', () => {
   // Regression: clear_record() reset extant_species/extinct_species to [],
   // while init() and every access site treat them as objects keyed by species
   // name. Arrays only worked by accident, since they take string properties
-  // too. Restart runs clear_record and then reseeds, so it exercises the
+  // too. New Game runs clear_record and then reseeds, so it exercises the
   // wiped map being written to and read back.
-  test('restart rebuilds the species map from the reseeded organism', async ({ page }) => {
+  test('new game rebuilds the species map from the reseeded organism', async ({ page }) => {
     await pauseEngine(page);
-    await openWorldControls(page);
-
-    page.once('dialog', dialog => dialog.accept());
-    await page.locator('#reset-env').click();
+    await openNewGame(page);
+    await page.locator('#newgame-start').click();
 
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBe(1);
 

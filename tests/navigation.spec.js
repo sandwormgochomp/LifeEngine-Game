@@ -1,4 +1,4 @@
-const { test, expect, openPanel, openEditor, openWorldControls, closeModal } = require('./helpers/fixtures');
+const { test, expect, openPanel, openEditor, openNewGame, closeModal } = require('./helpers/fixtures');
 
 test.describe('Navigation and UI', () => {
   test('Page loads and displays title', async ({ page }) => {
@@ -18,11 +18,8 @@ test.describe('Navigation and UI', () => {
 
     // Modals: opened from the toolbar, dismissed with Escape (the backdrop
     // deliberately covers the toolbar so it can never occlude modal content)
-    await openWorldControls(page);
-    await expect(page.locator('#tool-environment')).toHaveClass(/toolbarBtnActive/);
-    await closeModal(page, 'world-modal');
-
     await openPanel(page, 'rules');
+    await expect(page.locator('#tool-rules')).toHaveClass(/toolbarBtnActive/);
     await expect(page.getByTestId('evolution-modal')).toBeVisible();
     await closeModal(page, 'evolution-modal');
 
@@ -47,12 +44,12 @@ test.describe('Navigation and UI', () => {
     expect(await page.evaluate(() => window.engine.env.controller.mode)).toBeDefined();
   });
 
-  test('Escape closes the popup first, then the editor dock', async ({ page }) => {
+  test('Escape closes the modal first, then the editor dock', async ({ page }) => {
     await openEditor(page);
-    await openPanel(page, 'environment');
+    await openNewGame(page);
 
     await page.keyboard.press('Escape');
-    await expect(page.locator('#reset-env')).toBeHidden();
+    await expect(page.getByTestId('newgame-modal')).toBeHidden();
     await expect(page.getByTestId('editor-dock')).toBeVisible();
 
     await page.keyboard.press('Escape');

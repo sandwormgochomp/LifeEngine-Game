@@ -59,4 +59,33 @@ test.describe('New Game dialog', () => {
     const after = await page.evaluate(() => window.engine.env.organisms.length);
     expect(after).toBe(before);
   });
+
+  test('Pause on extinction halts the sim when everything dies', async ({ page }) => {
+    await page.locator('#newgame-auto-pause').check();
+    await page.locator('#newgame-start').click();
+    await page.locator('[data-testid="newgame-modal"]').waitFor({ state: 'hidden' });
+
+    // Kill everything and let the sim tick so removeOrganisms sees extinction
+    await page.evaluate(() => {
+      window.engine.start();
+      window.engine.env.organisms.forEach(o => o.die());
+    });
+
+    await expect.poll(() => page.evaluate(() => window.engine.running)).toBe(false);
+  });
+
+  test('Reset on extinction restarts and counts', async ({ page }) => {
+    await page.locator('#newgame-auto-pause').uncheck();
+    await page.locator('#newgame-auto-reset').check();
+    await page.locator('#newgame-start').click();
+    await page.locator('[data-testid="newgame-modal"]').waitFor({ state: 'hidden' });
+
+    const before = await page.evaluate(() => window.engine.env.reset_count);
+    await page.evaluate(() => {
+      window.engine.start();
+      window.engine.env.organisms.forEach(o => o.die());
+    });
+
+    await expect.poll(() => page.evaluate(() => window.engine.env.reset_count)).toBeGreaterThan(before);
+  });
 });

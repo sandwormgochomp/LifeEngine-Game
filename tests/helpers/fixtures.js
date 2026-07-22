@@ -15,8 +15,8 @@ const test = base.test.extend({
   },
 });
 
-// Toggle a toolbar item by name (save|stats open popups; environment|rules open
-// modals; edit opens the dock). Named openPanel for historical reasons.
+// Toggle a toolbar item by name (save|stats open popups; rules opens the
+// evolution modal; edit opens the dock). Named openPanel for historical reasons.
 async function openPanel(page, panelName) {
   await page.locator(`#tool-${panelName}`).click();
 }
@@ -26,10 +26,10 @@ async function openEditor(page) {
   await page.locator('#tool-edit').click();
 }
 
-// Open the world controls modal and wait for it
-async function openWorldControls(page) {
-  await page.locator('#tool-environment').click();
-  await page.locator('[data-testid="world-modal"]').waitFor();
+// Open the New Game setup dialog from the top-left button and wait for it
+async function openNewGame(page) {
+  await page.locator('#new-game').click();
+  await page.locator('[data-testid="newgame-modal"]').waitFor();
 }
 
 // Dismiss the open modal. The modal backdrop covers the toolbar, so a modal
@@ -76,4 +76,4 @@ async function localCellState(page, dc, dr) {
   }, [dc, dr]);
 }
 
-module.exports = { test, expect: base.expect, openPanel, openEditor, openWorldControls, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, localCellState };
+module.exports = { test, expect: base.expect, openPanel, openEditor, openNewGame, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, localCellState };
