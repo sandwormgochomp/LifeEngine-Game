@@ -107,7 +107,11 @@ class Renderer {
         cell.state.render(this.ctx!, cell, this.cell_size, this.env);
         this.ctx!.globalAlpha = 1;
 
-        if (this.env && this.env.radiation_map && this.env.radiation_map.has(cell.col + "," + cell.row)) {
+        // Radiation is a niche tool, so the map is empty on the vast majority of
+        // frames. Gate on its size first: that skips the per-cell key string that
+        // would otherwise be built for every rendered cell every frame.
+        if (this.env && this.env.radiation_map && this.env.radiation_map.size
+            && this.env.radiation_map.has(cell.col + "," + cell.row)) {
             this.ctx!.fillStyle = 'rgba(0, 255, 0, 0.2)';
             this.ctx!.fillRect(cell.x, cell.y, this.cell_size, this.cell_size);
         }
