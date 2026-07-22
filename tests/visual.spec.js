@@ -15,9 +15,12 @@ test.describe('Visual Regression Tests', () => {
     // Open the editor dock
     await openEditor(page);
 
-    // Verify the editor dock visually matches the snapshot
+    // Verify the editor dock visually matches the snapshot. The cell-palette
+    // swatches are canvas-drawn with gradient decorations that don't rasterize
+    // pixel-identically across environments, so a small tolerance covers that
+    // anti-aliasing noise the way the dashboard shot already does.
     const dock = page.getByTestId('editor-dock');
-    await expect(dock).toHaveScreenshot('editor-dock.png');
+    await expect(dock).toHaveScreenshot('editor-dock.png', { maxDiffPixelRatio: 0.02 });
   });
 
   test('Editor dock with Fly Catcher preset', async ({ page }) => {
@@ -29,8 +32,9 @@ test.describe('Visual Regression Tests', () => {
     // Load the Fly Catcher preset
     await loadPreset(page, 'flycatcher');
 
-    // Verify the editor dock showing the Fly Catcher visually matches the snapshot
+    // Verify the editor dock showing the Fly Catcher visually matches the
+    // snapshot. Same canvas-swatch anti-aliasing tolerance as above.
     const dock = page.getByTestId('editor-dock');
-    await expect(dock).toHaveScreenshot('editor-dock-flycatcher.png');
+    await expect(dock).toHaveScreenshot('editor-dock-flycatcher.png', { maxDiffPixelRatio: 0.02 });
   });
 });
