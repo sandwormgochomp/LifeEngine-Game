@@ -1,6 +1,6 @@
 const { test, expect, pauseEngine } = require('./helpers/fixtures');
 
-// The top-left "New Game" button opens a setup dialog; nothing changes until
+// The bottom-toolbar "New Game" button opens a setup dialog; nothing changes until
 // Start is pressed, and Start applies every option at once.
 test.describe('New Game dialog', () => {
   test.beforeEach(async ({ page }) => {

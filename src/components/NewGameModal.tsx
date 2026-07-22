@@ -9,7 +9,7 @@ interface NewGameModalProps {
   onClose: () => void;
 }
 
-/* The "New Game" setup dialog, reached from the top-left button. It gathers the
+/* The "New Game" setup dialog, reached from the bottom-toolbar button. It gathers the
    world options that used to be scattered through World Controls and applies
    them all at once when the user commits — so nothing takes effect until they
    press Start, and Start itself is the confirmation. */

@@ -230,7 +230,9 @@ const App: React.FC = () => {
   };
 
   const handleToolbarClick = (item: string) => {
-    if (item === 'edit') {
+    if (item === 'new') {
+      handleNewGame();
+    } else if (item === 'edit') {
       setEditorOpen(open => !open);
       setActivePanel(null);
     } else if (item === 'rules') {
@@ -274,7 +276,7 @@ const App: React.FC = () => {
       <MicroscopeOverlay engine={engine} />
 
       {/* HUD Regions */}
-      <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} onNewGame={handleNewGame} />
+      <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />
       <HudTopCenter engine={engine} onLifeformsClick={() => setLifeformsOpen(open => !open)} />
       <HudTopRight engine={engine} />
       <HudToolPalette engine={engine} />

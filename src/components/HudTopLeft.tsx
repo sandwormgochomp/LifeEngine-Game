@@ -4,31 +4,16 @@ import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
 import { SPEED_MODES } from '../Engine';
 
-import Notifier from '../Utils/Notifier';
 import WorldConfig from '../WorldConfig';
 
 interface HudTopLeftProps {
   engine: Engine | null;
   headless: boolean;
   onToggleHeadless: () => void;
-  onNewGame: () => void;
 }
 
-const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadless, onNewGame }) => {
+const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadless }) => {
   const speedIndex = useEngineValue(engine, e => e.speed_index, 0);
-
-  const handleSave = () => {
-    if (!engine?.env) return;
-    const raw = engine.env.serialize();
-    const blob = new Blob([JSON.stringify(raw, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `life_engine_world_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    Notifier.notify('World saved successfully');
-  };
 
   return (
     <div className={styles.topLeft}>
@@ -52,19 +37,8 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadl
           </button>
         ))}
         <button
-          id="new-game"
-          className={`${styles.playbackBtn} ${styles.playbackGroupBreak}`}
-          onClick={onNewGame}
-          title="New Game"
-        >
-          <i className="fa-solid fa-seedling" />
-        </button>
-        <button className={styles.playbackBtn} onClick={handleSave} title="Save">
-          <i className="fa-solid fa-floppy-disk" />
-        </button>
-        <button
           id="headless-toggle"
-          className={`${styles.playbackBtn} ${headless ? styles.playbackBtnActive : ''}`}
+          className={`${styles.playbackBtn} ${styles.playbackGroupBreak} ${headless ? styles.playbackBtnActive : ''}`}
           onClick={onToggleHeadless}
           title="Stop drawing the world so the simulation runs much faster. Hotkey: H"
         >

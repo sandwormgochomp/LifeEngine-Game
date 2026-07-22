@@ -26,7 +26,7 @@ async function openEditor(page) {
   await page.locator('#tool-edit').click();
 }
 
-// Open the New Game setup dialog from the top-left button and wait for it
+// Open the New Game setup dialog from the bottom-toolbar button and wait for it
 async function openNewGame(page) {
   await page.locator('#new-game').click();
   await page.locator('[data-testid="newgame-modal"]').waitFor();
