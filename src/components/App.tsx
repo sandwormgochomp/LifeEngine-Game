@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/App.module.css';
 import Engine from '../Engine';
+import FossilRecord, { type FossilRecordType } from '../Stats/FossilRecord';
+import { generateOrganismName } from '../Utils/NameGenerator';
+import type { CellCountMap } from '../Stats/Species';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
 import WorldConfig from '../WorldConfig';
@@ -42,6 +45,11 @@ const NIGHT_VOID = '#000000';
 declare global {
   interface Window {
     engine?: Engine;
+    // The species registry is a module singleton; exposing it alongside the
+    // engine lets the Playwright suite (and debugging) reach the fossil record.
+    fossilRecord?: FossilRecordType;
+    // Pure body-plan -> name function, exposed for the naming test suite.
+    generateOrganismName?: (cell_counts: CellCountMap) => string;
   }
 }
 
@@ -80,6 +88,8 @@ const App: React.FC = () => {
       deco_canvas: decoCanvasRef.current!,
     });
     window.engine = newEngine;
+    window.fossilRecord = FossilRecord;
+    window.generateOrganismName = generateOrganismName;
     newEngine.start();
     setEngine(newEngine);
 

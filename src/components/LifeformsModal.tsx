@@ -43,10 +43,12 @@ const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, onClose, onOpen
       const seen = new Set<string>();
 
       // Existing cards keep their slot; ordering never changes for a species
-      // that is already on screen.
+      // that is already on screen. Match on the species *object*, not the name:
+      // generated names describe the body plan, so a reseeded identical organism
+      // reclaims the dead one's name -- identity is what tells them apart.
       for (const entry of prev) {
         const species = live[entry.name];
-        if (species) {
+        if (species && species === entry.species) {
           next.push({ ...entry, species, population: species.population, extinct: false });
           seen.add(entry.name);
         } else if (hovering.current) {

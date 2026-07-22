@@ -65,6 +65,7 @@ export interface FossilRecordType {
     setEnv(env: WorldEnvironment): void;
     addSpecies(org: Organism, ancestor: Species | null): Species;
     addSpeciesObj(species: Species): Species | undefined;
+    uniqueSpeciesName(base: string): string;
     changeSpeciesName(species: Species, new_name: string): void;
     numExtantSpecies(): number;
     numExtinctSpecies(): number;
@@ -105,6 +106,10 @@ const FossilRecord: FossilRecordType = {
 
     addSpecies: function(this: FossilRecordType, org: Organism, ancestor: Species | null): Species {
         var new_species = new Species(org.anatomy, ancestor, this.env.total_ticks);
+        /* Generated names describe the body plan, so different lineages with the
+           same anatomy collide. This map is keyed by name, so a collision would
+           silently overwrite the earlier species -- disambiguate before insert. */
+        new_species.name = this.uniqueSpeciesName(new_species.name);
         this.extant_species[new_species.name] = new_species;
         org.species = new_species;
         return new_species;
@@ -117,6 +122,23 @@ const FossilRecord: FossilRecordType = {
         }
         this.extant_species[species.name] = species;
         return species;
+    },
+
+    // Returns `base` if free, else appends a roman-numeral suffix (base II,
+    // base III, ...) until it finds an unused name across both the extant and
+    // extinct registries, which together own the keyspace.
+    uniqueSpeciesName: function(this: FossilRecordType, base: string): string {
+        const taken = (name: string): boolean =>
+            !!this.extant_species[name] || !!this.extinct_species[name];
+        if (!taken(base)) return base;
+        const roman = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+        let i = 0;
+        let candidate: string;
+        do {
+            candidate = i < roman.length ? `${base} ${roman[i]}` : `${base} ${i + 2}`;
+            i++;
+        } while (taken(candidate));
+        return candidate;
     },
 
     changeSpeciesName: function(this: FossilRecordType, species: Species, new_name: string): void {

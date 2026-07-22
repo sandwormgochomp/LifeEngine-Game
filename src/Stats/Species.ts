@@ -1,4 +1,5 @@
 import CellStates from "../Organism/Cell/CellStates";
+import { generateOrganismName } from "../Utils/NameGenerator";
 // Circular with FossilRecord (which imports Species); safe because both only
 // touch each other inside methods, never during module evaluation.
 import FossilRecord from "./FossilRecord";
@@ -36,9 +37,16 @@ class Species {
         this.cumulative_pop = 1;
         this.start_tick = start_tick;
         this.end_tick = -1;
-        this.name = Math.random().toString(36).substr(2, 10);
         this.extinct = false;
         this.calcAnatomyDetails();
+        /* Name derived from the body plan (e.g. "Glowgrazer"), once cell_counts
+           exists. The anatomy-less case is loadRaw's `new Species(null,...)`,
+           whose name is overwritten from the saved key immediately after, so the
+           random fallback is only ever a momentary placeholder. FossilRecord
+           disambiguates collisions at registration via uniqueSpeciesName. */
+        this.name = this.cell_counts
+            ? generateOrganismName(this.cell_counts)
+            : Math.random().toString(36).substr(2, 10);
     }
 
     calcAnatomyDetails(): void {
