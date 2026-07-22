@@ -34,7 +34,7 @@ test.describe('Navigation and UI', () => {
   });
 
   test('Hint bar reflects the mode and live brush size', async ({ page }) => {
-    await openWorldControls(page);
+    // Paint tools + brush live in the always-on bottom-left palette
     await page.locator('#wall').click();
     await expect(page.getByText(/place wall .* brush 5×5/)).toBeVisible();
 

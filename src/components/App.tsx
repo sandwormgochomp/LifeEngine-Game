@@ -11,6 +11,7 @@ import HudTopLeft from './HudTopLeft';
 import HudTopCenter from './HudTopCenter';
 import HudTopRight from './HudTopRight';
 import HudBottomBar from './HudBottomBar';
+import HudToolPalette from './HudToolPalette';
 import HudPanel from './HudPanel';
 import HudNotifications from './HudNotifications';
 import EditorDock from './EditorDock';
@@ -282,6 +283,7 @@ const App: React.FC = () => {
       <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />
       <HudTopCenter engine={engine} onLifeformsClick={() => setLifeformsOpen(open => !open)} />
       <HudTopRight engine={engine} />
+      <HudToolPalette engine={engine} />
       <HudBottomBar
         engine={engine}
         activePanel={activePanel}

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
-import Modes from '../Controllers/ControlModes';
 import WorldConfig from '../WorldConfig';
 import type { WorldConfigShape } from '../WorldConfig';
 import Notifier from '../Utils/Notifier';
@@ -12,17 +11,7 @@ interface WorldControlsModalProps {
   onClose: () => void;
 }
 
-const TOOLS = [
-  { id: 'food', label: 'Food', mode: Modes.FoodDrop, title: 'Paint food onto the world; organisms eat it to survive and reproduce. Hotkey: F' },
-  { id: 'wall', label: 'Wall', mode: Modes.WallDrop, title: 'Paint walls that block movement (killers and explosions can destroy them). Hotkey: D' },
-  { id: 'invincible-wall', label: 'Invincible Wall', mode: Modes.InvincibleWallDrop, title: 'Paint permanent walls that nothing can destroy' },
-  { id: 'radiation-drop', label: 'Radiation', mode: Modes.RadiationDrop, title: 'Paint radiation zones that raise mutation rates for organisms inside. Hotkey: R' },
-  { id: 'kill', label: 'Kill', mode: Modes.ClickKill, title: 'Kill organisms under the brush. Hotkey: G' },
-  { id: 'drag', label: 'Drag', mode: Modes.Drag, title: 'Pan the world view by dragging (middle-click drags in any mode). Hotkey: S' },
-];
-
 const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose }) => {
-  const activeMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   const resetCount = useEngineValue(engine, e => e.env.reset_count, 0);
 
   // WorldConfig is a plain module object; mirror the flags we own here
@@ -31,7 +20,6 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
     auto_reset: WorldConfig.auto_reset,
     auto_pause: WorldConfig.auto_pause,
     clear_walls_on_reset: WorldConfig.clear_walls_on_reset,
-    brush_size: WorldConfig.brush_size,
   });
   const [cellSize, setCellSize] = useState(5);
   const [fillWindow, setFillWindow] = useState(true);
@@ -40,17 +28,11 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
   const [numRandom, setNumRandom] = useState(100);
 
   // Generic in the key so `value` is the type that flag actually holds
-  // (boolean for the toggles, number for brush_size) rather than a union
+  // (boolean for the toggles) rather than a union
   const setFlag = <K extends keyof typeof config>(key: K, value: WorldConfigShape[K]) => {
     WorldConfig[key] = value;
     setConfig(prev => ({ ...prev, [key]: value }));
     engine?.emitChange(true);
-  };
-
-  const setMode = (mode: number) => {
-    if (!engine) return;
-    engine.env.controller.mode = mode;
-    engine.emitChange(true);
   };
 
   const handlePetriToggle = (on: boolean) => {
@@ -111,35 +93,6 @@ const WorldControlsModal: React.FC<WorldControlsModalProps> = ({ engine, onClose
         </div>
 
         <div className={styles.ctrlBody}>
-          <section className={styles.ctrlGroup}>
-            <h4>Tools</h4>
-            <div className={styles.buttonGroup}>
-              {TOOLS.map(tool => (
-                <button
-                  key={tool.id}
-                  className={`env-mode-btn ${styles.ctrlBtn} ${activeMode === tool.mode ? styles.active : ''}`}
-                  id={tool.id}
-                  title={tool.title}
-                  onClick={() => setMode(tool.mode)}
-                >
-                  {tool.label}
-                </button>
-              ))}
-            </div>
-            <label className={styles.ctrlRow} title="Size of the brush for food, walls, radiation and killing">
-              <span className={styles.ctrlLabel}>Brush size</span>
-              <input
-                type="range"
-                id="brush-slider"
-                min={0}
-                max={15}
-                value={config.brush_size}
-                onChange={e => setFlag('brush_size', parseInt(e.target.value))}
-              />
-              <span className={styles.ctrlValue}>{config.brush_size * 2 + 1}×{config.brush_size * 2 + 1}</span>
-            </label>
-          </section>
-
           <section className={styles.ctrlGroup}>
             <h4>Terrain</h4>
             <div className={styles.buttonGroup}>

@@ -1,10 +1,9 @@
-const { test, expect, openWorldControls, closeModal } = require('./helpers/fixtures');
+const { test, expect, openWorldControls } = require('./helpers/fixtures');
 
 test.describe('Radiation Tool', () => {
   test.beforeEach(async ({ page }) => {
-    await openWorldControls(page);
+    // Paint tools live in the always-on bottom-left palette, no modal needed
     await page.locator('#radiation-drop').click();
-    await closeModal(page, 'world-modal'); // uncover the canvas
   });
 
   test('Placing and clearing radiation', async ({ page }) => {

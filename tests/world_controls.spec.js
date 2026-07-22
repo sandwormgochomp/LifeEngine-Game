@@ -46,9 +46,11 @@ test.describe('World controls', () => {
   });
 
   test('Brush size slider drives the engine brush', async ({ page }) => {
+    // Brush + paint tools moved to the always-on palette; the modal only covers
+    // the canvas here, so dismiss it before painting
+    await closeModal(page, 'world-modal');
     await page.locator('#brush-slider').fill('0');
     await page.locator('#food').click();
-    await closeModal(page, 'world-modal');
 
     // Sim is paused, so a brush of 0 changes exactly the clicked cell (5px cells)
     const before = await page.evaluate(() =>
