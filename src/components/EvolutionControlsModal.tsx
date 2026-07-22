@@ -171,9 +171,8 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
       <label key={field.key} className={styles.ctrlRow} title={field.title}>
         <span className={styles.ctrlLabel}>{field.label}</span>
         <input
-          type="number"
+          type="range"
           id={field.key}
-          className={styles.ctrlNumber}
           value={params[field.key]}
           min={field.min}
           max={field.max}
@@ -183,6 +182,7 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
             if (!Number.isNaN(value)) setParam(field.key, value);
           }}
         />
+        <span className={styles.ctrlValue}>{params[field.key]}</span>
       </label>
     );
   };

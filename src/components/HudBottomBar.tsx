@@ -17,7 +17,7 @@ interface HudBottomBarProps {
 const toolbarItems = [
   { id: 'tool-save', iconClass: 'fa-floppy-disk', label: 'SAVE', item: 'save', title: 'Save or load a snapshot of the whole world' },
   { id: 'tool-edit', iconClass: 'fa-flask', label: 'EDIT', item: 'edit', title: 'Open the Organism Lab: design, edit, and deploy life forms' },
-  { id: 'tool-rules', iconClass: 'fa-book', label: 'RULES', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
+  { id: 'tool-rules', iconClass: 'fa-dna', label: 'EVOLUTION', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
   { id: 'tool-environment', iconClass: 'fa-gear', label: 'ENVIRONMENT', item: 'environment', title: 'World tools: food, walls, radiation, and terrain generation' },
   { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats', title: 'Population, species, and evolution charts over time' },
   { id: 'tool-about', iconClass: 'fa-circle-info', label: 'ABOUT', item: 'about', title: 'What the cells do, the hotkeys, and project links' },

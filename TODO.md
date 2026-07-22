@@ -11,8 +11,8 @@
   - [x] Reset on extinction
   - [x] Pause on extinction
 - [ ] Remove World Controls / "Environment" once basically everything is moved elsewhere
-- [ ] "Rules" is now "Evolution" and has a DNA iicon
-  - [ ] Instead of inputs use sliders
+- [x] "Rules" is now "Evolution" and has a DNA iicon
+  - [x] Instead of inputs use sliders
 - [x] Select is a tool (the first one) instead of being in the center hud group
 
 
