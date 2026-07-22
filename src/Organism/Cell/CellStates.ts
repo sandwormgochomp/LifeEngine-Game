@@ -227,34 +227,87 @@ class InvincibleWall extends CellState<'invincible_wall'> {
     }
     render(ctx: CanvasRenderingContext2D, cell: RenderCellLike, size: number): void {
         // Petri-dish glass (flagged by WorldEnvironment.buildPetriDish):
-        // 16-bit retro pixel-art shaded glass dish with top-left specular highlights
+        // 16-bit retro pixel-art glass dish -- cool ice-blue shading with
+        // dithered band transitions and specular light on BOTH edges (glass
+        // catches light on the shadow side too, which is what sells it).
         if (cell.dish_glass) {
             var tier = cell.dish_tier || 0;
-            var light = cell.dish_light || 0;
+            // Checker dither nudges each cell's light up or down so the shade
+            // bands around the ring break up into chunky 16-bit dithering
+            // instead of hard color seams.
+            var dither = ((cell.col || 0) + (cell.row || 0)) % 2 === 0;
+            var light = (cell.dish_light || 0) + (dither ? 0.07 : -0.07);
 
             if (tier === 1) {
-                // Inner Glass Lip
-                ctx.fillStyle = light > 0.35 ? '#2A8570' : (light > -0.35 ? '#16423A' : '#0A201B');
+                // Inner Glass Lip -- pale refracted edge where glass meets the dish floor
+                ctx.fillStyle = light > 0.35 ? '#8FD0DA' : (light > -0.35 ? '#33616E' : '#16303A');
             } else if (tier === 2) {
-                // Main Glass Rim
-                ctx.fillStyle = light > 0.35 ? '#52F0CB' : (light > -0.35 ? '#247867' : '#144238');
+                // Main Glass Rim -- the glass body, near-white where the light hits
+                ctx.fillStyle = light > 0.35 ? '#D9F6FA' : (light > -0.35 ? '#57A0B0' : '#204955');
             } else if (tier === 3) {
                 // Outer Shadow Rim
-                ctx.fillStyle = light > 0.35 ? '#1C5247' : (light > -0.35 ? '#0E2E28' : '#071814');
+                ctx.fillStyle = light > 0.35 ? '#2E5560' : (light > -0.35 ? '#11282F' : '#070F13');
             } else {
                 // Outer Void
                 ctx.fillStyle = '#05050A';
             }
             ctx.fillRect(cell.x, cell.y, size, size);
 
-            // Add pixel specular highlight corner on the main rim at the top-left
-            if (tier === 2 && light > 0.6 && size >= 4) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-                ctx.fillRect(cell.x, cell.y, Math.max(1, Math.floor(size * 0.35)), Math.max(1, Math.floor(size * 0.35)));
+            if (tier === 2 && size >= 4) {
+                // Pixel specular highlight corner on the lit (top-left) side of the rim
+                if (light > 0.6) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                    ctx.fillRect(cell.x, cell.y, Math.max(1, Math.floor(size * 0.35)), Math.max(1, Math.floor(size * 0.35)));
+                }
+                // Faint rim-light on the shadow (bottom-right) side
+                if (light < -0.7) {
+                    var rl = Math.max(1, Math.floor(size * 0.3));
+                    ctx.fillStyle = 'rgba(190, 230, 240, 0.35)';
+                    ctx.fillRect(cell.x + size - rl, cell.y + size - rl, rl, rl);
+                }
             }
             return;
         }
-        super.render(ctx, cell, size);
+
+        // Painted "Glass" walls: translucent pixel-art panes instead of a flat
+        // slab. Every layer repaints from the opaque backdrop first, so dirty-
+        // cell re-renders never accumulate alpha. Self-contained per cell (no
+        // neighbor reads) so a cell never goes stale when the brush paints or
+        // erases next to it.
+        var x = Math.floor(cell.x);
+        var y = Math.floor(cell.y);
+        var sz = Math.floor(size);
+        if (sz <= 3) {
+            ctx.fillStyle = '#5E93A3';
+            ctx.fillRect(x, y, sz, sz);
+            return;
+        }
+        // World background showing through the pane
+        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#05050A';
+        ctx.fillRect(x, y, sz, sz);
+        ctx.fillStyle = 'rgba(126, 195, 214, 0.30)';
+        ctx.fillRect(x, y, sz, sz);
+
+        var px = Math.max(1, Math.floor(sz / 6)); // pixel-art unit
+        // Lit top & left edges, shaded bottom & right edges
+        ctx.fillStyle = 'rgba(215, 243, 250, 0.55)';
+        ctx.fillRect(x, y, sz, px);
+        ctx.fillRect(x, y, px, sz);
+        ctx.fillStyle = 'rgba(8, 24, 32, 0.55)';
+        ctx.fillRect(x, y + sz - px, sz, px);
+        ctx.fillRect(x + sz - px, y, px, sz);
+
+        // Stepped diagonal shine streak, top-right toward bottom-left
+        if (sz >= 6) {
+            ctx.fillStyle = 'rgba(235, 250, 253, 0.5)';
+            var steps = Math.floor(sz / px);
+            for (var i = 0; i < steps; i++) {
+                var sx = x + sz - px * (i + 2);
+                var sy = y + px * (i + 1);
+                if (sx >= x + px && sy <= y + sz - px * 2)
+                    ctx.fillRect(sx, sy, px, px);
+            }
+        }
     }
 }
 class Eye extends CellState<'eye'> {

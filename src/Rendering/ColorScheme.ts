@@ -26,7 +26,7 @@ var color_scheme: Record<CellName | 'eye-slit', string> = {
     "healer":"#0AEBAF",
     "explosive":"#FF6B00",
     "explosion":"#FFEA00",
-    "invincible_wall":"#2F3640",
+    "invincible_wall":"#5E93A3",
     "poison":"#C2FF00",
     "common":"#808080",
     "pheromone":"#FF00FF",
