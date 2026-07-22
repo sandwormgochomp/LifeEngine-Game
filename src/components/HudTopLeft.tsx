@@ -11,18 +11,11 @@ interface HudTopLeftProps {
   engine: Engine | null;
   headless: boolean;
   onToggleHeadless: () => void;
+  onNewGame: () => void;
 }
 
-const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadless }) => {
+const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadless, onNewGame }) => {
   const speedIndex = useEngineValue(engine, e => e.speed_index, 0);
-
-  const handleRestart = () => {
-    if (!engine?.env) return;
-    if (!window.confirm('Restart simulation and reset the world environment?')) return;
-    engine.env.reset(true);
-    engine.emitChange(true);
-    Notifier.notify('Simulation restarted');
-  };
 
   const handleSave = () => {
     if (!engine?.env) return;
@@ -59,11 +52,12 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadl
           </button>
         ))}
         <button
+          id="new-game"
           className={`${styles.playbackBtn} ${styles.playbackGroupBreak}`}
-          onClick={handleRestart}
-          title="Restart Simulation"
+          onClick={onNewGame}
+          title="New Game"
         >
-          <i className="fa-solid fa-rotate" />
+          <i className="fa-solid fa-seedling" />
         </button>
         <button className={styles.playbackBtn} onClick={handleSave} title="Save">
           <i className="fa-solid fa-floppy-disk" />

@@ -25,6 +25,7 @@ import MicroscopeOverlay from './MicroscopeOverlay';
 // Tab content
 import SaveTab from './Tabs/SaveTab';
 import WorldControlsModal from './WorldControlsModal';
+import NewGameModal from './NewGameModal';
 import EvolutionControlsModal from './EvolutionControlsModal';
 import StatsTab from './Tabs/StatsTab';
 import AboutTab from './Tabs/AboutTab';
@@ -58,6 +59,7 @@ const App: React.FC = () => {
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [worldOpen, setWorldOpen] = useState(false);
+  const [newGameOpen, setNewGameOpen] = useState(false);
   const [brainOpen, setBrainOpen] = useState(false);
   const [headless, setHeadless] = useState(WorldConfig.headless);
   // Derived as a boolean, so this only re-renders App when night actually
@@ -90,7 +92,9 @@ const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const envController = engine?.env?.controller;
-      if (worldsOpen) {
+      if (newGameOpen) {
+        setNewGameOpen(false);
+      } else if (worldsOpen) {
         setWorldsOpen(false);
       } else if (brainOpen) {
         setBrainOpen(false);
@@ -114,7 +118,7 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, worldOpen, brainOpen, worldsOpen]);
+  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, worldOpen, brainOpen, worldsOpen, newGameOpen]);
 
   // Headless skips all drawing so the simulation runs far faster; repaint
   // everything on the way back so the canvas isn't left stale.
@@ -221,6 +225,13 @@ const App: React.FC = () => {
     setLifeformsOpen(false);
     setBrainOpen(false);
     setWorldsOpen(false);
+    setNewGameOpen(false);
+  };
+
+  const handleNewGame = () => {
+    closeModals();
+    setNewGameOpen(true);
+    setActivePanel(null);
   };
 
   const handleToolbarClick = (item: string) => {
@@ -273,7 +284,7 @@ const App: React.FC = () => {
       <MicroscopeOverlay engine={engine} />
 
       {/* HUD Regions */}
-      <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />
+      <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} onNewGame={handleNewGame} />
       <HudTopCenter engine={engine} onLifeformsClick={() => setLifeformsOpen(open => !open)} />
       <HudTopRight engine={engine} />
       <HudToolPalette engine={engine} />
@@ -328,6 +339,10 @@ const App: React.FC = () => {
 
       {worldOpen && (
         <WorldControlsModal engine={engine} onClose={() => setWorldOpen(false)} />
+      )}
+
+      {newGameOpen && (
+        <NewGameModal engine={engine} onClose={() => setNewGameOpen(false)} />
       )}
 
       {presetsOpen && (

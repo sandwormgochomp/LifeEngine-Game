@@ -3,13 +3,13 @@
 - [x] Move random walls, clear walls, clear radiation as tools in the new tool ui
 - [x] Move "seed random life" as a tool in the tool ui except now it paints random life within the brush
 
-- [ ] Instead of "Restart" it's now "New Game" - which only exists on the button in the top-left. A new game has the following optioins from World Controls
-  - [ ] Petri dish world option
-  - [ ] Clear walls on reset
-  - [ ] Cell size
-  - [ ] Life (a checkbox to start with life)
-  - [ ] Reset on extinction
-  - [ ] Pause on extinction
+- [x] Instead of "Restart" it's now "New Game" - which only exists on the button in the top-left. A new game has the following optioins from World Controls
+  - [x] Petri dish world option
+  - [x] Clear walls on reset
+  - [x] Cell size
+  - [x] Life (a checkbox to start with life)
+  - [x] Reset on extinction
+  - [x] Pause on extinction
 - [ ] Remove World Controls / "Environment" once basically everything is moved elsewhere
 - [ ] "Rules" is now "Evolution" and has a DNA iicon
   - [ ] Instead of inputs use sliders
