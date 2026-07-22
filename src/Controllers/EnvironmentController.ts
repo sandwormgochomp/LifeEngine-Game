@@ -380,14 +380,24 @@ class EnvironmentController extends CanvasController{
 
         if (BRUSH_MODES.includes(this.mode)) {
             var is_kill = this.mode === Modes.ClickKill;
-            ctx.fillStyle = is_kill ? 'rgba(255, 60, 60, 0.22)' : 'rgba(0, 255, 65, 0.14)';
-            for (var loc of Neighbors.inRange(WorldConfig.brush_size)) {
-                var brush_cell = this.env.grid_map.cellAt(this.mouse_c + loc[0], this.mouse_r + loc[1]);
-                if (brush_cell == null) continue;
-                ctx.fillRect(brush_cell.x, brush_cell.y, cs, cs);
-                this.overlay_cells.add(brush_cell);
-            }
             var b = WorldConfig.brush_size;
+            // Fill the disc (matches Neighbors.inRange), but sweep one cell wider
+            // for the clear set: the ring outline's line width and anti-aliasing
+            // spill into cells just outside the disc, and every touched cell must
+            // be repainted next frame or the ring smears a trail as the cursor moves.
+            var fill_limit = (b + 0.5) * (b + 0.5);
+            var clear_limit = (b + 1.5) * (b + 1.5);
+            ctx.fillStyle = is_kill ? 'rgba(255, 60, 60, 0.22)' : 'rgba(0, 255, 65, 0.14)';
+            for (var i = -(b + 1); i <= b + 1; i++) {
+                for (var j = -(b + 1); j <= b + 1; j++) {
+                    var d = i * i + j * j;
+                    if (d > clear_limit) continue;
+                    var brush_cell = this.env.grid_map.cellAt(this.mouse_c + i, this.mouse_r + j);
+                    if (brush_cell == null) continue;
+                    if (d <= fill_limit) ctx.fillRect(brush_cell.x, brush_cell.y, cs, cs);
+                    this.overlay_cells.add(brush_cell);
+                }
+            }
             ctx.strokeStyle = is_kill ? 'rgba(255, 60, 60, 0.7)' : 'rgba(0, 255, 65, 0.55)';
             ctx.lineWidth = 1;
             // Ring the disc: centre on the hovered cell, radius to the painted edge
