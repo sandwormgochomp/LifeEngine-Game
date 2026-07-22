@@ -297,8 +297,10 @@ class OrganismEditor extends Environment{
         return JSON.stringify(this.organism.serialize());
     }
 
+    // Idempotent within a stroke: the first call records the pre-mutation
+    // snapshot, later calls fold into it (a whole slider drag is one entry)
     beginStroke(): void {
-        this.pending_snapshot = this.snapshot();
+        if (this.pending_snapshot == null) this.pending_snapshot = this.snapshot();
     }
 
     // Called by mutations; the first change of a stroke records it, the rest
@@ -321,6 +323,8 @@ class OrganismEditor extends Environment{
     canRedo(): boolean { return this.redo_stack.length > 0; }
 
     undo(): void {
+        // A stroke still in flight (e.g. a slider mid-drag) undoes as one entry
+        this.commitStroke();
         if (!this.canUndo()) return;
         this.redo_stack.push(this.snapshot());
         /* pop() is `string | undefined`; the canUndo() guard above already
@@ -329,6 +333,8 @@ class OrganismEditor extends Environment{
     }
 
     redo(): void {
+        // An uncommitted stroke is a new edit; committing it voids the redo branch
+        this.commitStroke();
         if (!this.canRedo()) return;
         this.history.push(this.snapshot());
         this.restoreSnapshot(this.redo_stack.pop()!);

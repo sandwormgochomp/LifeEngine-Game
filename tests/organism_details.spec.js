@@ -15,8 +15,7 @@ test.describe('Organism details', () => {
     await page.locator('#mutation-rate').fill('17');
     expect(await org(page, 'mutability')).toBe(17);
 
-    // Ctrl+Z is ignored while a number input has focus, so blur it first
-    await page.evaluate(() => document.activeElement.blur());
+    // Sliders don't swallow the undo shortcut the way text inputs do
     await page.keyboard.press('Control+z');
     expect(await org(page, 'mutability')).toBe(5);
   });

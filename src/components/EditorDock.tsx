@@ -154,14 +154,18 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
   };
 
   // Per-organism traits live on the Organism itself; snapshot them onto the
-  // editor's undo history like anatomy edits
+  // editor's undo history like anatomy edits. A slider drag is one stroke:
+  // the first change opens it (beginStroke folds the rest in), and releasing
+  // the pointer or leaving the control commits it as a single undo entry.
+  // undo()/redo() flush an in-flight stroke themselves.
   const setOrgField = (field: 'move_range' | 'mutability' | 'healer_food_cost' | 'poison_duration', value: number) => {
     if (!editor || Number.isNaN(value)) return;
     editor.beginStroke();
     editor.organism[field] = value;
-    editor.commitStroke();
     touch();
   };
+
+  const commitOrgStroke = () => editor?.commitStroke();
 
   const handleSeedWorld = () => {
     if (!engine) return;
@@ -371,7 +375,15 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
 
       <div className={`${styles.panelBody} ${styles.dockBody}`}>
         <h4>Organism</h4>
-        <div id="edit-organism-details" className={styles.dockInfoCard}>
+        {/* pointerup/keyup/blur close out any slider stroke; commitStroke
+            no-ops when no stroke is open */}
+        <div
+          id="edit-organism-details"
+          className={styles.dockInfoCard}
+          onPointerUp={commitOrgStroke}
+          onKeyUp={commitOrgStroke}
+          onBlur={commitOrgStroke}
+        >
           <input
             id="species-name"
             className={styles.dockNameInput}
@@ -388,26 +400,30 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
           )}
           <label className={styles.ctrlRow} title="Cells to move before randomly changing direction. Overridden by brain decisions.">
             <span className={styles.ctrlLabel}>Move range</span>
-            <input type="number" id="move-range" className={styles.ctrlNumber} min={1} max={100} value={moveRange}
+            <input type="range" id="move-range" min={1} max={100} value={moveRange}
               onChange={e => setOrgField('move_range', parseInt(e.target.value))} />
+            <span className={styles.ctrlValue}>{moveRange}</span>
           </label>
           <label className={styles.ctrlRow} title="Probability that this organism's offspring mutate">
             <span className={styles.ctrlLabel}>Mutation rate</span>
-            <input type="number" id="mutation-rate" className={styles.ctrlNumber} min={0} max={100} value={mutability}
+            <input type="range" id="mutation-rate" min={0} max={100} value={mutability}
               onChange={e => setOrgField('mutability', parseFloat(e.target.value))} />
+            <span className={styles.ctrlValue}>{mutability}</span>
           </label>
           {hasHealer && (
             <label className={styles.ctrlRow} title="Food this organism's healer cells spend to repair 1 damage">
               <span className={styles.ctrlLabel}>Healer food cost</span>
-              <input type="number" id="healer-cost" className={styles.ctrlNumber} min={0} max={1000} value={healerCost}
+              <input type="range" id="healer-cost" min={0} max={1000} value={healerCost}
                 onChange={e => setOrgField('healer_food_cost', parseFloat(e.target.value))} />
+              <span className={styles.ctrlValue}>{healerCost}</span>
             </label>
           )}
           {hasPoison && (
             <label className={styles.ctrlRow} title="How many ticks this organism's poison lasts on its victims">
               <span className={styles.ctrlLabel}>Poison duration</span>
-              <input type="number" id="poison-duration" className={styles.ctrlNumber} min={1} max={1000} value={poisonDuration}
+              <input type="range" id="poison-duration" min={1} max={1000} value={poisonDuration}
                 onChange={e => setOrgField('poison_duration', parseInt(e.target.value))} />
+              <span className={styles.ctrlValue}>{poisonDuration}</span>
             </label>
           )}
         </div>
