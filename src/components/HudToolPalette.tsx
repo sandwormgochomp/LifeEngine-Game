@@ -13,10 +13,10 @@ interface HudToolPaletteProps {
 
 // The world paint tools, lifted out of the World Controls modal so they live
 // as an always-visible palette next to the world. Icons mirror the click-hint
-// bar; titles keep the hotkeys discoverable. Select leads the group so picking
+// bar; titles keep the hotkeys discoverable. Sample leads the group so picking
 // an organism from the world sits alongside the tools that reshape it.
 const TOOLS = [
-  { id: 'tool-select', label: 'Select', iconClass: 'fa-arrow-pointer', mode: Modes.Select, title: 'Pick an organism from the world to inspect it in the Organism Lab. Hotkey: Z' },
+  { id: 'tool-select', label: 'Sample', iconClass: 'fa-eye-dropper', mode: Modes.Select, title: 'Take a sample — pick an organism from the world to examine it in the Organism Lab. Hotkey: Z' },
   { id: 'food', label: 'Food', iconClass: 'fa-drumstick-bite', mode: Modes.FoodDrop, title: 'Paint food onto the world; organisms eat it to survive and reproduce. Hotkey: F' },
   { id: 'wall', label: 'Wall', iconClass: 'fa-cube', mode: Modes.WallDrop, title: 'Paint walls that block movement (killers and explosions can destroy them). Hotkey: D' },
   { id: 'invincible-wall', label: 'Glass', iconClass: 'fa-gem', mode: Modes.InvincibleWallDrop, title: 'Paint permanent walls that nothing can destroy' },

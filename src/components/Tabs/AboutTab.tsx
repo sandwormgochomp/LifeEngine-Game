@@ -13,7 +13,7 @@ const HOTKEYS: [string, string][] = [
   ['G', 'click to kill'],
   ['B', 'clear all walls'],
   ['H', 'toggle rendering'],
-  ['Z', 'select organism'],
+  ['Z', 'sample organism'],
   ['X', 'open the lab'],
   ['C', 'deploy organism'],
   ['Esc', 'back out / close'],

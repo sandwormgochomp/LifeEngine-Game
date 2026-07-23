@@ -60,7 +60,7 @@ function renderClickHint(mode: number, brushSize: number) {
     case Modes.Select:
       return (
         <span>
-          <MouseLeftIcon /> select for lab · <MouseRightIcon /> cancel · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> sample for lab · <MouseRightIcon /> cancel · <MouseMiddleIcon /> pan
         </span>
       );
     case Modes.FoodDrop:
@@ -108,7 +108,7 @@ function renderClickHint(mode: number, brushSize: number) {
     default:
       return (
         <span>
-          <MouseLeftIcon /> select organism · <MouseRightIcon /> erase · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> sample organism · <MouseRightIcon /> erase · <MouseMiddleIcon /> pan
         </span>
       );
   }
