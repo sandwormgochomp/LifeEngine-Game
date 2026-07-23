@@ -621,19 +621,26 @@ class WorldEnvironment extends Environment{
         this.renderFull();
     }
 
+    // Clears user-placed walls (regular and invincible alike) but never the
+    // petri dish: the glass is the world's bounds, not a wall in it, and is
+    // recognized by the dish_glass flag buildPetriDish sets.
     clearWalls(): void {
+        let kept: WorldCell[] = [];
         for(var wall of this.walls){
             let wcell = this.grid_map.cellAt(wall.col, wall.row);
-            if (wcell && (wcell.state == CellStates.wall || wcell.state == CellStates.invincible_wall)) {
-                wcell.dish_glass = false;
-                /* Dead write, kept verbatim: `dish_rim` is not a GridCell field
-                   and nothing reads it -- buildPetriDish flags the rim with
-                   dish_glass/dish_tier/dish_light. The cast is only what lets an
-                   undeclared property be assigned. */
-                (wcell as WorldCell & { dish_rim?: boolean }).dish_rim = false;
+            if (wcell == null) continue;
+            if (wcell.dish_glass) {
+                kept.push(wcell);
+                continue;
+            }
+            if (wcell.state == CellStates.wall || wcell.state == CellStates.invincible_wall) {
                 this.changeCell(wall.col, wall.row, CellStates.empty, null);
             }
         }
+        /* Rebuilding the list also prunes the stale entries that used to
+           accumulate: changeCell(empty) never removed cells from walls, it
+           only relied on the state re-check above to skip them next time. */
+        this.walls = kept;
         this.renderFull();
     }
 

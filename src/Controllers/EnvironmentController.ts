@@ -74,7 +74,6 @@ interface EnvControllerEnvLike {
     /* Keys are "col,row". dropRadiation() creates it when missing rather than
        assuming the environment brought one. */
     radiation_map?: Set<string>;
-    clearWalls(): void;
     changeCell(c: number, r: number, state: CellState, owner: BodyCell | null): void;
     addOrganism(organism: Organism): void;
 }
@@ -190,26 +189,33 @@ class EnvironmentController extends CanvasController{
 
     /*
     Iterate over grid from 0,0 to env.num_cols,env.num_rows and create random walls using perlin noise to create a more organic shape.
+    The world bounds are left untouched: invincible walls (the petri dish glass
+    among them) are never cleared or overwritten, so with the dish setting on
+    the noise walls land only in the dish interior.
     */
     randomizeWalls(thickness: number = 1): void {
-        this.env.clearWalls();
         const noise_threshold = -0.017;
-        let avg_noise = 0;
         let resolution = 20;
         Perlin.seed();
 
         for (let r = 0; r < this.env.num_rows; r++) {
             for (let c = 0; c < this.env.num_cols; c++) {
+                let cell = this.env.grid_map.cellAt(c, r);
+                if (cell == null) continue;
+                if (cell.state == CellStates.invincible_wall || cell.dish_glass) continue;
+
                 let xval = c/this.env.num_cols*(resolution/this.env.renderer.cell_size*(this.env.num_cols/this.env.num_rows));
                 let yval = r/this.env.num_rows*(resolution/this.env.renderer.cell_size*(this.env.num_rows/this.env.num_cols));
                 let noise = Perlin.get(xval, yval);
-                avg_noise += noise/(this.env.num_rows*this.env.num_cols);
                 if (noise > noise_threshold && noise < noise_threshold + thickness/resolution) {
-                    let cell = this.env.grid_map.cellAt(c, r);
-                    if (cell != null) {
-                        if(cell.owner != null) cell.owner.die();
-                        this.env.changeCell(c, r, CellStates.wall, null);
-                    }
+                    if(cell.owner != null) cell.owner.die();
+                    this.env.changeCell(c, r, CellStates.wall, null);
+                } else if (cell.state == CellStates.wall) {
+                    // A re-roll replaces the previous random layout: regular
+                    // walls the new noise field misses are cleared in place
+                    // rather than via clearWalls(), which would also take the
+                    // dish glass with it.
+                    this.env.changeCell(c, r, CellStates.empty, null);
                 }
             }
         }

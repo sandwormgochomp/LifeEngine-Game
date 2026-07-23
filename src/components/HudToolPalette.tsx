@@ -110,7 +110,7 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
         <button className={styles.toolPaletteAction} id="randomize-walls-btn" title="Generate organic wall shapes using Perlin noise" onClick={randomizeWalls}>
           Random Walls
         </button>
-        <button className={styles.toolPaletteAction} id="clear-walls" title="Remove every wall in the world. Hotkey: B" onClick={clearWalls}>
+        <button className={styles.toolPaletteAction} id="clear-walls" title="Remove every wall in the world (the petri dish stays). Hotkey: B" onClick={clearWalls}>
           Clear Walls
         </button>
         <button className={styles.toolPaletteAction} id="clear-radiation" title="Remove all radiation zones" onClick={clearRadiation}>
