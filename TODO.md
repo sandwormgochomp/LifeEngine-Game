@@ -5,14 +5,28 @@ Organism Lab
 - [ ] For each cell type, have a hover live preview that demonstrates how it excels (killer cell killing, armor cell protecting, poison cell poisoning, etc)
 
 Performance (bundled-world evaluation, 2026-07-23)
-- [ ] **Producer-path early-out.** `org_cells` (the per-cell `performFunction`
-      loop) dominates the tick on static-plant worlds — 14.2µs/org at
-      shrubland's ~4.7k organisms with `org_move` ~0, capping it near 40 tps
-      with rendering free. Profile the producer path first, then add a cheap
-      "nothing actionable this tick" skip. Gate: `sim.org_cells_us_per_org`
-      in `npm run bench` / the P panel; verify at shrubland, not the default
-      world. (Deeper fallback if the early-out isn't enough: the typed-array
-      grid refactor, which also buys load time and heap.)
+- [x] ~~Producer-path early-out~~ — done, and it does not move the needle.
+      Recorded here because the *diagnosis* was wrong in a way worth not
+      repeating: `org_cells` does dominate shrubland's tick (11.7ms of
+      21.5ms), but producers are only 1.7ms of it. Mouth cells are 5ms —
+      18.5k of them, each scanning 4 neighbours every tick. Micro-optimising
+      around that (indexed loops for the neighbour scans, inlined `cellAt`
+      bounds test, call-site null guards) measured **zero** aggregate gain
+      over 5 trials × 120 ticks and was reverted; V8 was already handling it.
+- [ ] **Reduce grid-lookup volume in the per-cell loop.** What actually costs
+      is ~350k `grid_map.cellAt` calls per tick at shrubland scale — inherent
+      to the semantics at ~4.9k organisms, so it needs an algorithmic change,
+      not tuning. Two candidates, neither started:
+      - *Food-adjacency counter*: maintain a per-cell count of adjacent food
+        so a mouth tests one number instead of four cells. Upside ~3ms of the
+        21.5ms tick. Risk is real: every path that writes a cell (changeCell,
+        fillGrid, reset, loadRaw, organism death) has to keep the count
+        honest, and it sits in the central mutation path.
+      - *Typed-array grid / slimmer cells*: makes each lookup cheaper rather
+        than rarer, and also buys load time (0.2–0.6s blocking) and heap
+        (159MB at HighDefSweepers). Largest refactor.
+      Gate either on `sim.org_cells_us_per_org`, measured at shrubland — the
+      `npm run bench` lattice has no producers and barely responds.
 
 ---
 
