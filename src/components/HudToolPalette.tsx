@@ -31,9 +31,11 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
   // slider stays in sync with the hotkeys and the click-hint bar
   const brushSize = useEngineValue(engine, () => WorldConfig.brush_size, WorldConfig.brush_size);
 
-  const setMode = (mode: number) => {
+  // Clicking a tool arms it; clicking the armed tool again puts it away.
+  const toggleMode = (mode: number) => {
     if (!engine) return;
-    engine.env.controller.mode = mode;
+    const controller = engine.env.controller;
+    controller.mode = controller.mode === mode ? Modes.None : mode;
     engine.emitChange(true);
   };
 
@@ -88,7 +90,7 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
             id={tool.id}
             title={tool.title}
             className={`env-mode-btn ${styles.toolPaletteBtn} ${activeMode === tool.mode ? styles.toolPaletteBtnActive : ''}`}
-            onClick={() => setMode(tool.mode)}
+            onClick={() => toggleMode(tool.mode)}
           >
             <i className={`fa-solid ${tool.iconClass} ${styles.toolPaletteIcon}`} />
             <span className={styles.toolPaletteLabel}>{tool.label}</span>

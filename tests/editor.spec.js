@@ -304,7 +304,9 @@ test.describe('Select from world', () => {
     await page.locator('#env-canvas').click({ position: pos });
 
     await expect(page.getByTestId('editor-dock')).toBeVisible();
-    await expect(page.locator('#tool-select')).not.toHaveClass(/toolPaletteBtnActive/);
+    // The tool stays armed so successive clicks keep sampling; right-click,
+    // Escape or re-clicking the palette button put it away.
+    await expect(page.locator('#tool-select')).toHaveClass(/toolPaletteBtnActive/);
 
     const counts = await page.evaluate(() => ({
       world: window.engine.env.organisms[0].anatomy.cells.length,

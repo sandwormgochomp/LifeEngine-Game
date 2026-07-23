@@ -8,6 +8,15 @@ test.describe('World tools palette', () => {
     await pauseEngine(page);
   });
 
+  test('Clicking the armed tool puts it away', async ({ page }) => {
+    await page.locator('#wall').click();
+    await expect(page.locator('#wall')).toHaveClass(/toolPaletteBtnActive/);
+
+    await page.locator('#wall').click();
+    await expect(page.locator('#wall')).not.toHaveClass(/toolPaletteBtnActive/);
+    expect(await page.evaluate(() => window.engine.env.controller.mode)).toBe(0); // Modes.None
+  });
+
   test('Clear Walls clears placed walls but never the petri dish', async ({ page }) => {
     // Place a user wall inside the dish so there's something to clear
     await page.locator('#wall').click();

@@ -219,21 +219,17 @@ const App: React.FC = () => {
   };
 
   // When a canvas click samples an organism into the editor (Select tool or
-  // an unarmed left-click), open the dock and disarm. The controller raises
-  // pending_editor_open only on the sampling path, so the dock's own Reset /
-  // Random / preset loads -- which also swap the editor organism -- don't
-  // retrigger this.
+  // an unarmed left-click), open the dock. The tool stays armed so successive
+  // clicks keep sampling; right-click, Escape or re-clicking the palette
+  // button put it away. The controller raises pending_editor_open only on the
+  // sampling path, so the dock's own Reset / Random / preset loads -- which
+  // also swap the editor organism -- don't retrigger this.
   const editorOrganism = useEngineValue(engine, e => e.organism_editor.organism, null);
   useEffect(() => {
     if (!engine || !editorOrganism) return;
     const controller = engine.env.controller;
     if (controller.pending_editor_open) {
       controller.pending_editor_open = false;
-      if (controller.mode === Modes.Select) {
-        // Disarm only when the Sample tool fired it; None has nothing to disarm.
-        controller.mode = Modes.None;
-        engine.emitChange(true);
-      }
       setEditorOpen(true);
       Notifier.notify('Organism loaded into the editor');
     }
