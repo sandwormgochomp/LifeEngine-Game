@@ -78,79 +78,123 @@ class CellState<N extends CellName = CellName> {
     }
 
     renderOrganismCell(ctx: CanvasRenderingContext2D, cell: RenderCellLike, size: number, env?: RenderEnvLike): void {
-        var x = Math.floor(cell.x);
-        var y = Math.floor(cell.y);
-        var sz = Math.floor(size);
-
-        // Wipe any cursor overlay / brush preview artifacts on this cell first
-        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#05050A';
-        ctx.fillRect(x, y, sz, sz);
-
-        var org = cell.owner || (cell.cell_owner ? cell.cell_owner.org : null);
-        var hasN = false, hasS = false, hasE = false, hasW = false;
-        var hasNW = false, hasNE = false, hasSW = false, hasSE = false;
-
-        if (env && env.grid_map && cell.col !== undefined && cell.row !== undefined) {
-            var grid_map = env.grid_map;
-            var col = cell.col, row = cell.row;
-            var isSameOrg = function(c: number, r: number): boolean {
-                var target = grid_map.cellAt(c, r);
-                return Boolean(target && (target.owner === org || (target.cell_owner && target.cell_owner.org === org)));
-            };
-            hasN  = isSameOrg(col, row - 1);
-            hasS  = isSameOrg(col, row + 1);
-            hasE  = isSameOrg(col + 1, row);
-            hasW  = isSameOrg(col - 1, row);
-            hasNW = isSameOrg(col - 1, row - 1);
-            hasNE = isSameOrg(col + 1, row - 1);
-            hasSW = isSameOrg(col - 1, row + 1);
-            hasSE = isSameOrg(col + 1, row + 1);
-        } else if (cell.cell_owner && org && org.anatomy) {
-            var anatomy = org.anatomy;
-            var lc = cell.cell_owner.loc_col, lr = cell.cell_owner.loc_row;
-            hasN  = Boolean(anatomy.getLocalCell(lc, lr - 1));
-            hasS  = Boolean(anatomy.getLocalCell(lc, lr + 1));
-            hasE  = Boolean(anatomy.getLocalCell(lc + 1, lr));
-            hasW  = Boolean(anatomy.getLocalCell(lc - 1, lr));
-            hasNW = Boolean(anatomy.getLocalCell(lc - 1, lr - 1));
-            hasNE = Boolean(anatomy.getLocalCell(lc + 1, lr - 1));
-            hasSW = Boolean(anatomy.getLocalCell(lc - 1, lr + 1));
-            hasSE = Boolean(anatomy.getLocalCell(lc + 1, lr + 1));
-        }
-
-        // Fill solid cell body for the organism
-        if (cell.cell_owner && cell.cell_owner.custom_color) {
-            ctx.fillStyle = cell.cell_owner.custom_color;
-        } else {
-            ctx.fillStyle = this.color;
-        }
-        ctx.fillRect(x, y, sz, sz);
-
-        ctx.fillStyle = (CellStates.empty && CellStates.empty.color) || '#05050A';
-
-        // 2. Erase outer corners (where NONE of the adjacent orthogonal or diagonal cells belong to the same organism)
-        var c = sz >= 12 ? 3 : (sz >= 6 ? 2 : 1);
-        if (!hasN && !hasW && !hasNW) ctx.fillRect(x, y, c, c);                        // Top-Left outer corner
-        if (!hasN && !hasE && !hasNE) ctx.fillRect(x + sz - c, y, c, c);                // Top-Right outer corner
-        if (!hasS && !hasW && !hasSW) ctx.fillRect(x, y + sz - c, c, c);                // Bottom-Left outer corner
-        if (!hasS && !hasE && !hasSE) ctx.fillRect(x + sz - c, y + sz - c, c, c);        // Bottom-Right outer corner
-
-        // Restore cell color for highlight
-        if (cell.cell_owner && cell.cell_owner.custom_color) {
-            ctx.fillStyle = cell.cell_owner.custom_color;
-        } else {
-            ctx.fillStyle = this.color;
-        }
-
-        // Crisp pixel art highlight dot in top-left (only on larger cells)
-        if (sz >= 6) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-            var hlSize = Math.max(1, Math.floor(sz * 0.2));
-            var hlOffset = Math.max(1, Math.floor(sz * 0.22));
-            ctx.fillRect(x + hlOffset, y + hlOffset, hlSize, hlSize);
-        }
+        drawOrgCellPatch(ctx, computeOrgCellPatch(this, cell, size, env));
     }
 }
+
+/* An organism body cell reduced to plain paint data. Renderer.renderCells
+   batches the dirty set by paint phase (all backdrops, then bodies grouped by
+   color, then corner erases, then dots) so the canvas sees long runs of the
+   same fillStyle instead of five switches per cell; renderOrganismCell above
+   draws one patch alone through the same helpers, so both paths paint
+   identical pixels from this single computation. */
+export interface OrgCellPatch {
+    x: number;
+    y: number;
+    sz: number;
+    color: string;   // body fill: the owner's custom color or the state color
+    corner: number;  // erased-corner square size in px
+    corners: number; // erase mask: 1 top-left, 2 top-right, 4 bottom-left, 8 bottom-right
+    dot: boolean;    // highlight dot, only on larger cells
+}
+
+export const ORG_CELL_DOT_STYLE = 'rgba(255, 255, 255, 0.25)';
+
+export function emptyBackdropColor(): string {
+    return (CellStates.empty && CellStates.empty.color) || '#05050A';
+}
+
+export function computeOrgCellPatch(state: CellState, cell: RenderCellLike, size: number, env?: RenderEnvLike): OrgCellPatch {
+    var x = Math.floor(cell.x);
+    var y = Math.floor(cell.y);
+    var sz = Math.floor(size);
+
+    var org = cell.owner || (cell.cell_owner ? cell.cell_owner.org : null);
+    var hasN = false, hasS = false, hasE = false, hasW = false;
+    var hasNW = false, hasNE = false, hasSW = false, hasSE = false;
+
+    if (env && env.grid_map && cell.col !== undefined && cell.row !== undefined) {
+        var grid_map = env.grid_map;
+        var col = cell.col, row = cell.row;
+        var isSameOrg = function(c: number, r: number): boolean {
+            var target = grid_map.cellAt(c, r);
+            return Boolean(target && (target.owner === org || (target.cell_owner && target.cell_owner.org === org)));
+        };
+        hasN  = isSameOrg(col, row - 1);
+        hasS  = isSameOrg(col, row + 1);
+        hasE  = isSameOrg(col + 1, row);
+        hasW  = isSameOrg(col - 1, row);
+        hasNW = isSameOrg(col - 1, row - 1);
+        hasNE = isSameOrg(col + 1, row - 1);
+        hasSW = isSameOrg(col - 1, row + 1);
+        hasSE = isSameOrg(col + 1, row + 1);
+    } else if (cell.cell_owner && org && org.anatomy) {
+        var anatomy = org.anatomy;
+        var lc = cell.cell_owner.loc_col, lr = cell.cell_owner.loc_row;
+        hasN  = Boolean(anatomy.getLocalCell(lc, lr - 1));
+        hasS  = Boolean(anatomy.getLocalCell(lc, lr + 1));
+        hasE  = Boolean(anatomy.getLocalCell(lc + 1, lr));
+        hasW  = Boolean(anatomy.getLocalCell(lc - 1, lr));
+        hasNW = Boolean(anatomy.getLocalCell(lc - 1, lr - 1));
+        hasNE = Boolean(anatomy.getLocalCell(lc + 1, lr - 1));
+        hasSW = Boolean(anatomy.getLocalCell(lc - 1, lr + 1));
+        hasSE = Boolean(anatomy.getLocalCell(lc + 1, lr + 1));
+    }
+
+    // Outer corners are erased where NONE of the adjacent orthogonal or
+    // diagonal cells belong to the same organism
+    var c = sz >= 12 ? 3 : (sz >= 6 ? 2 : 1);
+    var corners = 0;
+    if (!hasN && !hasW && !hasNW) corners |= 1;
+    if (!hasN && !hasE && !hasNE) corners |= 2;
+    if (!hasS && !hasW && !hasSW) corners |= 4;
+    if (!hasS && !hasE && !hasSE) corners |= 8;
+
+    return {
+        x, y, sz,
+        color: (cell.cell_owner && cell.cell_owner.custom_color) || state.color,
+        corner: c,
+        corners,
+        dot: sz >= 6,
+    };
+}
+
+export function drawOrgCellCorners(ctx: CanvasRenderingContext2D, p: OrgCellPatch): void {
+    if (p.corners & 1) ctx.fillRect(p.x, p.y, p.corner, p.corner);
+    if (p.corners & 2) ctx.fillRect(p.x + p.sz - p.corner, p.y, p.corner, p.corner);
+    if (p.corners & 4) ctx.fillRect(p.x, p.y + p.sz - p.corner, p.corner, p.corner);
+    if (p.corners & 8) ctx.fillRect(p.x + p.sz - p.corner, p.y + p.sz - p.corner, p.corner, p.corner);
+}
+
+// Crisp pixel art highlight dot in top-left; caller sets ORG_CELL_DOT_STYLE
+export function drawOrgCellDot(ctx: CanvasRenderingContext2D, p: OrgCellPatch): void {
+    var hlSize = Math.max(1, Math.floor(p.sz * 0.2));
+    var hlOffset = Math.max(1, Math.floor(p.sz * 0.22));
+    ctx.fillRect(p.x + hlOffset, p.y + hlOffset, hlSize, hlSize);
+}
+
+// The single-cell path: same phases the batched passes run, one patch at a time
+export function drawOrgCellPatch(ctx: CanvasRenderingContext2D, p: OrgCellPatch): void {
+    // Wipe any cursor overlay / brush preview artifacts on this cell first
+    ctx.fillStyle = emptyBackdropColor();
+    ctx.fillRect(p.x, p.y, p.sz, p.sz);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, p.sz, p.sz);
+    if (p.corners) {
+        ctx.fillStyle = emptyBackdropColor();
+        drawOrgCellCorners(ctx, p);
+    }
+    if (p.dot) {
+        ctx.fillStyle = ORG_CELL_DOT_STYLE;
+        drawOrgCellDot(ctx, p);
+    }
+}
+
+/* The inherited CellState.render. Renderer's batching keys on it: a state
+   whose render IS this function draws either a flat rect or an organism
+   patch, both batchable; a state that overrides it (Food, Eye, the walls'
+   glass) must go through its own renderer. */
+export const BASE_CELL_RENDER = CellState.prototype.render;
 
 class Empty extends CellState<'empty'> {
     constructor() {

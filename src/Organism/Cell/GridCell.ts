@@ -21,6 +21,10 @@ class Cell{
     dish_glass?: boolean;
     dish_tier?: number;
     dish_light?: number;
+    /* Set by Renderer when a dirty cell was skipped because it was off screen
+       (or a big-world full repaint deferred it); cleared when it is drawn.
+       Renderer.updateView repaints stale cells as pan/zoom reveals them. */
+    stale?: boolean;
 
     constructor(state: CellState, col: number, row: number, x: number, y: number){
         this.owner = null; // owner organism

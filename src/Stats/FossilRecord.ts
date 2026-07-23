@@ -213,8 +213,15 @@ const FossilRecord: FossilRecordType = {
             cell_counts[c.name] = 0;
         }
         var first=true;
-        for (let s of Object.values(this.extant_species)) {
-            if (!first && this.numExtantSpecies() > 10 && s.cumulative_pop < this.min_discard){
+        /* Both hoisted out of the loop: numExtantSpecies() materializes
+           Object.values() on every call, and calling it per species made this
+           pass O(S^2) -- a measured 16ms spike every data update on a world
+           with thousands of species. Nothing below mutates extant_species, so
+           the snapshot is safe. */
+        var extant = Object.values(this.extant_species);
+        var discard_small = extant.length > 10;
+        for (let s of extant) {
+            if (!first && discard_small && s.cumulative_pop < this.min_discard){
                 continue;
             }
             /* The `for...in` body only runs when s.cell_counts is present, so the

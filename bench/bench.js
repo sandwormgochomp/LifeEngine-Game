@@ -98,7 +98,9 @@ async function freshPage(browser) {
 const seedWorld = (page, step) => page.evaluate(async s => {
   const engine = window.engine;
   engine.stop();
-  const preset = await (await fetch('/assets/organisms/hunter.json')).json();
+  // Relative like the app's own asset fetches: a root-absolute path misses
+  // vite's /LifeEngine-Game/ base (page URLs only work via the / redirect)
+  const preset = await (await fetch('assets/organisms/hunter.json')).json();
   preset.anatomy.cells = preset.anatomy.cells.filter(c => c.state.name !== 'eye');
   engine.organism_editor.loadRawOrg(preset);
   const env = engine.env;
