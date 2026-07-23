@@ -31,6 +31,9 @@ test.describe('Navigation and UI', () => {
   });
 
   test('Hint bar reflects the mode and live brush size', async ({ page }) => {
+    // Unarmed boot: the idle hint offers sampling and pan, nothing else
+    await expect(page.getByText(/sample organism .* pan/)).toBeVisible();
+
     // Paint tools + brush live in the always-on bottom-left palette
     await page.locator('#wall').click();
     await expect(page.getByText(/place wall .* brush Radius: 2/)).toBeVisible();
@@ -42,6 +45,18 @@ test.describe('Navigation and UI', () => {
     await page.locator('#brush-slider').fill('4');
     await expect(page.getByText(/kill organism .* brush Radius: 4/)).toBeVisible();
     expect(await page.evaluate(() => window.engine.env.controller.mode)).toBeDefined();
+  });
+
+  test('Hint bar switches to a disabled message while headless', async ({ page }) => {
+    // Headless kills every tool (only middle-drag pan survives), and the hint
+    // bar says so instead of advertising the armed tool
+    await page.locator('#wall').click();
+    await page.keyboard.press('h');
+    await expect(page.getByText(/tools disabled while rendering is off/)).toBeVisible();
+
+    // Toggling rendering back restores the armed tool's hint
+    await page.keyboard.press('h');
+    await expect(page.getByText(/place wall/)).toBeVisible();
   });
 
   test('Escape closes the modal first, then the editor dock', async ({ page }) => {

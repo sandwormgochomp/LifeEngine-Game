@@ -15,30 +15,6 @@ Groups are ordered so each one is a single coherent sitting — the items inside
 group touch the same files and share a decision, so splitting them means making
 the same call twice.
 
-## Group 1 — The hint bar tells the truth
-
-All three items are `renderClickHint` in `src/components/HudBottomBar.tsx:51` plus
-the mode plumbing behind it. Fix them together or the bar stays inconsistent.
-
-- [ ] **The idle-mode hint is wrong.** The `default:` branch
-      (`HudBottomBar.tsx:108`) advertises "sample organism · erase · pan".
-      In `Modes.None` the controller does neither: `performModeAction`
-      (`src/Controllers/EnvironmentController.ts:243`) guards on
-      `mode != Modes.None`, so left and right click are no-ops and only
-      middle-drag works. Either implement click-to-sample in `None` or make the
-      hint say "nothing armed — pick a tool".
-- [ ] **The world boots with Food armed.** `EnvironmentController` sets
-      `this.mode = Modes.FoodDrop` in its constructor
-      (`EnvironmentController.ts:122`), so a first-time user's very first click
-      paints food. The tool palette does highlight the armed tool now
-      (`HudToolPalette.tsx:91`), so this is visible — decide whether starting
-      armed is actually intended, or start in `None`.
-- [ ] **Headless silently eats every tool.** `performModeAction` returns early
-      when `WorldConfig.headless` unless it's a middle-click pan
-      (`EnvironmentController.ts:239`), but the hint bar still reads "place
-      food". The `RENDERING OFF` overlay (`App.tsx:318`) should say tools are
-      disabled, or the hint bar should switch to a disabled state.
-
 ## Group 2 — One concept, one name
 
 Pure naming pass, no behaviour change. Cheap, and it makes the rest of the audit

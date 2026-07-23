@@ -218,15 +218,22 @@ const App: React.FC = () => {
     Notifier.notify(`Loaded ${name} into the lab`);
   };
 
-  // When an organism is picked from the world in Select mode, drop it into
-  // the editor: open the dock and disarm the tool. The organism reference
-  // changes exactly when a new organism is loaded into the editor.
+  // When a canvas click samples an organism into the editor (Select tool or
+  // an unarmed left-click), open the dock and disarm. The controller raises
+  // pending_editor_open only on the sampling path, so the dock's own Reset /
+  // Random / preset loads -- which also swap the editor organism -- don't
+  // retrigger this.
   const editorOrganism = useEngineValue(engine, e => e.organism_editor.organism, null);
   useEffect(() => {
     if (!engine || !editorOrganism) return;
-    if (engine.env.controller.mode === Modes.Select) {
-      engine.env.controller.mode = Modes.None;
-      engine.emitChange(true);
+    const controller = engine.env.controller;
+    if (controller.pending_editor_open) {
+      controller.pending_editor_open = false;
+      if (controller.mode === Modes.Select) {
+        // Disarm only when the Sample tool fired it; None has nothing to disarm.
+        controller.mode = Modes.None;
+        engine.emitChange(true);
+      }
       setEditorOpen(true);
       Notifier.notify('Organism loaded into the editor');
     }

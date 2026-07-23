@@ -102,7 +102,7 @@ function renderClickHint(mode: number, brushSize: number) {
     default:
       return (
         <span>
-          <MouseLeftIcon /> sample organism · <MouseRightIcon /> erase · <MouseMiddleIcon /> pan
+          <MouseLeftIcon /> sample organism · <MouseMiddleIcon /> pan
         </span>
       );
   }
@@ -113,6 +113,8 @@ const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editor
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // hint bar tracks the slider
   const brushSize = useEngineValue(engine, () => WorldConfig.brush_size, WorldConfig.brush_size);
+  // toggleHeadless force-emits, so this re-reads on every rendering toggle
+  const headless = useEngineValue(engine, () => WorldConfig.headless, WorldConfig.headless);
 
   const isActive = (item: string) => {
     if (item === 'edit') return editorOpen;
@@ -122,8 +124,10 @@ const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editor
 
   return (
     <div className={styles.bottomCenter}>
-      <div className={styles.gameHintBar}>
-        {renderClickHint(envMode, brushSize)}
+      <div className={`${styles.gameHintBar} ${headless ? styles.gameHintBarDisabled : ''}`}>
+        {headless
+          ? <span>tools disabled while rendering is off · <MouseMiddleIcon /> pan</span>
+          : renderClickHint(envMode, brushSize)}
       </div>
       <div className={styles.toolbar}>
         {toolbarItems.map(({ id, iconClass, label, item, title }) => (

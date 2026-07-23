@@ -313,6 +313,54 @@ test.describe('Select from world', () => {
     expect(counts.editor).toBe(counts.world);
   });
 
+  test('Unarmed left-click samples an organism into the lab', async ({ page }) => {
+    await pauseEngine(page);
+
+    // The world boots unarmed: no tool highlighted, mode is None
+    expect(await page.evaluate(() => window.engine.env.controller.mode)).toBe(0);
+    await expect(page.locator('[class*="toolPaletteBtnActive"]')).toHaveCount(0);
+
+    // Clicking empty ground (no organism within brush radius) does nothing.
+    // Scan only the vertically-middle band of the grid so the chosen point
+    // isn't covered by the top/bottom HUD overlays, which intercept clicks.
+    const emptyPos = await page.evaluate(() => {
+      const env = window.engine.env;
+      const cs = env.grid_map.cell_size;
+      const radius = 20; // comfortably beyond any brush size
+      const mid = Math.floor(env.num_rows / 2);
+      const band = Math.floor(env.num_rows / 6);
+      for (let r = mid - band; r < mid + band; r++) {
+        for (let c = 2; c < env.num_cols - 2; c++) {
+          if (env.organisms.every(o => Math.abs(o.c - c) + Math.abs(o.r - r) > radius))
+            return { x: c * cs + cs / 2, y: r * cs + cs / 2 };
+        }
+      }
+      return null;
+    });
+    expect(emptyPos).not.toBeNull();
+    await page.locator('#env-canvas').click({ position: emptyPos });
+    await expect(page.getByTestId('editor-dock')).toBeHidden();
+
+    // Clicking a living organism samples it, exactly like the Select tool
+    const pos = await page.evaluate(() => {
+      const env = window.engine.env;
+      const org = env.organisms[0];
+      const cs = env.grid_map.cell_size;
+      return { x: org.c * cs + cs / 2, y: org.r * cs + cs / 2 };
+    });
+    await page.locator('#env-canvas').click({ position: pos });
+
+    await expect(page.getByTestId('editor-dock')).toBeVisible();
+    // Sampling is the ambient default, not the Sample tool: nothing arms
+    await expect(page.locator('[class*="toolPaletteBtnActive"]')).toHaveCount(0);
+
+    const counts = await page.evaluate(() => ({
+      world: window.engine.env.organisms[0].anatomy.cells.length,
+      editor: window.engine.organism_editor.organism.anatomy.cells.length,
+    }));
+    expect(counts.editor).toBe(counts.world);
+  });
+
   test('Lifeforms modal lists living species and opens one in the lab', async ({ page }) => {
     await pauseEngine(page);
     await page.locator('#lifeforms-stat').click();

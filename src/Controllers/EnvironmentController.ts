@@ -105,6 +105,11 @@ class EnvironmentController extends CanvasController{
        HUD (App.tsx, EditorDock). */
     mode: number;
     org_to_clone: Organism | null;
+    /* Set when a canvas click loads an organism into the editor; consumed
+       (and cleared) by the React layer (App.tsx) to open the lab dock.
+       Distinguishes canvas sampling from the dock's own Reset/Random/preset
+       loads, which also swap the editor organism. */
+    pending_editor_open: boolean;
     scale: number;
     pan_x: number;
     pan_y: number;
@@ -117,8 +122,9 @@ class EnvironmentController extends CanvasController{
 
     constructor(env: EnvControllerEnvLike, canvas: HTMLCanvasElement | null) {
         super(env, canvas);
-        this.mode = Modes.FoodDrop;
+        this.mode = Modes.None;
         this.org_to_clone = null;
+        this.pending_editor_open = false;
         this.scale = 1;
         this.pan_x = 0;
         this.pan_y = 0;
@@ -232,26 +238,60 @@ class EnvironmentController extends CanvasController{
     mouseDown(): void {
         this.drag_anchor_x = this.client_x;
         this.drag_anchor_y = this.client_y;
-        this.performModeAction();
+        this.performModeAction(true);
     }
 
     mouseUp(): void {
 
     }
 
-    performModeAction(): void {
+    /* Copies the organism under the cursor into the lab. Shared by the Select
+       tool and the unarmed (Modes.None) left-click. */
+    sampleOrganism(): void {
+        if (this.cur_org == null) {
+            this.cur_org = this.findNearOrganism();
+            /* The base class only publishes the hover target on a direct hit,
+               so a click that snapped to a nearby organism would send it to
+               the editor without ever tinting it. */
+            this.setHighlightedOrg(this.cur_org);
+        }
+        if (this.cur_org != null){
+            this.pending_editor_open = true;
+            /* Engine builds the environment (and so this controller) and then
+               ControlPanel, whose constructor calls setControlPanel(this) --
+               all synchronously. A pointer event can only be dispatched on a
+               later turn of the event loop, so this is always set by then. */
+            this.control_panel!.setEditorOrganism(this.cur_org);
+            /* Force an emit so the dock opens now rather than on the next
+               throttled sim-loop emit. */
+            if (this.env && this.env.engine) {
+                this.env.engine.emitChange(true);
+            }
+        }
+    }
+
+    performModeAction(from_mouse_down: boolean = false): void {
         // Headless disables the world tools, but middle-click pan still works.
         if (WorldConfig.headless && !this.middle_click)
             return;
         var mode = this.mode;
         var right_click = this.right_click;
         var left_click = this.left_click;
-        if (mode != Modes.None && (right_click || left_click)) {
+        if (right_click || left_click) {
             var cell = this.cur_cell;
             if (cell == null){
                 return;
             }
             switch(mode) {
+                case Modes.None:
+                    /* Unarmed: a deliberate left-click samples the organism
+                       under the cursor. Gated to the mousedown event so a
+                       left-drag doesn't re-sample everything it crosses;
+                       right-click stays a no-op. */
+                    if (left_click && from_mouse_down) {
+                        this.sampleOrganism();
+                    }
+                    break;
                 case Modes.FoodDrop:
                     if (left_click){
                         this.dropCellType(cell.col, cell.row, CellStates.food, false, CellStates.wall);
@@ -304,23 +344,7 @@ class EnvironmentController extends CanvasController{
                             this.env.engine.emitChange(true);
                         }
                     } else if (left_click) {
-                        if (this.cur_org == null) {
-                            this.cur_org = this.findNearOrganism();
-                            /* The base class only publishes the hover target
-                               on a direct hit, so a click that snapped to a
-                               nearby organism would send it to the editor
-                               without ever tinting it. */
-                            this.setHighlightedOrg(this.cur_org);
-                        }
-                        if (this.cur_org != null){
-                            /* Engine builds the environment (and so this
-                               controller) and then ControlPanel, whose
-                               constructor calls setControlPanel(this) --
-                               all synchronously. A pointer event can only
-                               be dispatched on a later turn of the event
-                               loop, so this is always set by then. */
-                            this.control_panel!.setEditorOrganism(this.cur_org);
-                        }
+                        this.sampleOrganism();
                     }
                     break;
 
