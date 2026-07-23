@@ -35,10 +35,30 @@ test.describe('Simulation Controls', () => {
   test('Clear Life empties the world; New Game reseeds one', async ({ page }) => {
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBeGreaterThan(0);
 
+    // Count non-transparent pixels on the glow overlay. Clearing life must
+    // blank it -- reset() once forgot glow_dirty and every halo stayed up.
+    const glowPixels = () => page.evaluate(() => {
+      const canvas = window.engine.env.glow_canvas;
+      const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+      let n = 0;
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) n++;
+      return n;
+    });
+    await expect.poll(glowPixels).toBeGreaterThan(0); // organisms are glowing
+
+    /* Pause first: a running sim masks the regression, because generateFood's
+       changeCell sets glow_dirty within a tick or two and repaints the
+       overlay from the emptied world anyway. Paused, reset() itself is the
+       only thing that can trigger the repaint (the rAF render loop keeps
+       running either way). */
+    await page.locator('#speed-0').click();
+
     // Clear Life is a one-shot palette action, sibling of Clear Walls/Radiation
     page.once('dialog', dialog => dialog.accept());
     await page.locator('#clear-life').click();
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBe(0);
+    // Poll past the overlay repaint schedule (33ms floor / 200ms staleness cap)
+    await expect.poll(glowPixels).toBe(0);
 
     // New Game with life on reseeds a single origin organism
     await openNewGame(page);

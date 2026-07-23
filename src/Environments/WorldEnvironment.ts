@@ -681,7 +681,14 @@ class WorldEnvironment extends Environment{
         this.active_explosions = [];
         this.active_projectiles = [];
         this.setNightMode(false);
+        /* Both overlays must repaint from the emptied world. Nothing else in
+           this method routes through changeCell (fillGrid writes the grid
+           directly), so missing a flag here leaves that overlay's stale
+           pixels up indefinitely -- glow was the one missed: Clear Life
+           (reset(false)) kept every organism's halo on screen. The reseeding
+           path masked it because OriginOfLife's changeCell sets both flags. */
         this.deco_dirty = true;
+        this.glow_dirty = true;
         this.radiation_map.clear();
         FossilRecord.clear_record();
         if (reset_life)
