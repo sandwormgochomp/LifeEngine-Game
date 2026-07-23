@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "test": "playwright test",
+    "bench": "node bench/bench.js",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
