@@ -1,79 +1,105 @@
-This is the readme for my evolution simulator, The Life Engine. 
-
-FOR FEATURE REQUESTS, USE THE DISCUSSIONS TAB. FOR BUG REPORTS, USE THE ISSUES TAB. :)
-
 # The Life Engine
-[Play here!](https://thelifeengine.net/)
 
-The life engine is a cellular automaton designed to simulate the long term processes of biological evolution. It allows organisms to eat, reproduce, mutate, and adapt.
-Unlike genetic algorithms, the life engine does not manually select the most "fit" organism for some given task, but rather allows true natural selection to 
-run its course. Organisms that survive, successfully produce offspring, and out-compete their neighbors naturally propogate througout the environment.
+[**Play here!**](https://sandwormgochomp.github.io/LifeEngine-Game/)
 
-This is the second version of the [original evolution simulator](https://github.com/MaxRobinsonTheGreat/EvolutionSimulator), which I started in high school.
+The Life Engine is a cellular automaton designed to simulate the long-term processes of biological evolution. Organisms eat, reproduce, mutate, and adapt. Unlike genetic algorithms, nothing is selected for a given task — true natural selection runs its course. Organisms that survive, successfully produce offspring, and out-compete their neighbors naturally propagate throughout the environment.
 
+This is a fork of [The Life Engine](https://github.com/MaxRobinsonTheGreat/LifeEngine) by MaxRobinsonTheGreat, rebuilt on React + TypeScript + Vite and extended with new cell types, world mechanics, and tooling.
 
-# How to Run and Modify the Code
- - [Install node and npm](https://nodejs.org/en/download/)
- - Download or clone this repository
- - Open a terminal or powershell comand prompt, go to the repository and run `npm install`
- - Run `npm run build` (or `npm run build-watch` for a better developer experience)
-   - If you get a `Can't resolve jquery` error message run `npm install --save jquery`
- - Open `dist/index.html` in your browser. The simulation should start running.
+For feature requests use the Discussions tab; for bug reports use the Issues tab.
 
-To load custom creations (found in `/dist/assets`), you must have a simple web server that serves all files in the dist directory. I do this with python:
- - [Install python](https://www.python.org/downloads/)
- - run `python -m http.server --directory dist` from the repository root
- - Open `http://localhost:8000/` in your browser
+# Setup
 
-### Npm build commands
-- Production mode (minified): `npm run build`
-- Watch mode (dev mode that auto-builds when you save a file): `npm run build-watch`
-- Dev mode (better error messages): `npm run build-dev` 
+Requires [Node.js and npm](https://nodejs.org/en/download/).
 
+```sh
+git clone https://github.com/sandwormgochomp/LifeEngine-Game.git
+cd LifeEngine-Game
+npm install
+npm run dev
+```
 
-# How the Simulation Works
+The dev server starts at `http://localhost:3000` with hot reload.
+
+### Other commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run build` | Type-check with `tsc` and produce a production build in `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm test` | Run the Playwright test suite (first time: `npx playwright install`) |
+| `npm run bench` | Run the tracked benchmark harness with drift reporting |
+| `npm run deploy` | Build and publish `dist/` to the `gh-pages` branch |
+
+# How the Game Works
+
 ## The Environment
-The environment is a simple grid system made up of cells, which at every tick have a certain type. The environment is populated by organisms, which are structures of multiple cells.
 
-## Cells
-A cell can be one of the following types.
-### Independent Cells
-Independent cells are not part of organisms. 
-- Empty - Dark blue, inert.
-- Food - Grayish-blue, provides nourishment for organisms.
-- Wall - Gray, blocks organisms movement and reproduction.
-### Organism Cells
-Organism Cells are only found in organisms, and cannot exist on their own in the grid.
-- Mouth - Orange, eats food in directly adjacent cells.
-- Producer - Green, randomly generates food in directly adjacent empty cells.
-- Mover - Light blue, allows the organism to move and rotate randomly.
-- Killer - Red, harms organisms in directly adjacent cells (besides itself).
-- Armor - Purple, negates the effects of killer cells.
-- Eye - Light purple with a slit, allows the organism to see and move intelligently. See further description below.
+The world is a grid of cells. At every tick each cell has a type. Independent cells exist on their own in the grid:
+
+- **Empty** — inert background.
+- **Food** — nourishment for organisms.
+- **Wall** — blocks movement and reproduction.
+
+The environment is populated by organisms — structures built from the living cell types below.
+
+## Cell Types
+
+Each color does one job:
+
+- **Mouth** — eats adjacent food.
+- **Producer** — grows food in nearby empty cells.
+- **Mover** — lets the organism move and turn.
+- **Killer** — harms organisms it touches.
+- **Armor** — blocks killer cells.
+- **Eye** — sees ahead to steer movers (click a placed eye to rotate it).
+- **Healer** — repairs damage by spending stored food.
+- **Explosive** — explodes on death, harming everything nearby.
+- **Poison** — poisons organisms that touch it.
+- **Pheromone** — emits a signal other organisms can sense.
+- **Common** — plain structural cell.
+- **Parasite** — steals food from adjacent organisms.
+- **Chameleon** — invisible to eyes.
+- **Shooter** — fires at targets the organism sees.
 
 ## Organisms
-Organisms are structures of cells that eat food, reproduce, and die.
-When an organism dies, every cell in the grid that was occupied by a cell in its body will be changed to food.
-Their lifespan is calculated by multiplying the number of cells they have by the hyperparameter `Lifespan Multiplier`. They will survive for that many ticks unless killed by another organism.
-When touched by a killer cell, an organism will take damage. Once it has taken as much damage as it has cells in its body, it will die. If the hyperparameter `One touch kill` is on, an organism will immediatly die when touched by a killer cell.
+
+Organisms are structures of cells that eat food, reproduce, and die. When an organism dies, every grid cell its body occupied turns to food. Lifespan is the organism's cell count multiplied by the `Lifespan Multiplier` hyperparameter; an organism survives that many ticks unless killed first. When touched by a killer cell an organism takes damage, and dies once it has taken as much damage as it has cells (or immediately, if `One touch kill` is on).
 
 ## Reproduction
-Once an organism has eaten as much food as it has cells in its body, it will attempt to reproduce. 
-First, offspring is formed by cloning the current organism and possibly mutating it (see below).
-The offspring birth location is then chosen a certain number of cells in a random direction (up, down, left, right). This number is calculated programmatically such that it is far enough away that it can't intersect with it's parent.
-Additionally, a random value between 1 and 3 is added to the location to introduce a little variance.
-Reproduction can fail if the offspring attempts to occupy non-empty cells, like other organisms and food. If reproduction fails, the food required to produce a child is wasted.
+
+Once an organism has eaten as much food as it has cells, it attempts to reproduce. The offspring is a clone of the parent, possibly mutated. A birth location is chosen far enough away in a random direction that the child can't intersect its parent, plus a little random variance. Reproduction fails if the offspring would overlap non-empty cells — and the food spent is wasted.
 
 ## Mutation
-Offspring can mutate their anatomies in 3 different ways: change a cell, lose a cell, or add a cell. Changing a cell sets a random cell to a random type. Losing a cell removes a random cell. Note that this can result in organisms with "gaps" and cells disconnected from the rest of its body. I consider this a feature, not a bug.
-To add a cell the organism first selects a cell it already has in its body, then grows a new cell with a random type in a location adjacent to the selected cell.
 
-If an organism mutates, there is a 10% chance that mutation will alter the movement patterns of the organism (see below).
+Offspring can mutate in three ways: change a random cell to a random type, lose a random cell, or add a cell adjacent to an existing one. Losing cells can leave gaps or disconnected cells — that's a feature, not a bug. Mutations can also alter an organism's movement patterns and brain behaviors.
 
 ## Movement and Rotation
-Organisms with mover cells (light blue) are permitted to move freely about the grid. Only a single mover cell is required and adding more doesn't do anything. By default, an organism selects a random direction and moves one cell per tick in that direction for a certain number of ticks. This number is called "Move range", and it can mutate over time.
 
-Organims can also rotate around a central pivot cell. This cell can never be removed by mutation, though it can change type. Movers rotate randomly when they change direction, and their rotation is not necessarily the same as their movement direction, ie, they aren't always facing the direction they are moving. Offspring of all organisms (including static ones) rotate randomly during reproduction. This rotation can be toggled in the simulation controls.
+Organisms with a mover cell move freely about the grid (one mover is enough; extras do nothing). By default an organism picks a random direction and moves one cell per tick for a number of ticks called its move range, which can mutate over time. Organisms rotate around a central pivot cell — a cell mutation can retype but never remove. Offspring rotate randomly at birth (toggleable in the simulation controls).
 
 ## Eyes and Brains
-Any organism can evolve eyes, but when an organism has both eyes and mover cells it is given a brain. The eye, unlike other cells, has a direction, which is denoted by the direction of the slit in the cell. It "looks" forward in this direction and "sees" the first non-empty cell within a certain range. It checks the type of the cell and informs the brain, which then decideds how to move. The brain can either ignore (keep moving in whatever direction), chase (move towards the observed cell), or retreat (move in the opposite direction of the observed cell). The brain maps different observed cell types to different actions. For instance, the brain will chase when it sees food and retreat when it sees a killer cell. These behaviors can mutate over time. 
+
+Any organism can evolve eyes, and an organism with both eyes and movers gets a brain. An eye looks in the direction of its slit and sees the first non-empty cell within range. The brain maps what is seen to an action — ignore, chase, or retreat. For instance, chase food, retreat from killer cells. These behaviors mutate over time, so hunting and fleeing strategies evolve on their own.
+
+## Shaping the World
+
+You interact with the world directly: drop food, walls, or radiation, kill organisms, generate perlin-noise wall mazes, and tune hyperparameters and evolution controls while the simulation runs. The world also supports a day/night cycle. Use the **Organism Lab** to build your own organism cell-by-cell and deploy it into the world, or sample an existing organism to inspect and edit it.
+
+### Hotkeys
+
+| Key | Action |
+| --- | --- |
+| `Space` | play / pause |
+| `A` | reset view |
+| `S` | drag view |
+| `F` | drop food |
+| `D` | drop wall |
+| `R` | drop radiation |
+| `G` | click to kill |
+| `B` | clear all walls |
+| `H` | toggle rendering |
+| `Z` | sample organism |
+| `X` | open the lab |
+| `C` | deploy organism |
+| `Esc` | back out / close |

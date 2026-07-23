@@ -14,15 +14,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MaxRobinsonTheGreat/EvolutionSimulatorV2.git"
+    "url": "git+https://github.com/sandwormgochomp/LifeEngine-Game.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/MaxRobinsonTheGreat/EvolutionSimulatorV2/issues"
+    "url": "https://github.com/sandwormgochomp/LifeEngine-Game/issues"
   },
-  "homepage": "https://github.com/MaxRobinsonTheGreat/EvolutionSimulatorV2#readme",
+  "homepage": "https://sandwormgochomp.github.io/LifeEngine-Game/",
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@types/react": "^19.2.17",
