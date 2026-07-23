@@ -4,6 +4,16 @@ Organism Lab
 - [ ] Move name input to top-center
 - [ ] For each cell type, have a hover live preview that demonstrates how it excels (killer cell killing, armor cell protecting, poison cell poisoning, etc)
 
+Performance (bundled-world evaluation, 2026-07-23)
+- [ ] **Producer-path early-out.** `org_cells` (the per-cell `performFunction`
+      loop) dominates the tick on static-plant worlds — 14.2µs/org at
+      shrubland's ~4.7k organisms with `org_move` ~0, capping it near 40 tps
+      with rendering free. Profile the producer path first, then add a cheap
+      "nothing actionable this tick" skip. Gate: `sim.org_cells_us_per_org`
+      in `npm run bench` / the P panel; verify at shrubland, not the default
+      world. (Deeper fallback if the early-out isn't enough: the typed-array
+      grid refactor, which also buys load time and heap.)
+
 ---
 
 # Interface review: counter-intuitive behaviour
