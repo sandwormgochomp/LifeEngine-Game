@@ -6,7 +6,6 @@ import { CELL_INFO } from '../cellInfo';
 const HOTKEYS: [string, string][] = [
   ['Space', 'play / pause'],
   ['A', 'reset view'],
-  ['S', 'drag view'],
   ['F', 'drop food'],
   ['D', 'drop wall'],
   ['R', 'drop radiation'],

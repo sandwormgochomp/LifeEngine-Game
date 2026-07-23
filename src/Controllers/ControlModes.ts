@@ -6,7 +6,6 @@ const Modes = {
     Select: 4,
     Edit: 5,
     Clone: 6,
-    Drag: 7,
     InvincibleWallDrop: 8,
     Paint: 9,
     RadiationDrop: 10,

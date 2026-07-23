@@ -23,7 +23,6 @@ const TOOLS = [
   { id: 'radiation-drop', label: 'Rad', iconClass: 'fa-radiation', mode: Modes.RadiationDrop, title: 'Paint radiation zones that raise mutation rates for organisms inside. Hotkey: R' },
   { id: 'seed-life', label: 'Life', iconClass: 'fa-seedling', mode: Modes.SeedLife, title: 'Paint scattered random organisms within the brush (right-click clears them). Hotkey: L' },
   { id: 'kill', label: 'Kill', iconClass: 'fa-skull', mode: Modes.ClickKill, title: 'Kill organisms under the brush. Hotkey: G' },
-  { id: 'drag', label: 'Pan', iconClass: 'fa-up-down-left-right', mode: Modes.Drag, title: 'Pan the world view by dragging (middle-click drags in any mode). Hotkey: S' },
 ];
 
 const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {

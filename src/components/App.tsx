@@ -168,7 +168,6 @@ const App: React.FC = () => {
           engine.toggleRunning();
           break;
         case 'a': engine.env.controller.resetView(); break;
-        case 's': setMode(Modes.Drag); break;
         case 'd': setMode(Modes.WallDrop); break;
         case 'f': setMode(Modes.FoodDrop); break;
         case 'g': setMode(Modes.ClickKill); break;

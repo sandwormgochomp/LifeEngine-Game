@@ -2,12 +2,8 @@ const { test, expect } = require('./helpers/fixtures');
 
 const canvasBox = (page) => page.locator('#env-canvas').boundingBox();
 
-// Select an environment tool from the always-on bottom-left palette
-async function selectEnvMode(page, buttonId) {
-  await page.locator(`#${buttonId}`).click();
-}
-
-async function dragBy(page, { from, dx, dy, steps = 10, button = 'left' }) {
+// Panning is always middle-click drag; it works regardless of the armed tool
+async function dragBy(page, { from, dx, dy, steps = 10, button = 'middle' }) {
   const before = await canvasBox(page);
 
   await page.mouse.move(from.x, from.y);
@@ -20,9 +16,7 @@ async function dragBy(page, { from, dx, dy, steps = 10, button = 'left' }) {
 }
 
 test.describe('Panning and zooming the world canvas', () => {
-  test('Dragging pans the canvas 1:1 with the mouse', async ({ page }) => {
-    await selectEnvMode(page, 'drag');
-
+  test('Middle-click drag pans the canvas 1:1 with the mouse', async ({ page }) => {
     const { moved_x, moved_y } = await dragBy(page, {
       from: { x: 400, y: 300 },
       dx: 200,
@@ -34,20 +28,18 @@ test.describe('Panning and zooming the world canvas', () => {
   });
 
   test('Panning advances evenly on every mousemove', async ({ page }) => {
-    await selectEnvMode(page, 'drag');
-
     // Each step must move the canvas by the same amount. Stalled or reversed
     // steps are what the drag reads as stutter.
     const step = 20;
     const positions = [];
 
     await page.mouse.move(400, 300);
-    await page.mouse.down();
+    await page.mouse.down({ button: 'middle' });
     for (let i = 1; i <= 8; i++) {
       await page.mouse.move(400 + i * step, 300);
       positions.push((await canvasBox(page)).x);
     }
-    await page.mouse.up();
+    await page.mouse.up({ button: 'middle' });
 
     for (let i = 1; i < positions.length; i++) {
       const delta = positions[i] - positions[i - 1];
@@ -55,12 +47,13 @@ test.describe('Panning and zooming the world canvas', () => {
     }
   });
 
-  test('Middle-click drags the canvas in any mode', async ({ page }) => {
+  test('Middle-click drags the canvas while a tool is armed', async ({ page }) => {
+    await page.locator('#food').click();
+
     const { moved_x, moved_y } = await dragBy(page, {
       from: { x: 400, y: 300 },
       dx: 150,
       dy: -80,
-      button: 'middle',
     });
 
     expect(moved_x).toBeCloseTo(150, 0);
@@ -68,8 +61,6 @@ test.describe('Panning and zooming the world canvas', () => {
   });
 
   test('Panning stays 1:1 while zoomed in', async ({ page }) => {
-    await selectEnvMode(page, 'drag');
-
     await page.mouse.move(400, 300);
     await page.mouse.wheel(0, -120);
     await page.mouse.wheel(0, -120);
@@ -108,7 +99,6 @@ test.describe('Panning and zooming the world canvas', () => {
   test('Reset view restores pan and zoom', async ({ page }) => {
     const original = await canvasBox(page);
 
-    await selectEnvMode(page, 'drag');
     await page.mouse.move(400, 300);
     await page.mouse.wheel(0, -120);
     await dragBy(page, { from: { x: 400, y: 300 }, dx: 100, dy: 60 });

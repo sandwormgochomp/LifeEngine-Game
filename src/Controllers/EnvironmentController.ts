@@ -89,7 +89,6 @@ const SEED_LIFE_DENSITY = 0.02;
 const SEED_LIFE_MAX_PER_TICK = 6;
 
 const MODE_CURSORS: Record<number, string> = {
-    [Modes.Drag]: 'grab',
     [Modes.ClickKill]: 'not-allowed',
     [Modes.Select]: 'pointer',
     [Modes.Clone]: 'copy',
@@ -235,7 +234,8 @@ class EnvironmentController extends CanvasController{
     }
 
     performModeAction(): void {
-        if (WorldConfig.headless && this.mode != Modes.Drag)
+        // Headless disables the world tools, but middle-click pan still works.
+        if (WorldConfig.headless && !this.middle_click)
             return;
         var mode = this.mode;
         var right_click = this.right_click;
@@ -330,9 +330,6 @@ class EnvironmentController extends CanvasController{
                             this.dropOrganism(this.org_to_clone, this.mouse_c, this.mouse_r);
                         }
                     }
-                    break;
-                case Modes.Drag:
-                    this.dragScreen();
                     break;
             }
         }

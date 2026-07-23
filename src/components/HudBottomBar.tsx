@@ -99,12 +99,6 @@ function renderClickHint(mode: number, brushSize: number) {
           <MouseLeftIcon /> paint random life · <MouseRightIcon /> clear life · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
-    case Modes.Drag:
-      return (
-        <span>
-          <MouseLeftIcon /> pan view · wheel: zoom
-        </span>
-      );
     default:
       return (
         <span>

@@ -17,7 +17,7 @@ the same call twice.
 
 ## Group 1 — The hint bar tells the truth
 
-All four items are `renderClickHint` in `src/components/HudBottomBar.tsx:51` plus
+All three items are `renderClickHint` in `src/components/HudBottomBar.tsx:51` plus
 the mode plumbing behind it. Fix them together or the bar stays inconsistent.
 
 - [ ] **The idle-mode hint is wrong.** The `default:` branch
@@ -34,14 +34,10 @@ the mode plumbing behind it. Fix them together or the bar stays inconsistent.
       (`HudToolPalette.tsx:91`), so this is visible — decide whether starting
       armed is actually intended, or start in `None`.
 - [ ] **Headless silently eats every tool.** `performModeAction` returns early
-      when `WorldConfig.headless` unless the mode is `Drag`
-      (`EnvironmentController.ts:238`), but the hint bar still reads "place
+      when `WorldConfig.headless` unless it's a middle-click pan
+      (`EnvironmentController.ts:239`), but the hint bar still reads "place
       food". The `RENDERING OFF` overlay (`App.tsx:318`) should say tools are
       disabled, or the hint bar should switch to a disabled state.
-- [ ] **Drag mode hides middle-click pan.** Its hint (`HudBottomBar.tsx:102`)
-      lists only left-drag and wheel, while every other mode advertises middle
-      pan. Middle pan works in Drag too — the `else if (this.middle_click)`
-      branch (`EnvironmentController.ts:339`) is mode-independent.
 
 ## Group 2 — One concept, one name
 
@@ -115,8 +111,7 @@ different window, with no cross-reference.
       (`HudBottomBar.tsx:16-23`, `App.tsx:186`). The tool palette does this
       right — its tooltips carry "Hotkey: Z" etc.
 - [ ] **The letters fight their mnemonics.** `D` drops walls but reads as
-      "drag"; `S` is drag but reads as "save"; `A` resets the view. See
-      `App.tsx:170-172`.
+      "drag"; `A` resets the view. See `App.tsx:170-171`.
 - [ ] **`Z` is overloaded around the lab.** Bare `Z` toggles Sample globally
       (`App.tsx:183` — internally still `Modes.Select`) while `Ctrl+Z` is the
       lab's undo (`EditorDock.tsx:193`). With the dock open and a slider or
