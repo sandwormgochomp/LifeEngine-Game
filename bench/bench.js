@@ -46,9 +46,12 @@ const RENDER_PASSES = 60;  // fixed render workload iterations
  * buckets wobble ±20% between healthy runs). Everything else in the record
  * is context. */
 const TRACKED = {
-  'live.tps_1x': { better: 'higher' },
-  'live.tps_4x': { better: 'higher' },
-  'live.fps_tps_ratio_4x': { better: 'lower' },
+  /* Keys carry the mode's multiplier so a ladder retune (1x/4x -> 0.5x/8x
+   * on 2026-07-22) starts a fresh history instead of reading the new target
+   * as a regression against the old one's median. */
+  'live.tps_halfx': { better: 'higher' },
+  'live.tps_8x': { better: 'higher' },
+  'live.fps_tps_ratio_8x': { better: 'lower' },
   'sim.us_per_org_tick': { better: 'lower', warn: 0.35 }, // coarse aggregate; the bucket metrics below are the precise detectors
   'sim.org_cells_us_per_org': { better: 'lower', warn: 0.35 },
   'sim.org_move_us_per_org': { better: 'lower', warn: 0.25 },
@@ -124,15 +127,15 @@ async function run() {
   // 1. Live loop rates on a fresh world: is the machinery hitting targets?
   {
     const page = await freshPage(browser);
-    await page.evaluate(() => window.engine.setSpeedIndex(1));
-    const tps1 = await liveTps(page);
-    await page.evaluate(() => window.engine.setSpeedIndex(3));
-    const tps4 = await liveTps(page);
+    await page.evaluate(() => window.engine.setSpeedIndex(1)); // Play, 0.5x
+    const tpsHalf = await liveTps(page);
+    await page.evaluate(() => window.engine.setSpeedIndex(3)); // Faster, 8x
+    const tps8 = await liveTps(page);
     const fps = await page.evaluate(() => window.engine.actual_fps);
     scenarios.live = {
-      tps_1x: +tps1.toFixed(1),
-      tps_4x: +tps4.toFixed(1),
-      fps_tps_ratio_4x: tps4 > 0 ? +(fps / tps4).toFixed(3) : null,
+      tps_halfx: +tpsHalf.toFixed(1),
+      tps_8x: +tps8.toFixed(1),
+      fps_tps_ratio_8x: tps8 > 0 ? +(fps / tps8).toFixed(3) : null,
     };
     await page.close();
   }

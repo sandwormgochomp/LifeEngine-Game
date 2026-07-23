@@ -30,8 +30,13 @@ const base_tick_rate = 60;
 
    Rendering runs on its own requestAnimationFrame loop and never shares the
    sim interval, so ticks stop paying the render cost (measured before the
-   split: 81 ticks/sec at 4x rendered vs 212 headless on the same world). The
-   ladder still stops at 4x: past that the tick budget itself is the wall. */
+   split: 81 ticks/sec at 4x rendered vs 212 headless on the same world).
+
+   The ladder spans 0.5x to 8x. Sub-1x speeds work by carrying fractional
+   ticks between interval firings (0.5x ticks every other firing); the top
+   end is a *target* -- on a dense world the tick budget is the wall and the
+   delivered rate simply plateaus below it, which the perf panel reports
+   honestly via actual_tps. */
 export interface SpeedMode {
     label: string;
     icon: string;
@@ -40,12 +45,12 @@ export interface SpeedMode {
 
 export const SPEED_MODES: SpeedMode[] = [
     {label: 'Pause',  icon: 'fa-pause',        multiplier: 0},
-    {label: 'Play',   icon: 'fa-play',         multiplier: 1},
-    {label: 'Fast',   icon: 'fa-forward',      multiplier: 2},
-    {label: 'Faster', icon: 'fa-forward-fast', multiplier: 4},
+    {label: 'Play',   icon: 'fa-play',         multiplier: 0.5},
+    {label: 'Fast',   icon: 'fa-forward',      multiplier: 4},
+    {label: 'Faster', icon: 'fa-forward-fast', multiplier: 8},
 ];
 
-export const DEFAULT_SPEED_INDEX = 1; // Play, 1x
+export const DEFAULT_SPEED_INDEX = 1; // Play, 0.5x
 
 class Engine {
     /* No initializers: useDefineForClassFields is false and these must stay
@@ -63,6 +68,11 @@ class Engine {
     colorscheme: ColorScheme;
     sim_last_update: number;
     sim_delta_time: number;
+    /* Fractional-tick carry for sub-1x speeds: each firing banks the
+       multiplier and a tick runs per whole unit banked, so 0.5x ticks every
+       other firing instead of rounding to 0 or 1. Reset by applyLoops() so a
+       leftover fraction never crosses a speed change or a pause. */
+    tick_carry: number;
     /* Measured render rate: how often necessaryUpdate() actually runs. Stays
        live while paused, since the rAF loop keeps repainting for panning and
        editing.
@@ -119,6 +129,7 @@ class Engine {
 
         this.sim_last_update = Date.now();
         this.sim_delta_time = 0;
+        this.tick_carry = 0;
 
         this.frame_count = 0;
         this.frame_window_start = Date.now();
@@ -205,9 +216,11 @@ class Engine {
        runs from construction to dispose() regardless of playback state.
 
        The interval always fires at base_tick_rate; speed runs more ticks per
-       firing instead of firing more often, so 4x costs four tick budgets
-       inside one 16.7ms period rather than a 4ms interval the browser clamps
-       and thrashes. */
+       firing instead of firing more often, so 8x costs eight tick budgets
+       inside one 16.7ms period rather than a 2ms interval the browser clamps
+       and thrashes. Fractional speeds carry the remainder between firings,
+       so 0.5x ticks every other firing at the full firing rate rather than
+       needing a slower second interval. */
     applyLoops(): void {
         if (this.sim_loop) {
             clearInterval(this.sim_loop);
@@ -224,9 +237,11 @@ class Engine {
         this.sim_last_update = Date.now();
         this.tick_count = 0;
         this.tick_window_start = this.sim_last_update;
+        this.tick_carry = 0;
         this.sim_loop = setInterval(()=>{
             this.updateSimDeltaTime();
-            for (let i = 0; i < multiplier; i++)
+            this.tick_carry += multiplier;
+            for (; this.tick_carry >= 1; this.tick_carry--)
                 this.environmentUpdate();
         }, 1000/base_tick_rate);
     }

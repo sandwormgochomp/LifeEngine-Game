@@ -2,17 +2,17 @@ const { test, expect, openPanel, openNewGame } = require('./helpers/fixtures');
 
 test.describe('Simulation Controls', () => {
   test('Each speed button sets its rate, and shows as the active one', async ({ page }) => {
-    // The simulation starts at Play, 1x
-    expect(await page.evaluate(() => window.engine.fps)).toBe(60);
+    // The simulation starts at Play, 0.5x
+    expect(await page.evaluate(() => window.engine.fps)).toBe(30);
     await expect(page.locator('#speed-1')).toHaveAttribute('aria-pressed', 'true');
 
-    await page.locator('#speed-2').click(); // Fast
-    expect(await page.evaluate(() => window.engine.fps)).toBe(120);
+    await page.locator('#speed-2').click(); // Fast, 4x
+    expect(await page.evaluate(() => window.engine.fps)).toBe(240);
     await expect(page.locator('#speed-2')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#speed-1')).toHaveAttribute('aria-pressed', 'false');
 
-    await page.locator('#speed-3').click(); // Faster
-    expect(await page.evaluate(() => window.engine.fps)).toBe(240);
+    await page.locator('#speed-3').click(); // Faster, 8x
+    expect(await page.evaluate(() => window.engine.fps)).toBe(480);
 
     await page.locator('#speed-0').click(); // Pause
     expect(await page.evaluate(() => window.engine.running)).toBe(false);
@@ -20,15 +20,15 @@ test.describe('Simulation Controls', () => {
     await expect(page.locator('#speed-0')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('Space resumes at the speed that was running, not 1x', async ({ page }) => {
+  test('Space resumes at the speed that was running, not the default', async ({ page }) => {
     await page.locator('#speed-3').click(); // Faster
-    expect(await page.evaluate(() => window.engine.fps)).toBe(240);
+    expect(await page.evaluate(() => window.engine.fps)).toBe(480);
 
     await page.keyboard.press(' ');
     expect(await page.evaluate(() => window.engine.running)).toBe(false);
 
     await page.keyboard.press(' ');
-    expect(await page.evaluate(() => window.engine.fps)).toBe(240);
+    expect(await page.evaluate(() => window.engine.fps)).toBe(480);
     await expect(page.locator('#speed-3')).toHaveAttribute('aria-pressed', 'true');
   });
 
