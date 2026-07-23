@@ -107,6 +107,16 @@ const OVERLAY_MIN_REPAINT_MS = 33;
 const OVERLAY_DEADLINE_MS = 5;
 const OVERLAY_MAX_AGE_MS = 200;
 
+/* How the world lands on a viewport-sized overlay: world px x maps to overlay
+   px ox + x*s. Computed by overlayCamera() from the controller's pan/zoom. */
+interface OverlayCamera { ox: number; oy: number; s: number; }
+
+/* Decoration culling margin, in cells, around the visible rect. Sprites are
+   culled by their anchor cell before the sprite cache is even touched, so the
+   margin has to cover how far an organism's artwork can reach from its
+   anchor; nothing bred or built in practice approaches a 32-cell radius. */
+const DECO_CULL_PAD_CELLS = 32;
+
 class WorldEnvironment extends Environment{
     /* No initializers anywhere below: useDefineForClassFields is false and these
        must stay bare declarations, so the constructor assignments remain the
@@ -155,6 +165,15 @@ class WorldEnvironment extends Environment{
     last_deco_repaint: number;
     last_glow_repaint: number;
     frame_render_start: number;
+    /* The camera each overlay was last painted at, and the cached
+       untransformed canvas offset overlayCamera() derives the current camera
+       from. Between a pan/zoom and the next scheduled repaint, the stored
+       cameras drive a CSS transform that keeps the old paint aligned
+       (syncOverlayCssTransforms). Null until the first repaint / first
+       camera read. */
+    glow_cam: OverlayCamera | null;
+    deco_cam: OverlayCamera | null;
+    overlay_base: { left: number; top: number; cw: number; ch: number; vw: number; vh: number } | null;
     /* The hovered organism, written by CanvasController and read by the
        decoration pass, which tints that organism's sprite. Never initialized,
        for the same reason as the fields above: no pointer has moved yet. A
@@ -195,6 +214,9 @@ class WorldEnvironment extends Environment{
         this.last_deco_repaint = 0;
         this.last_glow_repaint = 0;
         this.frame_render_start = 0;
+        this.glow_cam = null;
+        this.deco_cam = null;
+        this.overlay_base = null;
         this.syncOverlaySizes();
         /* The controller declares its own structural view of this environment,
            and the two cannot unify today: that view's renderer types
@@ -410,50 +432,164 @@ class WorldEnvironment extends Environment{
         return performance.now() - this.frame_render_start < OVERLAY_DEADLINE_MS;
     }
 
+    /* The overlays are viewport-sized, not world-sized: both repaint fully
+       whenever they repaint at all, so a world-sized layer meant clearing,
+       redrawing and re-uploading tens of megapixels ~30x a second on the big
+       bundled worlds -- measured as what held Epic at 14fps headed. Sized to
+       the container instead; the painters draw world coordinates through
+       overlayCamera()'s transform. */
     syncOverlaySizes(): void {
+        const cont = this.container;
+        const vw = (cont && cont.clientWidth) || window.innerWidth;
+        const vh = (cont && cont.clientHeight) || window.innerHeight;
         if (this.deco_canvas) {
-            this.deco_canvas.width = this.renderer.width;
-            this.deco_canvas.height = this.renderer.height;
+            this.deco_canvas.width = vw;
+            this.deco_canvas.height = vh;
+            this.deco_canvas.style.transformOrigin = '0 0';
             this.deco_dirty = true;
         }
         if (!this.glow_canvas) return;
-        this.glow_canvas.width = this.renderer.width;
-        this.glow_canvas.height = this.renderer.height;
+        this.glow_canvas.width = vw;
+        this.glow_canvas.height = vh;
+        this.glow_canvas.style.transformOrigin = '0 0';
         // The scratch is rendered small: upscaling it with image smoothing
         // produces the soft halo for free, where a per-frame blur() filter at
         // full resolution dragged the whole app down.
-        this.glow_scratch.width = Math.max(1, Math.ceil(this.renderer.width / GLOW_DOWNSCALE));
-        this.glow_scratch.height = Math.max(1, Math.ceil(this.renderer.height / GLOW_DOWNSCALE));
+        this.glow_scratch.width = Math.max(1, Math.ceil(vw / GLOW_DOWNSCALE));
+        this.glow_scratch.height = Math.max(1, Math.ceil(vh / GLOW_DOWNSCALE));
         this.glow_dirty = true;
     }
 
+    // True when the container has changed size since the overlays were sized
+    // (nothing else watches window resizes); checked before each repaint.
+    overlaySizesStale(): boolean {
+        const cont = this.container;
+        const c = this.deco_canvas || this.glow_canvas;
+        if (!cont || !c) return false;
+        const vw = cont.clientWidth || window.innerWidth;
+        const vh = cont.clientHeight || window.innerHeight;
+        return c.width !== vw || c.height !== vh;
+    }
+
+    /* Where the world sits in the container: world px x -> container px
+       ox + x*s. pan and scale come from the controller; the canvas's
+       untransformed layout offset comes from one getBoundingClientRect pair,
+       inverted analytically (the canvas center is invariant under the
+       scale-about-center and moves 1:1 with the translate) and cached so the
+       per-mousemove path never forces layout. */
+    overlayCamera(): OverlayCamera | null {
+        const canvas = this.renderer.canvas;
+        const cont = this.container;
+        const ctl = this.controller as EnvironmentController | undefined;
+        if (!canvas || !cont || !ctl || canvas.width === 0) return null;
+        const vw = cont.clientWidth, vh = cont.clientHeight;
+        let base = this.overlay_base;
+        if (!base || base.cw !== canvas.width || base.ch !== canvas.height || base.vw !== vw || base.vh !== vh) {
+            const cr = canvas.getBoundingClientRect();
+            if (cr.width === 0) return null;
+            const vr = cont.getBoundingClientRect();
+            base = this.overlay_base = {
+                left: cr.left - vr.left + cr.width / 2 - ctl.pan_x - canvas.width / 2,
+                top: cr.top - vr.top + cr.height / 2 - ctl.pan_y - canvas.height / 2,
+                cw: canvas.width, ch: canvas.height, vw, vh,
+            };
+        }
+        const s = ctl.scale;
+        return {
+            ox: base.left + canvas.width / 2 + ctl.pan_x - (canvas.width / 2) * s,
+            oy: base.top + canvas.height / 2 + ctl.pan_y - (canvas.height / 2) * s,
+            s,
+        };
+    }
+
+    /* Called by the controller on every pan/zoom change. The overlays' content
+       is baked in camera space, so a camera move schedules a repaint and, until
+       it lands, bridges the gap by transforming the last paint into place. */
+    onCameraMoved(): void {
+        this.glow_dirty = true;
+        this.deco_dirty = true;
+        this.syncOverlayCssTransforms();
+    }
+
+    syncOverlayCssTransforms(): void {
+        const cur = this.overlayCamera();
+        if (!cur) return;
+        if (this.glow_canvas && this.glow_cam) this.applyOverlayCss(this.glow_canvas, this.glow_cam, cur);
+        if (this.deco_canvas && this.deco_cam) this.applyOverlayCss(this.deco_canvas, this.deco_cam, cur);
+    }
+
+    /* Map a layer painted at camera R onto the current camera C: painted px p
+       holds world (p - R.o)/R.s, which must land at C.o + world*C.s -- an
+       affine with scale k = C.s/R.s about the (0,0) transform origin. Passing
+       R === C yields the identity, which is how a fresh repaint clears its
+       bridge transform. */
+    applyOverlayCss(el: HTMLCanvasElement, rendered: OverlayCamera, cur: OverlayCamera): void {
+        const k = cur.s / rendered.s;
+        el.style.transform = `translate(${cur.ox - rendered.ox * k}px, ${cur.oy - rendered.oy * k}px) scale(${k})`;
+    }
+
     renderDecorations(): void {
-        if (!this.deco_ctx || WorldConfig.headless) return;
-        // Like glow, only repaint when the world changed; pan/zoom move the
-        // overlay via its CSS transform instead.
+        if (!this.deco_ctx || !this.deco_canvas || WorldConfig.headless) return;
+        // Only repaint when the world or the camera changed; in between,
+        // syncOverlayCssTransforms keeps the last paint aligned.
         if (!this.deco_dirty) return;
         if (!this.overlayMayRepaint(this.last_deco_repaint)) return;
+        const cam = this.overlayCamera();
+        if (!cam) return;
+        if (this.overlaySizesStale()) this.syncOverlaySizes();
         this.last_deco_repaint = Date.now();
         this.deco_dirty = false;
-        drawOrganismDecorations(this.deco_ctx, this);
+
+        const ctx = this.deco_ctx;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.deco_canvas.width, this.deco_canvas.height);
+        ctx.setTransform(cam.s, 0, 0, cam.s, cam.ox, cam.oy);
+        // The overlays inherit the container's pixelated image-rendering; the
+        // camera scale must not smooth the sprites where CSS scaling didn't.
+        ctx.imageSmoothingEnabled = false;
+        const pad = DECO_CULL_PAD_CELLS * this.renderer.cell_size;
+        drawOrganismDecorations(ctx, this, false, false, {
+            x0: (0 - cam.ox) / cam.s - pad,
+            y0: (0 - cam.oy) / cam.s - pad,
+            x1: (this.deco_canvas.width - cam.ox) / cam.s + pad,
+            y1: (this.deco_canvas.height - cam.oy) / cam.s + pad,
+        });
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.deco_cam = cam;
+        this.applyOverlayCss(this.deco_canvas, cam, cam);
     }
 
     renderGlow(): void {
-        if (!this.glow_ctx || WorldConfig.headless) return;
-        // Only re-composite when the world changed (changeCell/addOrganism);
-        // pan and zoom move the overlay via its CSS transform instead.
+        if (!this.glow_ctx || !this.glow_canvas || WorldConfig.headless) return;
+        // Only re-composite when the world (changeCell/addOrganism) or the
+        // camera changed; syncOverlayCssTransforms bridges the gap between.
         if (!this.glow_dirty) return;
         if (!this.overlayMayRepaint(this.last_glow_repaint)) return;
+        const cam = this.overlayCamera();
+        if (!cam) return;
+        if (this.overlaySizesStale()) this.syncOverlaySizes();
         this.last_glow_repaint = Date.now();
         this.glow_dirty = false;
 
-        var w = this.renderer.width;
-        var h = this.renderer.height;
-        var cs = this.renderer.cell_size / GLOW_DOWNSCALE;
+        var w = this.glow_canvas.width;
+        var h = this.glow_canvas.height;
+        var cs = this.renderer.cell_size;
+        var spread = cs * GLOW_SPREAD;
         var margin = cs * (GLOW_SPREAD - 1) / 2;
+        // Visible world rect, padded by the halo spread; cells outside it
+        // can't reach the viewport, so they cost neither fill nor upscale
+        var x0 = (0 - cam.ox) / cam.s - spread;
+        var y0 = (0 - cam.oy) / cam.s - spread;
+        var x1 = (w - cam.ox) / cam.s + spread;
+        var y1 = (h - cam.oy) / cam.s + spread;
 
         var sctx = this.glow_scratch_ctx;
+        sctx.setTransform(1, 0, 0, 1, 0, 0);
         sctx.clearRect(0, 0, this.glow_scratch.width, this.glow_scratch.height);
+        // Camera baked into the scratch transform: the painter below works in
+        // world coordinates, exactly like the old world-sized pass did.
+        var k = cam.s / GLOW_DOWNSCALE;
+        sctx.setTransform(k, 0, 0, k, cam.ox / GLOW_DOWNSCALE, cam.oy / GLOW_DOWNSCALE);
         for (var org of this.organisms) {
             for (var body_cell of org.anatomy.cells) {
                 /* getRealCell() returns Organism's own structural view of a grid
@@ -464,15 +600,12 @@ class WorldEnvironment extends Environment{
                    organism's omits x/y/setType entirely. */
                 var cell = org.getRealCell(body_cell) as unknown as WorldCell | null;
                 if (cell == null) continue;
+                if (cell.x < x0 || cell.x > x1 || cell.y < y0 || cell.y > y1) continue;
                 sctx.fillStyle = body_cell.custom_color || body_cell.state.color;
-                sctx.fillRect(
-                    cell.x / GLOW_DOWNSCALE - margin,
-                    cell.y / GLOW_DOWNSCALE - margin,
-                    cs * GLOW_SPREAD,
-                    cs * GLOW_SPREAD
-                );
+                sctx.fillRect(cell.x - margin, cell.y - margin, spread, spread);
             }
         }
+        sctx.setTransform(1, 0, 0, 1, 0, 0);
 
         var gctx = this.glow_ctx;
         gctx.clearRect(0, 0, w, h);
@@ -480,6 +613,8 @@ class WorldEnvironment extends Environment{
         gctx.imageSmoothingEnabled = true;
         gctx.drawImage(this.glow_scratch, 0, 0, this.glow_scratch.width, this.glow_scratch.height, 0, 0, w, h);
         gctx.globalAlpha = 1;
+        this.glow_cam = cam;
+        this.applyOverlayCss(this.glow_canvas, cam, cam);
     }
 
     renderFull(): void {

@@ -542,7 +542,11 @@ function drawHighlightedSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvas
    runs on the child inside reproduce(), before addOrganism publishes it --
    so re-hashing every organism every frame bought nothing and was the single
    largest string-allocation source in the render path. */
-function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike, clear: boolean = true, verify_anatomy: boolean = false): void {
+/* `view`, when given, is a world-px rect (pre-padded by the caller to cover
+   sprite overhang -- see DECO_CULL_PAD_CELLS): organisms anchored outside it
+   are skipped before their sprite cache is even touched, so off-screen
+   organisms never pay for sprite generation. */
+function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike, clear: boolean = true, verify_anatomy: boolean = false, view?: { x0: number; y0: number; x1: number; y1: number }): void {
     var renderer = env.renderer;
     var sz = Math.floor(renderer.cell_size);
     if (clear) ctx.clearRect(0, 0, renderer.width, renderer.height);
@@ -550,6 +554,10 @@ function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike
 
     for (var org of env.organisms) {
         if (!org.living) continue;
+        if (view) {
+            var px = org.c * sz, py = org.r * sz;
+            if (px < view.x0 || px > view.x1 || py < view.y0 || py > view.y1) continue;
+        }
 
         var set = org._spriteCache;
         if (!set || set.sz !== sz || (verify_anatomy && set.hash !== getAnatomyHash(org))) {

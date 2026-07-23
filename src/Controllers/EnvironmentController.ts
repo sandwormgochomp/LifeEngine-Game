@@ -62,11 +62,9 @@ interface EnvControllerEnvLike {
     num_rows: number;
     num_cols: number;
     total_ticks: number;
-    /* Both overlay canvases are optional constructor arguments of
-       WorldEnvironment and stay null when the React layer does not supply
-       them. */
-    glow_canvas: HTMLCanvasElement | null;
-    deco_canvas: HTMLCanvasElement | null;
+    /* Pan/zoom notification: the env owns the viewport-sized overlay
+       canvases and re-aims their camera when the view moves. */
+    onCameraMoved(): void;
     /* Set by Engine after it builds the environment, so absent for the window
        between construction and that assignment -- performModeAction() guards on
        it explicitly. */
@@ -157,11 +155,11 @@ class EnvironmentController extends CanvasController{
     applyView(): void {
         var transform = `translate(${this.pan_x}px, ${this.pan_y}px) scale(${this.scale})`;
         this.canvas!.style.transform = transform;
-        // the overlay canvases mirror the world's pan/zoom
-        if (this.env.glow_canvas)
-            this.env.glow_canvas.style.transform = transform;
-        if (this.env.deco_canvas)
-            this.env.deco_canvas.style.transform = transform;
+        /* The overlays no longer mirror this transform: they are
+           viewport-sized and bake the camera into their content. The env
+           schedules their repaints and bridges the interim with its own CSS
+           transform on each. */
+        this.env.onCameraMoved();
     }
 
     defineZoomControls(): void {
