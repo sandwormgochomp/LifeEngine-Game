@@ -1,0 +1,398 @@
+/* Eyedroppers Demo Page Stylesheet */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600;800&family=VT323&display=swap');
+
+:root {
+  --neon-green: #00ff41;
+  --neon-pink: #ff0055;
+  --neon-blue: #00f0ff;
+  --panel-bg: rgba(22, 22, 34, 0.7);
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.demo-body {
+  margin: 0;
+  padding: 0;
+  background-color: #0c0c10;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(255, 0, 85, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, #161622 0%, #08080c 100%);
+  color: #f4f4f5;
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.demo-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Header */
+.demo-header {
+  text-align: center;
+  margin-bottom: 50px;
+  position: relative;
+}
+
+.back-btn {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 20px;
+  border-radius: 30px;
+  color: #a1a1aa;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.back-btn:hover {
+  background: rgba(0, 255, 65, 0.08);
+  border-color: var(--neon-green);
+  color: var(--neon-green);
+  box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+  transform: translateX(-3px);
+}
+
+.demo-title-glow {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin: 0 0 10px 0;
+  background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+}
+
+.demo-subtitle {
+  color: #a1a1aa;
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.demo-subtitle strong {
+  color: var(--neon-green);
+}
+
+/* Sandbox and Grid Layout */
+.demo-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+@media (min-width: 900px) {
+  .demo-layout {
+    grid-template-columns: 350px 1fr;
+  }
+}
+
+/* Sandbox panel */
+.sandbox-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: fit-content;
+}
+
+.sandbox-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sandbox-area {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  background: #111116;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  cursor: none; /* Hide default cursor to show custom one */
+}
+
+/* Interactive Color Swatch grid inside sandbox */
+.sandbox-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+.sandbox-cell {
+  transition: opacity 0.1s ease;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+}
+
+.sandbox-cell:hover {
+  transform: scale(1.1);
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+/* Selected Color Display panel */
+.color-readout {
+  background: rgba(0,0,0,0.4);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.readout-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.readout-label {
+  color: #71717a;
+}
+
+.readout-value {
+  color: #e4e4e7;
+  font-weight: bold;
+}
+
+.color-preview-bar {
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  font-size: 14px;
+}
+
+/* Cards Grid */
+.cards-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section-heading {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eyedroppers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 600px) {
+  .eyedroppers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1000px) {
+  .eyedroppers-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Eyedropper Card */
+.eyedropper-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.eyedropper-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: transparent;
+  transition: background 0.3s;
+}
+
+.eyedropper-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+}
+
+.eyedropper-card.active {
+  border-color: rgba(0, 255, 65, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 255, 65, 0.08);
+}
+
+.eyedropper-card.active::before {
+  background: linear-gradient(90deg, var(--neon-green), var(--neon-blue));
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.active-badge {
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid var(--neon-green);
+  color: var(--neon-green);
+  font-size: 9px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  text-shadow: 0 0 5px rgba(0,255,65,0.5);
+  white-space: nowrap;
+}
+
+.card-description {
+  font-size: 13px;
+  color: #a1a1aa;
+  line-height: 1.5;
+  margin: 0;
+  flex-grow: 1;
+}
+
+/* Card preview box - shows floating animated dropper */
+.card-preview-box {
+  height: 120px;
+  background: radial-gradient(circle, #1a1a26 0%, #0d0d12 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sandbox custom cursor helper container */
+.sandbox-cursor-container {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate3d(-100px, -100px, 0);
+  will-change: transform;
+}
+
+/* Action button inside card */
+.activate-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e4e4e7;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.activate-btn:hover {
+  background: #ffffff;
+  color: #0c0c10;
+  border-color: #ffffff;
+  box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
+}
+
+.eyedropper-card.active .activate-btn {
+  background: rgba(0, 255, 65, 0.08);
+  border-color: rgba(0, 255, 65, 0.3);
+  color: var(--neon-green);
+}
+
+.eyedropper-card.active .activate-btn:hover {
+  background: var(--neon-green);
+  color: #0c0c10;
+  border-color: var(--neon-green);
+  box-shadow: 0 5px 15px rgba(0, 255, 65, 0.4);
+}
+
+/* Toast alert notification styling */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: rgba(12, 12, 16, 0.95);
+  border: 1px solid var(--neon-green);
+  color: #ffffff;
+  padding: 16px 24px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0, 255, 65, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 9999;
+  font-weight: 500;
+  animation: slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  backdrop-filter: blur(10px);
+}
+
+@keyframes slideIn {
+  from { transform: translateY(20px) scale(0.9); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.toast-icon {
+  color: var(--neon-green);
+  font-size: 18px;
+}
