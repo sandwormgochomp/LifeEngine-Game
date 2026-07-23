@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type Engine from '../Engine';
+import WorldConfig from '../WorldConfig';
 
 // Ambient "microscope dust": faint motes drifting over the world that shy
 // away from the cursor. Pure decoration on its own click-transparent layer.
@@ -7,10 +8,17 @@ import type Engine from '../Engine';
 // Motes are positioned in world space (the env canvas' untransformed bitmap
 // coords) and projected through the same camera the world canvas uses, so they
 // sit at a fixed depth in the dish rather than being pasted onto the screen.
+// Drawing is clipped to the dish itself — the dust lives in the sample, so it
+// never appears out on the glass or the page background.
 // The camera is read straight off the controller each frame instead of through
 // useEngineValue: the controller never emits on pan/zoom, and the engine's own
 // emits are throttled to 100ms, which would make the dust stutter behind a drag.
-const NUM_MOTES = 80;
+const NUM_MOTES = 24;
+
+// How far past the dish's bounding box motes may wander before wrapping, in
+// world px. Just enough that a wrapped mote drifts in from behind the clip
+// edge instead of popping in at the rim.
+const WRAP_MARGIN = 100;
 
 const PAN_STIFFNESS = 0.10;
 const PAN_DAMPING = 0.6;
@@ -268,9 +276,7 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
       const spriteList = isGiant ? GIANT_SPRITES : REGULAR_SPRITES;
       const spriteName = spriteList[Math.floor(rand() * spriteList.length)];
 
-      const basePixelSize = isGiant
-        ? Math.floor(2 + rand() * 2)
-        : Math.floor(1 + rand() * 2);
+      const basePixelSize = isGiant ? Math.floor(1 + rand() * 2) : 1;
 
       return {
         x: rand() * canvas.width,
@@ -307,14 +313,40 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
       const t = deterministic ? STATIC_T : performance.now() / 1000;
 
       const controller = engineRef.current?.env?.controller;
-      const scale = controller?.scale || 1;
-      const pan_x = controller?.pan_x || 0;
-      const pan_y = controller?.pan_y || 0;
-      const W = controller?.canvas?.width || canvas.width;
-      const H = controller?.canvas?.height || canvas.height;
+      // The dust lives inside the dish; without a world there is nothing to
+      // clip to, so hold off drawing until the engine mounts.
+      if (!controller) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const scale = controller.scale || 1;
+      const pan_x = controller.pan_x || 0;
+      const pan_y = controller.pan_y || 0;
+      const W = controller.canvas?.width || canvas.width;
+      const H = controller.canvas?.height || canvas.height;
+
+      // Dish geometry in world px. Matches buildPetriDish: the glass circle
+      // is inset 4 cells from the shorter grid edge. Rectangular (non-dish)
+      // worlds use the canvas itself as the bounds.
+      const cellSize = engineRef.current?.env?.grid_map?.cell_size ?? 5;
+      const dishRadius = WorldConfig.petri_dish
+        ? Math.min(W, H) / 2 - 4 * cellSize
+        : null;
+
+      // Wrap bounds hug the dish's bounding box plus a hidden margin, so a
+      // wrapping mote drifts in from behind the clip edge instead of popping
+      // in at the rim.
+      const left = (dishRadius != null ? W / 2 - dishRadius : 0) - WRAP_MARGIN;
+      const right = (dishRadius != null ? W / 2 + dishRadius : W) + WRAP_MARGIN;
+      const top = (dishRadius != null ? H / 2 - dishRadius : 0) - WRAP_MARGIN;
+      const bottom = (dishRadius != null ? H / 2 + dishRadius : H) + WRAP_MARGIN;
 
       if (!seeded) {
         for (const m of motes) {
+          // The constructor spawned in window space before the world's size
+          // was known; re-scatter into the dish bounds on the first frame.
+          m.x = left + rand() * (right - left);
+          m.y = top + rand() * (bottom - top);
           m.pan_x = pan_x;
           m.pan_y = pan_y;
         }
@@ -336,16 +368,22 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
       prev_pan_y = pan_y;
       prev_scale = scale;
 
-      // Significantly expanded world wrapping bounds (2000px margin) so floaties
-      // cover a massive space around the dish without popping in at visible edges.
-      const margin = 2000;
-      const left = -margin;
-      const right = W + margin;
-      const top = -margin;
-      const bottom = H + margin;
-
       const isNight = Boolean(engineRef.current?.env?.is_night);
       const nightMult = isNight ? 0.55 : 1.0;
+
+      // Everything below draws inside the dish only. The clip uses the true
+      // camera, so motes lagging on their pan springs get shaved at the rim
+      // while swooshing rather than escaping onto the glass.
+      const clipOriginX = pan_x + W / 2 - scale * (W / 2);
+      const clipOriginY = pan_y + H / 2 - scale * (H / 2);
+      ctx.save();
+      ctx.beginPath();
+      if (dishRadius != null) {
+        ctx.arc(clipOriginX + (W / 2) * scale, clipOriginY + (H / 2) * scale, dishRadius * scale, 0, Math.PI * 2);
+      } else {
+        ctx.rect(clipOriginX, clipOriginY, W * scale, H * scale);
+      }
+      ctx.clip();
 
       for (const m of motes) {
         m.pvx = (m.pvx + (pan_x - m.pan_x) * m.stiffness) * PAN_DAMPING;
@@ -392,7 +430,7 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
           sy += (dy / dist) * push;
         }
 
-        const rawPixelSize = m.basePixelSize * Math.min(3.0, Math.max(0.5, Math.sqrt(scale)));
+        const rawPixelSize = m.basePixelSize * Math.min(2.0, Math.max(0.5, Math.sqrt(scale)));
         const pixelSize = Math.max(1, Math.round(rawPixelSize));
         const matrix = SPRITES[m.spriteName] || SPRITES.dot;
 
@@ -428,6 +466,7 @@ const Floaties: React.FC<FloatiesProps> = ({ engine }) => {
           );
         }
       }
+      ctx.restore();
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
