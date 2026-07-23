@@ -8,17 +8,27 @@ test.describe('World tools palette', () => {
     await pauseEngine(page);
   });
 
-  test('Clear Walls empties the world of walls', async ({ page }) => {
-    // The petri dish seeds the world with invincible walls
-    const before = await page.evaluate(() =>
-      window.engine.env.grid_map.grid.flat().filter(c => c.state.name.includes('wall')).length);
-    expect(before).toBeGreaterThan(0);
+  test('Clear Walls clears placed walls but never the petri dish', async ({ page }) => {
+    // Place a user wall inside the dish so there's something to clear
+    await page.locator('#wall').click();
+    await page.locator('#env-canvas').click({ position: { x: 500, y: 400 } });
+
+    // The dish glass is flagged cell-by-cell, so it splits from user walls
+    const counts = () => page.evaluate(() => ({
+      user: window.engine.env.grid_map.grid.flat()
+        .filter(c => c.state.name.includes('wall') && !c.dish_glass).length,
+      dish: window.engine.env.grid_map.grid.flat()
+        .filter(c => c.state.name.includes('wall') && c.dish_glass).length,
+    }));
+    const before = await counts();
+    expect(before.user).toBeGreaterThan(0);
+    expect(before.dish).toBeGreaterThan(0);
 
     await page.locator('#clear-walls').click();
 
-    const after = await page.evaluate(() =>
-      window.engine.env.grid_map.grid.flat().filter(c => c.state.name.includes('wall')).length);
-    expect(after).toBe(0);
+    const after = await counts();
+    expect(after.user).toBe(0); // placed walls gone
+    expect(after.dish).toBe(before.dish); // dish untouched
   });
 
   test('Clear Life removes every organism but keeps the walls', async ({ page }) => {
