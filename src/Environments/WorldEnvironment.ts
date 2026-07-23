@@ -84,10 +84,22 @@ const GLOW_DOWNSCALE = 6;
 const GLOW_SPREAD = 1.5;
 const GLOW_ALPHA = 0.1;
 
-/* Floor between decoration repaints (~30Hz). Organisms move at most one cell
-   per tick, so an outline lagging its body by a frame or two is invisible in
-   motion -- and the cap halves the cost of the most expensive render pass. */
-const DECO_MIN_REPAINT_MS = 33;
+/* Overlay scheduling. Both overlay passes (decorations, glow) are cosmetic
+   full repaints whose cost scales with population, so they run under three
+   rules rather than every dirty frame:
+
+   - a floor of OVERLAY_MIN_REPAINT_MS between repaints (~30Hz): organisms
+     move at most one cell per tick, so an overlay lagging its cells by a
+     frame or two is invisible in motion;
+   - a deadline: when the frame's mandatory passes have already spent
+     OVERLAY_DEADLINE_MS, the repaint is deferred to a later frame -- this is
+     what sheds render load once a big world saturates the main thread,
+     instead of dragging the tick rate down with it;
+   - a staleness cap of OVERLAY_MAX_AGE_MS that overrides the deadline, so
+     under any load the overlays still track the world at 5Hz or better. */
+const OVERLAY_MIN_REPAINT_MS = 33;
+const OVERLAY_DEADLINE_MS = 5;
+const OVERLAY_MAX_AGE_MS = 200;
 
 class WorldEnvironment extends Environment{
     /* No initializers anywhere below: useDefineForClassFields is false and these
@@ -128,13 +140,15 @@ class WorldEnvironment extends Environment{
        context first. Hence `| undefined` rather than a definite-assignment `!`. */
     deco_dirty: boolean | undefined;
     glow_dirty: boolean | undefined;
-    /* When the decoration pass last repainted. In a busy world something
-       changes every tick, so deco_dirty alone means "repaint every frame" --
-       and the pass is a full clear + one drawImage per organism, the largest
-       single item in the measured render cost. Repaints are therefore also
-       capped at DECO_MIN_REPAINT_MS; the dirty flag stays set in between, so
-       nothing is lost, just deferred a frame or two. */
+    /* When each overlay pass last repainted, and when the current frame's
+       render began. In a busy world something changes every tick, so the
+       dirty flags alone mean "repaint every frame"; overlayMayRepaint()
+       turns these three timestamps into the floor/deadline/staleness rules
+       described on the OVERLAY_* constants. The dirty flags stay set across
+       a deferral, so nothing is lost, just delayed a frame or two. */
     last_deco_repaint: number;
+    last_glow_repaint: number;
+    frame_render_start: number;
     /* The hovered organism, written by CanvasController and read by the
        decoration pass, which tints that organism's sprite. Never initialized,
        for the same reason as the fields above: no pointer has moved yet. A
@@ -173,6 +187,8 @@ class WorldEnvironment extends Environment{
         this.deco_canvas = deco_canvas;
         this.deco_ctx = deco_canvas ? deco_canvas.getContext('2d') : null;
         this.last_deco_repaint = 0;
+        this.last_glow_repaint = 0;
+        this.frame_render_start = 0;
         this.syncOverlaySizes();
         /* The controller declares its own structural view of this environment,
            and the two cannot unify today: that view's renderer types
@@ -361,19 +377,31 @@ class WorldEnvironment extends Environment{
             this.renderer.cells_to_render.clear();
             return;
         }
+        this.frame_render_start = performance.now();
         var t = Perf.begin();
         this.renderer.renderCells();
         Perf.end('cells_draw', t);
         this.renderer.renderHighlights();
         this.controller.renderCursorOverlay();
-        /* Both overlay passes early-out on their dirty flags, so their avg
-           stays near zero; the max column is what shows the repaint spike. */
+        /* Both overlay passes early-out on their dirty flags and the
+           overlayMayRepaint() schedule, so their avg stays near zero; the max
+           column is what shows the repaint spike. */
         t = Perf.begin();
         this.renderDecorations();
         Perf.end('deco', t);
         t = Perf.begin();
         this.renderGlow();
         Perf.end('glow', t);
+    }
+
+    /* The floor/deadline/staleness schedule described on the OVERLAY_*
+       constants. Called by an overlay pass after its dirty check; a false
+       leaves the dirty flag set, so the repaint happens on a later frame. */
+    overlayMayRepaint(last_repaint: number): boolean {
+        const age = Date.now() - last_repaint;
+        if (age < OVERLAY_MIN_REPAINT_MS) return false;
+        if (age > OVERLAY_MAX_AGE_MS) return true;
+        return performance.now() - this.frame_render_start < OVERLAY_DEADLINE_MS;
     }
 
     syncOverlaySizes(): void {
@@ -398,11 +426,8 @@ class WorldEnvironment extends Environment{
         // Like glow, only repaint when the world changed; pan/zoom move the
         // overlay via its CSS transform instead.
         if (!this.deco_dirty) return;
-        // Rate cap: leave the flag set so the deferred repaint still happens
-        // on a later frame -- see the field comment on last_deco_repaint.
-        const now = Date.now();
-        if (now - this.last_deco_repaint < DECO_MIN_REPAINT_MS) return;
-        this.last_deco_repaint = now;
+        if (!this.overlayMayRepaint(this.last_deco_repaint)) return;
+        this.last_deco_repaint = Date.now();
         this.deco_dirty = false;
         drawOrganismDecorations(this.deco_ctx, this);
     }
@@ -412,6 +437,8 @@ class WorldEnvironment extends Environment{
         // Only re-composite when the world changed (changeCell/addOrganism);
         // pan and zoom move the overlay via its CSS transform instead.
         if (!this.glow_dirty) return;
+        if (!this.overlayMayRepaint(this.last_glow_repaint)) return;
+        this.last_glow_repaint = Date.now();
         this.glow_dirty = false;
 
         var w = this.renderer.width;
