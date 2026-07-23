@@ -36,8 +36,8 @@ interface TransformableCell extends SerializedBodyCell {
 const ZOOM_LEVELS = [8, 11, 14, 18, 24];
 const DEFAULT_ZOOM = 2;
 const HISTORY_LIMIT = 100;
-// Snapshots are JSON strings; giant organisms (Bob is ~10k cells) make each
-// one megabytes, so the stack is also bounded by total size, not just count.
+// Snapshots are JSON strings; giant organisms (~10k cells) make each one
+// megabytes, so the stack is also bounded by total size, not just count.
 const HISTORY_CHAR_LIMIT = 8_000_000;
 
 class OrganismEditor extends Environment{
@@ -217,8 +217,8 @@ class OrganismEditor extends Environment{
     }
 
     // Deferred to the next frame: updateGrid() calls this once per organism
-    // cell, and rendering inline froze the tab for huge organisms (the ~10k
-    // cell Bob preset meant ~10k full-canvas redraws).
+    // cell, and rendering inline froze the tab for huge organisms (a ~10k
+    // cell organism meant ~10k full-canvas redraws).
     /* The owner parameter is widened past the base class's, which declares only
        `RenderCellOwnerLike | null`: the editor really does hand body cells
        through here. Widening a parameter in an override is sound, so no

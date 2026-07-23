@@ -101,8 +101,8 @@ class Anatomy {
     }
 
     // check=false skips the whole-anatomy type scan so bulk loaders can run
-    // it once at the end instead of per cell (O(n) instead of O(n²) — large
-    // organisms like the 10k-cell Bob preset froze the game otherwise).
+    // it once at the end instead of per cell (O(n) instead of O(n²) —
+    // 10k-cell organisms froze the game otherwise).
     addInheritCell(parent_cell: BodyCell, check = true): BodyCell {
         var new_cell = BodyCellFactory.createInherited(this.owner, parent_cell);
         this.cells.push(new_cell);

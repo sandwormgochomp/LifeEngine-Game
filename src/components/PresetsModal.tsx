@@ -26,8 +26,8 @@ const PresetsModal: React.FC<PresetsModalProps> = ({ onClose, onOpenInLab }) => 
   const [loaded, setLoaded] = useState<Record<string, PresetRaw>>({});
 
   // Fetch the manifest, then every preset in parallel so thumbnails fill in
-  // as they arrive — one preset (Bob) is far larger than the rest and would
-  // otherwise hold up the whole grid.
+  // as they arrive — a preset much larger than the rest would otherwise hold
+  // up the whole grid.
   useEffect(() => {
     let cancelled = false;
     fetch('assets/organisms/_list.json')

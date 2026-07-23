@@ -40,9 +40,20 @@ test.describe('Organism details', () => {
     // A normal organism is natural
     await expect(page.locator('#unnatural-warning')).toBeHidden();
 
-    // Stacking two cells on one coordinate makes it unnatural, like the
-    // degenerate NED preset
-    await loadPreset(page, 'NED');
+    // Stacking two cells on one coordinate makes it unnatural (the degenerate
+    // NED preset that used to cover this has been removed, so build one raw)
+    await page.evaluate(() => {
+      window.engine.organism_editor.loadRawOrg({
+        c: 7, r: 7, lifetime: 0, food_collected: 0, living: true, direction: 2,
+        rotation: 0, can_rotate: false, move_count: 0, move_range: 2,
+        ignore_brain_for: 0, mutability: 5, damage: 0,
+        anatomy: { birth_distance: 4, is_producer: true, is_mover: false, has_eyes: false, cells: [
+          { loc_col: 0, loc_row: 0, state: { name: 'mouth' } },
+          { loc_col: 0, loc_row: 0, state: { name: 'producer' } },
+        ]},
+      });
+      window.engine.emitChange(true);
+    });
     await expect(page.locator('#unnatural-warning')).toBeVisible();
   });
 

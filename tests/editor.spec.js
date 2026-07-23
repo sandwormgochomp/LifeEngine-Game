@@ -168,14 +168,27 @@ test.describe('Organism Lab dock', () => {
     expect(name).toBe('Testosaurus');
   });
 
-  test('The giant Bob preset loads without freezing and stays editable', async ({ page }) => {
-    // Bob is ~10k cells; loading used to hard-freeze the tab (O(n²) anatomy rebuild)
+  test('A giant 10k-cell organism loads without freezing and stays editable', async ({ page }) => {
+    // ~10k cells used to hard-freeze the tab (O(n²) anatomy rebuild). Built
+    // raw here since the giant Bob preset that proved it has been removed.
     const start = Date.now();
-    await loadPreset(page, 'Bob');
-    await expectCellCount(page, 10783);
+    await page.evaluate(() => {
+      const cells = [];
+      for (let c = -50; c <= 50; c++)
+        for (let r = -50; r <= 50; r++)
+          if (c !== 0 || r !== 0) cells.push({ loc_col: c, loc_row: r, state: { name: 'armor' } });
+      window.engine.organism_editor.loadRawOrg({
+        c: 7, r: 7, lifetime: 0, food_collected: 0, living: true, direction: 2,
+        rotation: 0, can_rotate: false, move_count: 0, move_range: 2,
+        ignore_brain_for: 0, mutability: 5, damage: 0,
+        anatomy: { birth_distance: 4, is_producer: false, is_mover: false, has_eyes: false, cells },
+      });
+      window.engine.emitChange(true);
+    });
+    await expectCellCount(page, 10200);
     expect(Date.now() - start).toBeLessThan(5000);
 
-    // The editor is still responsive: place one more cell at the center's edge
+    // The editor is still responsive: place one more cell at the empty center
     await page.locator('.cell-type#common').click();
     await clickEditorCell(page, 0, 0, 'left');
     expect(await localCellState(page, 0, 0)).toBe('common');
@@ -186,7 +199,7 @@ test.describe('Organism Lab dock', () => {
     await expect(page.getByTestId('presets-modal')).toBeVisible();
 
     const cards = page.locator('.preset-card');
-    await expect(cards).toHaveCount(16);
+    await expect(cards).toHaveCount(13);
     await expect(page.locator('.preset-card[data-preset="hunter"] canvas')).toBeVisible();
     await expect(page.locator('.preset-card[data-preset="hunter"]')).toContainText('5 cells');
 
