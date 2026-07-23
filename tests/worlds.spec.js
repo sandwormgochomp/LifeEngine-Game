@@ -1,4 +1,56 @@
-const { test, expect, openPanel } = require('./helpers/fixtures');
+const fs = require('fs');
+const path = require('path');
+const { test, expect, openPanel, pauseEngine } = require('./helpers/fixtures');
+
+const WORLDS_DIR = path.join(__dirname, '..', 'public', 'assets', 'worlds');
+const worldList = JSON.parse(fs.readFileSync(path.join(WORLDS_DIR, '_list.json'), 'utf8'));
+
+// What a bundled save declares, read straight from its JSON on disk
+function savedWorld(value) {
+  const raw = JSON.parse(fs.readFileSync(path.join(WORLDS_DIR, `${value}.json`), 'utf8'));
+  return {
+    cols: Number(raw.grid.cols),
+    rows: Number(raw.grid.rows),
+    organisms: raw.organisms.length,
+    walls: raw.grid.walls.length,
+  };
+}
+
+// What actually made it into the live grid. invincible_wall and dish_glass
+// can only come from buildPetriDish (GridMap.serialize never stores either),
+// so any non-zero count means the dish was stamped over the loaded world.
+async function loadedWorld(page) {
+  return await page.evaluate(() => {
+    const env = window.engine.env;
+    let glass = 0, invincible = 0, walls = 0;
+    for (const col of env.grid_map.grid) {
+      for (const cell of col) {
+        if (cell.dish_glass) glass++;
+        if (cell.state.name === 'invincible_wall') invincible++;
+        else if (cell.state.name === 'wall') walls++;
+      }
+    }
+    return {
+      cols: env.grid_map.cols,
+      rows: env.grid_map.rows,
+      organisms: env.organisms.filter(o => o.living).length,
+      glass, invincible, walls,
+    };
+  });
+}
+
+async function openWorldsModal(page) {
+  await openPanel(page, 'save');
+  await page.locator('#browse-worlds-btn').click();
+  await expect(page.getByTestId('worlds-modal')).toBeVisible();
+}
+
+async function loadWorld(page, value) {
+  await page.locator(`.world-card[data-world="${value}"]`).click();
+  // The largest bundled grids (High Def Sweepers is 2048x1041) take a few
+  // seconds to rebuild, and the modal only closes once the load lands
+  await expect(page.getByTestId('worlds-modal')).toBeHidden({ timeout: 15000 });
+}
 
 test.describe('Worlds picker', () => {
   test.beforeEach(async ({ page }) => {
@@ -47,5 +99,68 @@ test.describe('Worlds picker', () => {
 
     await page.locator('#tool-rules').click();
     await expect(page.locator('#lookRange')).toHaveValue('11');
+  });
+});
+
+/* The bundled worlds are rectangular designs that predate the petri dish.
+   Loading one used to stamp the session's dish over it -- glassing over the
+   layout and killing every organism outside the circle -- so each world is
+   checked cell-for-cell against the space its save declares. */
+test.describe('Bundled worlds load into their designed space', () => {
+  for (const { name, value } of worldList) {
+    test(`${name} loads intact`, async ({ page }) => {
+      test.slow(); // the biggest grids need more than the 15s default
+      // Pause first so no ticks run between load and inspection
+      await pauseEngine(page);
+      await openWorldsModal(page);
+      await loadWorld(page, value);
+
+      const saved = savedWorld(value);
+      const loaded = await loadedWorld(page);
+      expect(loaded.cols).toBe(saved.cols);
+      expect(loaded.rows).toBe(saved.rows);
+      // Every saved organism survives the load alive
+      expect(loaded.organisms).toBe(saved.organisms);
+      // Every saved wall landed, and nothing added any
+      expect(loaded.walls).toBe(saved.walls);
+      // No petri dish was stamped over the rectangular design
+      expect(loaded.glass).toBe(0);
+      expect(loaded.invincible).toBe(0);
+    });
+  }
+});
+
+test.describe('World shape round-trip', () => {
+  test('A petri-dish world keeps its dish through save and load', async ({ page }) => {
+    await pauseEngine(page);
+    // The default world starts inside the dish
+    const before = await loadedWorld(page);
+    expect(before.glass).toBeGreaterThan(0);
+
+    // JSON round-trip mirrors what Save/Load World State does with the file
+    await page.evaluate(() => {
+      const raw = JSON.parse(JSON.stringify(window.engine.env.serialize()));
+      window.engine.env.loadRaw(raw);
+    });
+
+    const after = await loadedWorld(page);
+    expect(after.glass).toBe(before.glass);
+    expect(after.organisms).toBe(before.organisms);
+  });
+
+  test('A rectangular world stays rectangular through save and load', async ({ page }) => {
+    await pauseEngine(page);
+    await openWorldsModal(page);
+    await loadWorld(page, 'colony');
+    expect((await loadedWorld(page)).glass).toBe(0);
+
+    await page.evaluate(() => {
+      const raw = JSON.parse(JSON.stringify(window.engine.env.serialize()));
+      window.engine.env.loadRaw(raw);
+    });
+
+    const after = await loadedWorld(page);
+    expect(after.glass).toBe(0);
+    expect(after.invincible).toBe(0);
   });
 });

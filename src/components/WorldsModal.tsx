@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
-import WorldConfig from '../WorldConfig';
 import Notifier from '../Utils/Notifier';
 
 interface WorldEntry {
@@ -40,10 +39,11 @@ const WorldsModal: React.FC<WorldsModalProps> = ({ engine, onClose }) => {
       .then(res => res.json())
       .then(raw => {
         if (!raw?.grid || !raw?.organisms) throw new Error('bad world');
+        // loadRaw shapes the world to the save's own petri_dish flag; the
+        // bundled worlds are rectangular designs that predate the dish.
         engine.env.loadRaw(raw);
         // Saved worlds carry the evolution controls they were tuned with
         if (overrideControls && raw.controls) Hyperparams.loadJsonObj(raw.controls);
-        if (WorldConfig.petri_dish) engine.env.buildPetriDish();
         engine.emitChange(true);
         Notifier.notify(`Loaded ${world.name}`);
         onClose();

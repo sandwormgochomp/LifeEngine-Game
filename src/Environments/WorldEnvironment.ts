@@ -67,6 +67,12 @@ export interface SerializedWorld {
     organisms: SerializedOrganism[];
     fossil_record: SerializedFossilRecord;
     controls: HyperparamsSingleton;
+    /* Whether the world lives in the petri dish. The dish itself is never in
+       `grid` -- its glass is invincible_wall, which GridMap.serialize() skips
+       -- so this flag is how a save remembers its shape and loadRaw() rebuilds
+       it. Optional because the bundled worlds and older saves predate the
+       dish: absent means the world was designed for the full rectangle. */
+    petri_dish?: boolean;
     [key: string]: unknown;
 }
 
@@ -733,6 +739,9 @@ class WorldEnvironment extends Environment{
         }
         env.fossil_record = FossilRecord.serialize();
         env.controls = Hyperparams;
+        // See the interface comment: the glass never lands in env.grid, so the
+        // dish is saved as a flag for loadRaw to rebuild from.
+        env.petri_dish = WorldConfig.petri_dish;
         return env;
     }
 
@@ -760,7 +769,16 @@ class WorldEnvironment extends Environment{
                 this.walls.push(wall_cell);
             }
         }
-        // Saved worlds carry dish walls but not the glass flags; re-flag them
+        /* A world loads into the space it was designed for, so the save's own
+           dish flag decides -- not the session's current setting. Stamping the
+           dish over a rectangular world would glass over its layout and kill
+           everything outside the circle; the bundled worlds all predate the
+           dish and carry no flag. The global is updated to match so everything
+           keyed off it (Floaties' dish geometry, the New Game defaults, the
+           next serialize) agrees with the world now on screen. The grid resize
+           above rebuilt every cell, so a previous dish's glass flags are
+           already gone. */
+        WorldConfig.petri_dish = !!raw.petri_dish;
         if (WorldConfig.petri_dish)
             this.buildPetriDish();
 
