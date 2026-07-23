@@ -47,6 +47,38 @@ class GridMap {
         }
     }
 
+    /* Cell.food_adj invariant: for every cell, food_adj equals the number of
+       its four orthogonal neighbours whose state is food. This class is the
+       only writer, and there are exactly three ways the grid's states change:
+       setCellType (the funnel for Environment.changeCell and loadRaw, which
+       maintains the count incrementally), fillGrid (bulk, rebuilds), and
+       resize (fresh cells, all zero and no food). Nothing outside this file
+       calls Cell.setType on a grid cell -- if that ever changes, the new
+       caller has to maintain the count or rebuild.
+
+       It exists because mouth cells scan their neighbourhood every tick and
+       almost never find anything: measured 99.8% empty on the shrubland and
+       colony worlds, 99.3% on Epic. One read replaces four lookups on all of
+       those, against ~1.7k food writes a tick to keep it honest. */
+    bumpFoodAdj(col: number, row: number, delta: number): void {
+        if (col > 0)             this.grid[col-1][row].food_adj += delta;
+        if (col < this.cols - 1) this.grid[col+1][row].food_adj += delta;
+        if (row > 0)             this.grid[col][row-1].food_adj += delta;
+        if (row < this.rows - 1) this.grid[col][row+1].food_adj += delta;
+    }
+
+    // Recompute the whole invariant from the grid. O(cells), for after a bulk
+    // write that did not go through setCellType.
+    rebuildFoodAdjacency(): void {
+        for (var col of this.grid)
+            for (var cell of col)
+                cell.food_adj = 0;
+        for (var c = 0; c < this.cols; c++)
+            for (var r = 0; r < this.rows; r++)
+                if (this.grid[c][r].state === CellStates.food)
+                    this.bumpFoodAdj(c, r, 1);
+    }
+
     fillGrid(state: CellState, ignore_walls=false): void {
         for (var col of this.grid) {
             for (var cell of col) {
@@ -56,6 +88,9 @@ class GridMap {
                 cell.cell_owner = null;
             }
         }
+        // Bulk path: cheaper to recompute once than to track each write, and
+        // it cannot drift the way a hand-maintained bulk update could.
+        this.rebuildFoodAdjacency();
     }
 
     cellAt(col: number, row: number): Cell | null {
@@ -69,7 +104,14 @@ class GridMap {
         if (!this.isValidLoc(col, row)) {
             return;
         }
-        this.grid[col][row].setType(state);
+        var cell = this.grid[col][row];
+        // Only a transition across food changes what the neighbours see; a
+        // food->food or empty->wall write must not touch the counts.
+        var was_food = cell.state === CellStates.food;
+        var is_food = state === CellStates.food;
+        cell.setType(state);
+        if (was_food !== is_food)
+            this.bumpFoodAdj(col, row, is_food ? 1 : -1);
     }
 
     setCellOwner(col: number, row: number, cell_owner: RenderCellOwnerLike | null): void {

@@ -29,6 +29,9 @@ export interface OrganismGridCell {
     row: number;
     /* Only present while the cell is a wall -- GridMap deletes it otherwise. */
     durability?: number;
+    /* Count of orthogonally adjacent food cells, maintained by GridMap and
+       read by MouthCell to skip a neighbourhood that cannot feed it. */
+    food_adj: number;
 }
 
 /* Queued by shoot() and stepped by WorldEnvironment. */

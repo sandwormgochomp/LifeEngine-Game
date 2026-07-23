@@ -13,20 +13,21 @@ Performance (bundled-world evaluation, 2026-07-23)
       around that (indexed loops for the neighbour scans, inlined `cellAt`
       bounds test, call-site null guards) measured **zero** aggregate gain
       over 5 trials × 120 ticks and was reverted; V8 was already handling it.
-- [ ] **Reduce grid-lookup volume in the per-cell loop.** What actually costs
-      is ~350k `grid_map.cellAt` calls per tick at shrubland scale — inherent
-      to the semantics at ~4.9k organisms, so it needs an algorithmic change,
-      not tuning. Two candidates, neither started:
-      - *Food-adjacency counter*: maintain a per-cell count of adjacent food
-        so a mouth tests one number instead of four cells. Upside ~3ms of the
-        21.5ms tick. Risk is real: every path that writes a cell (changeCell,
-        fillGrid, reset, loadRaw, organism death) has to keep the count
-        honest, and it sits in the central mutation path.
-      - *Typed-array grid / slimmer cells*: makes each lookup cheaper rather
-        than rarer, and also buys load time (0.2–0.6s blocking) and heap
-        (159MB at HighDefSweepers). Largest refactor.
-      Gate either on `sim.org_cells_us_per_org`, measured at shrubland — the
-      `npm run bench` lattice has no producers and barely responds.
+- [x] ~~Food-adjacency counter~~ — done. `Cell.food_adj` counts orthogonally
+      adjacent food, maintained solely by `GridMap`, so a mouth rules out its
+      whole neighbourhood with one read instead of four lookups (99%+ of the
+      time on every world measured). Interleaved A/B, median of 5×120 ticks:
+      `org_cells` 2.45→1.96 µs/org-tick at shrubland (−20%) and 2.19→1.36 at
+      Epic (−38%); whole tick −13% and −14%. `tests/food_adjacency.spec.js`
+      guards the invariant and was verified to fail when the maintenance is
+      deliberately broken.
+- [ ] **Typed-array grid / slimmer cells.** The remaining lever on lookup
+      cost: makes each lookup cheaper rather than rarer, and also buys load
+      time (0.2–0.6s blocking) and heap (159MB at HighDefSweepers). Largest
+      refactor — do it last. Gate on `sim.org_cells_us_per_org` measured at
+      shrubland; the `npm run bench` lattice has no producers and responds
+      weakly, and its drift medians go stale when the machine is loaded, so
+      always interleave A/B runs rather than trusting the reported delta.
 
 ---
 

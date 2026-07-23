@@ -8,6 +8,7 @@ import type { CellCountMap } from '../Stats/Species';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
 import WorldConfig from '../WorldConfig';
+import Hyperparams from '../Hyperparameters';
 import useEngineValue from './useEngineValue';
 
 // HUD regions
@@ -55,6 +56,11 @@ declare global {
     // Timing instrumentation singleton, for the perf test suite and for
     // reading numbers from the console while profiling.
     perf?: typeof Perf;
+    /* The evolution controls. Exposed because a few of them have no UI --
+       the edible/killable/growable neighbour sets arrive only from a saved
+       world's controls -- and the food-adjacency suite has to be able to
+       put them somewhere the fast path must refuse. */
+    hyperparams?: typeof Hyperparams;
   }
 }
 
@@ -97,6 +103,7 @@ const App: React.FC = () => {
     window.fossilRecord = FossilRecord;
     window.generateOrganismName = generateOrganismName;
     window.perf = Perf;
+    window.hyperparams = Hyperparams;
     newEngine.start();
     setEngine(newEngine);
 

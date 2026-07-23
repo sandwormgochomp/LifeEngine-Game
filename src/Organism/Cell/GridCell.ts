@@ -25,10 +25,17 @@ class Cell{
        (or a big-world full repaint deferred it); cleared when it is drawn.
        Renderer.updateView repaints stale cells as pan/zoom reveals them. */
     stale?: boolean;
+    /* How many of the four orthogonally adjacent cells hold food. Maintained
+       exclusively by GridMap -- see the invariant note there -- so that a
+       mouth cell can rule out its whole neighbourhood with one read instead
+       of four grid lookups. Never serialized: it is derived state, rebuilt
+       from the grid whenever a bulk write lands. */
+    food_adj: number;
 
     constructor(state: CellState, col: number, row: number, x: number, y: number){
         this.owner = null; // owner organism
         this.cell_owner = null; // specific body cell of the owner organism that occupies this grid cell
+        this.food_adj = 0;
         this.setType(state);
         this.col = col;
         this.row = row;
