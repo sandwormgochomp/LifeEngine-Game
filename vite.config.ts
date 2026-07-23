@@ -13,7 +13,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        eyedroppers: resolve(__dirname, 'eyedroppers.html'),
       },
     },
   },
