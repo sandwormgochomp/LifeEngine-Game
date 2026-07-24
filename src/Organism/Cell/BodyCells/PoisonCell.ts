@@ -13,11 +13,11 @@ class PoisonCell extends BodyCell {
         var c = this.getRealCol();
         var r = this.getRealRow();
         for (var loc of Neighbors.adjacent) {
-            var cell = env.grid_map.cellAt(c+loc[0], r+loc[1]);
-            if (cell != null && cell.owner != null && cell.owner !== this.org && cell.owner.living) {
+            var owner = env.grid_map.ownerAt(c+loc[0], r+loc[1]);
+            if (owner != null && owner !== this.org && owner.living) {
                 // Don't poison own species/family
-                if (!cell.owner.anatomy.isEqual(this.org.anatomy)) {
-                    cell.owner.poison_ticks = this.org.poison_duration;
+                if (!owner.anatomy.isEqual(this.org.anatomy)) {
+                    owner.poison_ticks = this.org.poison_duration;
                 }
             }
         }

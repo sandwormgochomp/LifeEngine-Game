@@ -1,4 +1,3 @@
-import type Cell from '../Organism/Cell/GridCell';
 import type { RenderOrganismLike } from '../Organism/Cell/CellStates';
 
 /* Minimal shapes of Renderer, GridMap and the React control panel. These stay
@@ -7,12 +6,13 @@ import type { RenderOrganismLike } from '../Organism/Cell/CellStates';
 interface RendererLike {
     clearAllHighlights(clear_to_highlight?: boolean): void;
     highlightOrganism(org: RenderOrganismLike): void;
-    highlightCell(cell: Cell): void;
+    highlightCell(idx: number): void;
 }
 
 interface GridMapLike {
     xyToColRow(x: number, y: number): [number, number];
-    cellAt(col: number, row: number): Cell | null;
+    indexAt(col: number, row: number): number;
+    ownerAt(col: number, row: number): RenderOrganismLike | null;
 }
 
 interface ControllerEnvLike {
@@ -51,7 +51,12 @@ class CanvasController{
     left_click: boolean;
     middle_click: boolean;
     right_click: boolean;
-    cur_cell: Cell | null;
+    /* The hovered cell's grid index, or -1 when the pointer is off the grid.
+       An index rather than a cell object because the grid hands out a fresh
+       view per lookup (see GridCell): two views of one cell are never the same
+       object, so the "did the hover move?" test below could not be a reference
+       comparison any more. */
+    cur_idx: number;
     /* Also assigned directly by subclasses (EnvironmentController). */
     cur_org: RenderOrganismLike | null;
     highlight_org: boolean;
@@ -71,7 +76,7 @@ class CanvasController{
         this.left_click = false;
         this.middle_click = false;
         this.right_click = false;
-        this.cur_cell = null;
+        this.cur_idx = -1;
         this.cur_org = null;
         this.highlight_org = true;
         this.setCanvas(canvas);
@@ -158,7 +163,7 @@ class CanvasController{
     }
 
     updateMouseLocation(offsetX: number, offsetY: number): void {
-        var prev_cell = this.cur_cell;
+        var prev_idx = this.cur_idx;
         var prev_org = this.cur_org;
 
         this.mouse_x = offsetX;
@@ -166,16 +171,16 @@ class CanvasController{
         var colRow = this.env.grid_map.xyToColRow(this.mouse_x, this.mouse_y);
         this.mouse_c = colRow[0];
         this.mouse_r = colRow[1];
-        this.cur_cell = this.env.grid_map.cellAt(this.mouse_c, this.mouse_r);
-        this.cur_org = this.cur_cell ? this.cur_cell.owner : null;
+        this.cur_idx = this.env.grid_map.indexAt(this.mouse_c, this.mouse_r);
+        this.cur_org = this.cur_idx < 0 ? null : this.env.grid_map.ownerAt(this.mouse_c, this.mouse_r);
 
-        if (this.cur_org != prev_org || this.cur_cell != prev_cell) {
+        if (this.cur_org != prev_org || this.cur_idx != prev_idx) {
             this.env.renderer.clearAllHighlights(true);
             if (this.cur_org != null && this.highlight_org) {
                 this.env.renderer.highlightOrganism(this.cur_org);
             }
-            else if (this.cur_cell != null) {
-                this.env.renderer.highlightCell(this.cur_cell);
+            else if (this.cur_idx >= 0) {
+                this.env.renderer.highlightCell(this.cur_idx);
             }
             this.setHighlightedOrg(this.cur_org != null && this.highlight_org ? this.cur_org : null);
         }

@@ -48,8 +48,17 @@ export interface RenderCellLike {
     dish_light?: number;
 }
 
+/* The neighbour probe computeOrgCellPatch needs, and nothing else. Scalar
+   accessors rather than cellAt(): the grid stores its cells as typed arrays and
+   only materializes a view object on demand, so asking it for eight neighbour
+   objects to read one field off each would allocate eight throwaway views per
+   organism cell drawn. GridMap satisfies this structurally. */
 export interface RenderEnvLike {
-    grid_map?: { cellAt(col: number, row: number): RenderCellLike | null } | null;
+    grid_map?: {
+        indexAt(col: number, row: number): number;
+        ownerOf(idx: number): RenderOrganismLike | null;
+        cellOwnerOf(idx: number): RenderCellOwnerLike | null;
+    } | null;
 }
 
 /* Generic over its own name so that a CellState<LivingCellName> proves, in the
@@ -57,10 +66,17 @@ export interface RenderEnvLike {
 class CellState<N extends CellName = CellName> {
     name: N;
     color: string;
+    /* This state's index in CellStates.all, which is what the grid stores per
+       cell (one byte instead of an eight-byte pointer). Assigned by
+       defineLists(); -1 until then, and only for a state built outside the
+       registry, which nothing does. `empty` must keep index 0 so that a
+       freshly zeroed grid reads as empty without being written. */
+    id: number;
 
     constructor(name: N) {
         this.name = name;
         this.color = 'black';
+        this.id = -1;
     }
 
     render(ctx: CanvasRenderingContext2D, cell: RenderCellLike, size: number, env?: RenderEnvLike): void {
@@ -117,8 +133,11 @@ export function computeOrgCellPatch(state: CellState, cell: RenderCellLike, size
         var grid_map = env.grid_map;
         var col = cell.col, row = cell.row;
         var isSameOrg = function(c: number, r: number): boolean {
-            var target = grid_map.cellAt(c, r);
-            return Boolean(target && (target.owner === org || (target.cell_owner && target.cell_owner.org === org)));
+            var i = grid_map.indexAt(c, r);
+            if (i < 0) return false;
+            if (grid_map.ownerOf(i) === org) return true;
+            var co = grid_map.cellOwnerOf(i);
+            return Boolean(co && co.org === org);
         };
         hasN  = isSameOrg(col, row - 1);
         hasS  = isSameOrg(col, row + 1);
@@ -475,6 +494,12 @@ const CellStates: CellStatesRegistry = {
     defineLists() {
         this.all = [this.empty, this.food, this.wall, this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.healer, this.explosive, this.explosion, this.invincible_wall, this.poison, this.pheromone, this.common, this.parasite, this.chameleon, this.shooter]
         this.living = [this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.healer, this.explosive, this.poison, this.pheromone, this.common, this.parasite, this.chameleon, this.shooter];
+        /* `all` doubles as the grid's id -> state table (GridMap stores the id).
+           `empty` first is load-bearing: a zeroed Uint8Array must read as an
+           empty grid. Nothing persists an id, so the order is free to change
+           as long as empty stays at 0. */
+        for (var i = 0; i < this.all.length; i++)
+            this.all[i].id = i;
     },
     getRandomName: function(): CellName {
         return this.all[Math.floor(Math.random() * this.all.length)].name;

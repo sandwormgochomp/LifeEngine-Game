@@ -18,12 +18,12 @@ class ParasiteCell extends BodyCell{
         for (var offset of Neighbors.adjacent) {
             var col = start_col + offset[0];
             var row = start_row + offset[1];
-            var cell = env.grid_map.cellAt(col, row);
+            var owner = env.grid_map.ownerAt(col, row);
 
-            if (cell != null && cell.owner != null && cell.owner !== this.org && cell.owner.food_collected) {
+            if (owner != null && owner !== this.org && owner.food_collected) {
                 // Steal 1 food if they have it
-                if (cell.owner.food_collected >= 1) {
-                    cell.owner.food_collected--;
+                if (owner.food_collected >= 1) {
+                    owner.food_collected--;
                     this.org.food_collected++;
                 }
             }

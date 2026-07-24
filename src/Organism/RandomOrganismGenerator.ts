@@ -5,8 +5,8 @@ import Brain from "./Perception/Brain";
 
 /* The environment a random organism is generated into: everything Organism
    itself reaches through, plus the one grid-map method this file calls.
-   OrganismEnv's grid_map is declared with cellAt only, so getCenter is
-   intersected in rather than replacing it. Collapses to a real
+   OrganismEnv's grid_map declares only the accessors the simulation uses, so
+   getCenter is intersected in rather than replacing it. Collapses to a real
    WorldEnvironment/OrganismEditor import when those modules convert. */
 export interface GeneratorEnv extends OrganismEnv {
     grid_map: OrganismEnv['grid_map'] & { getCenter(): [number, number] };

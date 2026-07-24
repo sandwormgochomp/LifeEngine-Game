@@ -17,21 +17,34 @@ import type ExplosiveCell from "./Cell/BodyCells/ExplosiveCell";
 import type Species from "../Stats/Species";
 import type { OrganismSpriteSet } from "../Rendering/DecorationRenderer";
 
-/* A grid cell as Organism reaches through it. Structural rather than a real
-   GridCell import: GridMap is typed but its cell class is only described
-   structurally elsewhere too (see BodyCell.ts), and this shape is exactly what
-   this class touches plus what BodyCellOrganism's own view of cellAt demands. */
-export interface OrganismGridCell {
-    state: CellState;
-    owner: Organism | null;
-    cell_owner: BodyCell | null;
-    col: number;
-    row: number;
-    /* Only present while the cell is a wall -- GridMap deletes it otherwise. */
-    durability?: number;
-    /* Count of orthogonally adjacent food cells, maintained by GridMap and
-       read by MouthCell to skip a neighbourhood that cannot feed it. */
-    food_adj: number;
+/* The grid as Organism and the body cells reach through it. Structural rather
+   than a real GridMap import, for the same reason BodyCell.ts describes its
+   organism structurally: OrganismEditor is passed here too.
+ *
+ * All scalar, all allocation-free. The grid stores typed arrays and builds a
+ * cell object only when asked (GridMap.cellAt), and the per-cell simulation
+ * loops -- which run once per body cell per organism per tick -- are exactly
+ * where that object must not be built. Coordinate-taking accessors answer for
+ * an off-grid location (null, or -1); the -Of accessors take an index that
+ * indexAt has already vouched for.
+ *
+ * `owner` is renarrowed to the real Organism, and `cell_owner` to BodyCell,
+ * from the wider render-facing shapes GridMap declares. Both narrowings are
+ * sound -- those are the only values the engine ever stores -- and they are
+ * what lets this file call die()/harm() on what it reads back. */
+export interface OrganismGrid {
+    indexAt(col: number, row: number): number;
+    stateAt(col: number, row: number): CellState | null;
+    ownerAt(col: number, row: number): Organism | null;
+    foodAdjAt(col: number, row: number): number;
+    stateOf(idx: number): CellState;
+    ownerOf(idx: number): Organism | null;
+    cellOwnerOf(idx: number): BodyCell | null;
+    colOf(idx: number): number;
+    rowOf(idx: number): number;
+    /* Take hit points off a wall; true when it is spent. Used by the cells
+       that chip at walls (killer, explosive). */
+    damageWall(idx: number, amount: number): boolean;
 }
 
 /* Queued by shoot() and stepped by WorldEnvironment. */
@@ -50,9 +63,7 @@ export interface OrganismProjectile {
    concrete class would make the editor's partial implementation a type error
    instead of the documented invariant it actually is. */
 export interface OrganismEnv {
-    grid_map: {
-        cellAt(col: number, row: number): OrganismGridCell | null;
-    };
+    grid_map: OrganismGrid;
     /* The fourth argument is a *cell* owner, not an organism: GridMap.setCellOwner
        stores it as cell_owner and derives GridCell.owner from cell_owner.org.
        updateGrid() passes a BodyCell, every other call site passes null. This
@@ -400,8 +411,7 @@ class Organism {
                 r1 = temp;
             }
             for (var i=r1; i!=r2; i++) {
-                var cell = this.env.grid_map.cellAt(c1, i)
-                if (!this.isPassableCell(cell, parent)){
+                if (!this.isPassableCell(c1, i, parent)){
                     return false;
                 }
             }
@@ -414,8 +424,7 @@ class Organism {
                 c1 = temp;
             }
             for (var i=c1; i!=c2; i++) {
-                var cell = this.env.grid_map.cellAt(i, r1);
-                if (!this.isPassableCell(cell, parent)){
+                if (!this.isPassableCell(i, r1, parent)){
                     return false;
                 }
             }
@@ -423,17 +432,25 @@ class Organism {
         }
     }
 
-    isPassableCell(cell: OrganismGridCell | null, parent: Organism): boolean {
-        return cell != null && (cell.state == CellStates.empty || cell.owner == this || cell.owner == parent || cell.state == CellStates.food);
+    isPassableCell(col: number, row: number, parent: Organism): boolean {
+        var grid = this.env.grid_map;
+        var idx = grid.indexAt(col, row);
+        if (idx < 0)
+            return false;
+        var state = grid.stateOf(idx);
+        var owner = grid.ownerOf(idx);
+        return state == CellStates.empty || owner == this || owner == parent || state == CellStates.food;
     }
 
     isClear(col: number, row: number, rotation: Direction = this.rotation): boolean {
+        var grid = this.env.grid_map;
         for(var loccell of this.anatomy.cells) {
-            var cell = this.getRealCell(loccell, col, row, rotation);
-            if (cell==null) {
+            var idx = grid.indexAt(col + loccell.rotatedCol(rotation), row + loccell.rotatedRow(rotation));
+            if (idx < 0) {
                 return false;
             }
-            if (cell.owner==this || cell.state==CellStates.empty || (!Hyperparams.foodBlocksReproduction && cell.state==CellStates.food)){
+            var state = grid.stateOf(idx);
+            if (grid.ownerOf(idx)==this || state==CellStates.empty || (!Hyperparams.foodBlocksReproduction && state==CellStates.food)){
                 continue;
             }
             return false;
@@ -478,8 +495,7 @@ class Organism {
         for (var cell of this.anatomy.cells) {
             var real_c = this.c + cell.rotatedCol(this.rotation);
             var real_r = this.r + cell.rotatedRow(this.rotation);
-            var current_cell = this.env.grid_map.cellAt(real_c, real_r);
-            if (current_cell && current_cell.owner === this) {
+            if (this.env.grid_map.ownerAt(real_c, real_r) === this) {
                 this.env.changeCell(real_c, real_r, CellStates.food, null);
             }
         }
@@ -530,8 +546,7 @@ class Organism {
             var target_c = this.c + dir[0];
             var target_r = this.r + dir[1];
 
-            var target_cell = this.env.grid_map.cellAt(target_c, target_r);
-            if (target_cell && target_cell.state === CellStates.empty) {
+            if (this.env.grid_map.stateAt(target_c, target_r) === CellStates.empty) {
                 this.env.changeCell(target_c, target_r, CellStates.wall, null);
             }
         }
@@ -559,8 +574,7 @@ class Organism {
                     } else {
                         best_dir = dy > 0 ? Directions.down : Directions.up;
                     }
-                    var dummy_cell = { state: state_to_emit, owner: this };
-                    var obs = new Observation(dummy_cell, dist, best_dir);
+                    var obs = new Observation(state_to_emit, this, dist, best_dir);
                     other_org.brain.observe(obs);
                 }
             }
@@ -649,10 +663,14 @@ class Organism {
         return this.living;
     }
 
-    getRealCell(local_cell: BodyCell, c: number = this.c, r: number = this.r, rotation: Direction = this.rotation): OrganismGridCell | null {
+    /* The grid index this body cell currently occupies, or -1 if the organism
+       hangs off the edge of the world. Callers that want the cell's contents
+       ask the grid for the one field they need; the renderer, which is the
+       only caller that wants pixels, asks for x/y off the same index. */
+    getRealCellIndex(local_cell: BodyCell, c: number = this.c, r: number = this.r, rotation: Direction = this.rotation): number {
         var real_c = c + local_cell.rotatedCol(rotation);
         var real_r = r + local_cell.rotatedRow(rotation);
-        return this.env.grid_map.cellAt(real_c, real_r);
+        return this.env.grid_map.indexAt(real_c, real_r);
     }
 
     // An organism is natural if no two cells share a coordinate and one sits

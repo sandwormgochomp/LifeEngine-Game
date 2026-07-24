@@ -12,19 +12,7 @@ import Perlin from "../Utils/Perlin";
 import RandomOrganismGenerator from "../Organism/RandomOrganismGenerator";
 import type { GeneratorEnv } from "../Organism/RandomOrganismGenerator";
 import Species from "../Stats/Species";
-import type Cell from "../Organism/Cell/GridCell";
 import type BodyCell from "../Organism/Cell/BodyCells/BodyCell";
-
-/* A grid cell as this controller reaches through it. GridCell declares its
-   `owner` as RenderOrganismLike, which models only what the renderer needs;
-   this file calls die() on it and hands it out as the current selection, so the
-   owner is renarrowed to the real Organism here. Narrowing a member of a class
-   type is legal because Organism satisfies RenderOrganismLike, and it keeps
-   this shape assignable to the base controller's own view of a cell. Collapses
-   when GridCell itself can name Organism without closing an import cycle. */
-interface ControllerCell extends Cell {
-    owner: Organism | null;
-}
 
 /* The renderer, as this controller and its base class between them reach
    through it. The last three members mirror CanvasController's own (unexported)
@@ -35,11 +23,11 @@ interface ControllerCell extends Cell {
 interface EnvRendererLike {
     ctx: CanvasRenderingContext2D | null;
     cell_size: number;
-    renderCell(cell: Cell): void;
-    addToRender(cell: Cell): void;
+    renderCell(idx: number): void;
+    addToRender(idx: number): void;
     clearAllHighlights(clear_to_highlight?: boolean): void;
     highlightOrganism(org: RenderOrganismLike): void;
-    highlightCell(cell: Cell): void;
+    highlightCell(idx: number): void;
 }
 
 /* Only the one method reached through here is declared, so that the controller
@@ -55,9 +43,21 @@ interface EnvEngineLike {
    mismatch. The chain has to be untangled as a unit. */
 interface EnvControllerEnvLike {
     renderer: EnvRendererLike;
+    /* Scalar accessors rather than a cell object: the grid stores typed arrays
+       and builds a view only on demand (see GridMap). `owner` is renarrowed
+       from the render-facing RenderOrganismLike to the real Organism, which
+       this file calls die() on and hands out as the current selection --
+       legal because Organism satisfies that shape and is what is stored. */
     grid_map: {
         xyToColRow(x: number, y: number): [number, number];
-        cellAt(col: number, row: number): ControllerCell | null;
+        indexAt(col: number, row: number): number;
+        stateAt(col: number, row: number): CellState | null;
+        ownerAt(col: number, row: number): Organism | null;
+        colOf(idx: number): number;
+        rowOf(idx: number): number;
+        xOf(idx: number): number;
+        yOf(idx: number): number;
+        dishTierOf(idx: number): number;
     };
     num_rows: number;
     num_cols: number;
@@ -113,7 +113,7 @@ class EnvironmentController extends CanvasController{
     pan_y: number;
     /* Cells painted by the cursor overlay on the previous frame, re-rendered at
        the start of the next one so the overlay does not smear. */
-    overlay_cells: Set<Cell>;
+    overlay_cells: Set<number>;
     /* Assigned by setCanvas(), which the base constructor always calls, hence
        the definite assignment assertion rather than `| undefined`. */
     pointer_inside!: boolean;
@@ -204,17 +204,19 @@ class EnvironmentController extends CanvasController{
 
         for (let r = 0; r < this.env.num_rows; r++) {
             for (let c = 0; c < this.env.num_cols; c++) {
-                let cell = this.env.grid_map.cellAt(c, r);
-                if (cell == null) continue;
-                if (cell.state == CellStates.invincible_wall || cell.dish_glass) continue;
+                let idx = this.env.grid_map.indexAt(c, r);
+                if (idx < 0) continue;
+                let state = this.env.grid_map.stateAt(c, r);
+                if (state == CellStates.invincible_wall || this.env.grid_map.dishTierOf(idx) !== 0) continue;
 
                 let xval = c/this.env.num_cols*(resolution/this.env.renderer.cell_size*(this.env.num_cols/this.env.num_rows));
                 let yval = r/this.env.num_rows*(resolution/this.env.renderer.cell_size*(this.env.num_rows/this.env.num_cols));
                 let noise = Perlin.get(xval, yval);
                 if (noise > noise_threshold && noise < noise_threshold + thickness/resolution) {
-                    if(cell.owner != null) cell.owner.die();
+                    let owner = this.env.grid_map.ownerAt(c, r);
+                    if(owner != null) owner.die();
                     this.env.changeCell(c, r, CellStates.wall, null);
-                } else if (cell.state == CellStates.wall) {
+                } else if (state == CellStates.wall) {
                     // A re-roll replaces the previous random layout: regular
                     // walls the new noise field misses are cleared in place
                     // rather than via clearWalls(), which would also take the
@@ -276,10 +278,14 @@ class EnvironmentController extends CanvasController{
         var right_click = this.right_click;
         var left_click = this.left_click;
         if (right_click || left_click) {
-            var cell = this.cur_cell;
-            if (cell == null){
+            /* xyToColRow clamps to the grid, so the hovered coordinates are
+               always on it and cur_idx is only negative before the first
+               pointer event has set them. */
+            if (this.cur_idx < 0){
                 return;
             }
+            var cell_c = this.mouse_c;
+            var cell_r = this.mouse_r;
             switch(mode) {
                 case Modes.None:
                     /* Unarmed: a deliberate left-click samples the organism
@@ -292,33 +298,33 @@ class EnvironmentController extends CanvasController{
                     break;
                 case Modes.FoodDrop:
                     if (left_click){
-                        this.dropCellType(cell.col, cell.row, CellStates.food, false, CellStates.wall);
+                        this.dropCellType(cell_c, cell_r, CellStates.food, false, CellStates.wall);
                     }
                     else if (right_click){
-                        this.dropCellType(cell.col, cell.row, CellStates.empty, false, CellStates.wall);
+                        this.dropCellType(cell_c, cell_r, CellStates.empty, false, CellStates.wall);
                     }
                     break;
                 case Modes.WallDrop:
                         if (left_click){
-                            this.dropCellType(cell.col, cell.row, CellStates.wall, true);
+                            this.dropCellType(cell_c, cell_r, CellStates.wall, true);
                         }
                         else if (right_click){
-                            this.dropCellType(cell.col, cell.row, CellStates.empty, false, CellStates.food);
+                            this.dropCellType(cell_c, cell_r, CellStates.empty, false, CellStates.food);
                         }
                         break;
                 case Modes.InvincibleWallDrop:
                         if (left_click){
-                            this.dropCellType(cell.col, cell.row, CellStates.invincible_wall, true);
+                            this.dropCellType(cell_c, cell_r, CellStates.invincible_wall, true);
                         }
                         else if (right_click){
-                            this.dropCellType(cell.col, cell.row, CellStates.empty, false, CellStates.food);
+                            this.dropCellType(cell_c, cell_r, CellStates.empty, false, CellStates.food);
                         }
                         break;
                 case Modes.RadiationDrop:
                         if (left_click) {
-                            this.dropRadiation(cell.col, cell.row, true);
+                            this.dropRadiation(cell_c, cell_r, true);
                         } else if (right_click) {
-                            this.dropRadiation(cell.col, cell.row, false);
+                            this.dropRadiation(cell_c, cell_r, false);
                         }
                         break;
                 case Modes.ClickKill:
@@ -394,8 +400,8 @@ class EnvironmentController extends CanvasController{
         var renderer = this.env.renderer;
         if (!renderer.ctx || WorldConfig.headless) return;
         this.applyCursor();
-        for (var cell of this.overlay_cells)
-            renderer.renderCell(cell);
+        for (var idx of this.overlay_cells)
+            renderer.renderCell(idx);
         this.overlay_cells.clear();
         if (!this.pointer_inside || this.mouse_c == null)
             return;
@@ -417,10 +423,10 @@ class EnvironmentController extends CanvasController{
                 for (var j = -(b + 1); j <= b + 1; j++) {
                     var d = i * i + j * j;
                     if (d > clear_limit) continue;
-                    var brush_cell = this.env.grid_map.cellAt(this.mouse_c + i, this.mouse_r + j);
-                    if (brush_cell == null) continue;
-                    if (d <= fill_limit) ctx.fillRect(brush_cell.x, brush_cell.y, cs, cs);
-                    this.overlay_cells.add(brush_cell);
+                    var brush_idx = this.env.grid_map.indexAt(this.mouse_c + i, this.mouse_r + j);
+                    if (brush_idx < 0) continue;
+                    if (d <= fill_limit) ctx.fillRect(this.env.grid_map.xOf(brush_idx), this.env.grid_map.yOf(brush_idx), cs, cs);
+                    this.overlay_cells.add(brush_idx);
                 }
             }
             ctx.strokeStyle = is_kill ? 'rgba(255, 60, 60, 0.7)' : 'rgba(0, 255, 65, 0.55)';
@@ -436,22 +442,24 @@ class EnvironmentController extends CanvasController{
             // Mirrors Organism.isClear for a fresh (rotation: up) copy
             var valid = true;
             for (var body_cell of this.org_to_clone.anatomy.cells) {
-                var target = this.env.grid_map.cellAt(this.mouse_c + body_cell.loc_col, this.mouse_r + body_cell.loc_row);
-                if (target == null ||
-                    !(target.state === CellStates.empty || (!Hyperparams.foodBlocksReproduction && target.state === CellStates.food))) {
+                var target_state = this.env.grid_map.stateAt(this.mouse_c + body_cell.loc_col, this.mouse_r + body_cell.loc_row);
+                if (target_state == null ||
+                    !(target_state === CellStates.empty || (!Hyperparams.foodBlocksReproduction && target_state === CellStates.food))) {
                     valid = false;
                     break;
                 }
             }
             ctx.globalAlpha = 0.55;
             for (var body_cell of this.org_to_clone.anatomy.cells) {
-                var target = this.env.grid_map.cellAt(this.mouse_c + body_cell.loc_col, this.mouse_r + body_cell.loc_row);
-                if (target == null) continue;
+                var target = this.env.grid_map.indexAt(this.mouse_c + body_cell.loc_col, this.mouse_r + body_cell.loc_row);
+                if (target < 0) continue;
+                var tx = this.env.grid_map.xOf(target);
+                var ty = this.env.grid_map.yOf(target);
                 ctx.fillStyle = body_cell.custom_color || body_cell.state.color;
-                ctx.fillRect(target.x, target.y, cs, cs);
+                ctx.fillRect(tx, ty, cs, cs);
                 if (!valid) {
                     ctx.fillStyle = 'rgba(255, 60, 60, 0.6)';
-                    ctx.fillRect(target.x, target.y, cs, cs);
+                    ctx.fillRect(tx, ty, cs, cs);
                 }
                 this.overlay_cells.add(target);
             }
@@ -465,9 +473,9 @@ class EnvironmentController extends CanvasController{
         /* The only cast in this file. Organism declares its own view of this same environment
            (OrganismEnv) and the two still cannot unify -- but no longer for any
            reason this cleanup can reach. A grid cell's `cell_owner` is
-           RenderCellOwnerLike in GridCell and BodyCell in OrganismGridCell, and
+           RenderCellOwnerLike in GridMap and BodyCell in OrganismGrid, and
            neither satisfies the other: BodyCell lacks getAbsoluteDirection,
-           which lives on EyeCell alone. That is a GridCell-side variance
+           which lives on EyeCell alone. That is a grid-side variance
            problem, independent of Organism being typed. The cast stays until
            cell_owner has one type. */
         var new_org = new Organism(col, row, this.env as unknown as OrganismEnv, organism);
@@ -507,17 +515,19 @@ class EnvironmentController extends CanvasController{
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
             var c=col + loc[0];
             var r=row + loc[1];
-            var cell = this.env.grid_map.cellAt(c, r);
-            if (cell == null)
+            var idx = this.env.grid_map.indexAt(c, r);
+            if (idx < 0)
                 continue;
-            if (killBlocking && cell.owner != null){
-                cell.owner.die();
+            var owner = this.env.grid_map.ownerAt(c, r);
+            if (killBlocking && owner != null){
+                owner.die();
             }
-            else if (cell.owner != null) {
+            else if (owner != null) {
                 continue;
             }
             if (state !== CellStates.empty) {
-                if (ignoreState != null && (cell.state == ignoreState || cell.state == CellStates.invincible_wall || cell.state == CellStates.wall))
+                var cur_state = this.env.grid_map.stateAt(c, r);
+                if (ignoreState != null && (cur_state == ignoreState || cur_state == CellStates.invincible_wall || cur_state == CellStates.wall))
                     continue;
             }
             this.env.changeCell(c, r, state, null);
@@ -544,8 +554,8 @@ class EnvironmentController extends CanvasController{
                     }
                 }
                 if (changed) {
-                    var cell = this.env.grid_map.cellAt(c, r);
-                    if (cell) this.env.renderer.addToRender(cell);
+                    var idx = this.env.grid_map.indexAt(c, r);
+                    if (idx >= 0) this.env.renderer.addToRender(idx);
                 }
             }
         }
@@ -553,18 +563,18 @@ class EnvironmentController extends CanvasController{
 
     findNearOrganism(): Organism | null {
         /* performModeAction() -- the only caller -- returns early when
-           cur_cell is null, and nothing reassigns it in between. The
-           checker cannot carry that narrowing across the call. */
+           the pointer is off the grid, and nothing reassigns the hovered
+           coordinates in between. */
         let closest: Organism | null = null;
         let closest_dist = 100;
         for (let loc of Neighbors.inRange(WorldConfig.brush_size)){
-            let c = this.cur_cell!.col + loc[0];
-            let r = this.cur_cell!.row + loc[1];
-            let cell = this.env.grid_map.cellAt(c, r);
+            let c = this.mouse_c + loc[0];
+            let r = this.mouse_r + loc[1];
+            let owner = this.env.grid_map.ownerAt(c, r);
             let dist = Math.abs(loc[0]) + Math.abs(loc[1]);
-            if (cell != null && cell.owner != null) {
+            if (owner != null) {
                 if (closest === null || dist < closest_dist) {
-                    closest = cell.owner;
+                    closest = owner;
                     closest_dist = dist;
                 }
             }
@@ -574,14 +584,14 @@ class EnvironmentController extends CanvasController{
 
     killNearOrganisms(): void {
         /* performModeAction() -- the only caller -- returns early when
-           cur_cell is null, and nothing reassigns it in between. The
-           checker cannot carry that narrowing across the call. */
+           the pointer is off the grid, and nothing reassigns the hovered
+           coordinates in between. */
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
-            var c = this.cur_cell!.col + loc[0];
-            var r = this.cur_cell!.row + loc[1];
-            var cell = this.env.grid_map.cellAt(c, r);
-            if (cell != null && cell.owner != null)
-                cell.owner.die();
+            var c = this.mouse_c + loc[0];
+            var r = this.mouse_r + loc[1];
+            var owner = this.env.grid_map.ownerAt(c, r);
+            if (owner != null)
+                owner.die();
         }
     }
 
@@ -592,14 +602,15 @@ class EnvironmentController extends CanvasController{
     // one method RandomOrganismGenerator needs beyond Organism's own view.
     seedRandomLife(): void {
         /* performModeAction() -- the only caller -- returns early when
-           cur_cell is null, and nothing reassigns it in between. */
+           the pointer is off the grid, and nothing reassigns the hovered
+           coordinates in between. */
         var gen_env = this.env as unknown as GeneratorEnv;
         var spawned = 0;
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
             if (spawned >= SEED_LIFE_MAX_PER_TICK) break;
             if (Math.random() > SEED_LIFE_DENSITY) continue;
-            var c = this.cur_cell!.col + loc[0];
-            var r = this.cur_cell!.row + loc[1];
+            var c = this.mouse_c + loc[0];
+            var r = this.mouse_r + loc[1];
             if (c < 0 || c >= this.env.num_cols || r < 0 || r >= this.env.num_rows)
                 continue;
             var organism = RandomOrganismGenerator.generate(gen_env);

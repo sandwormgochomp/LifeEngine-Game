@@ -21,13 +21,26 @@ Performance (bundled-world evaluation, 2026-07-23)
       Epic (−38%); whole tick −13% and −14%. `tests/food_adjacency.spec.js`
       guards the invariant and was verified to fail when the maintenance is
       deliberately broken.
-- [ ] **Typed-array grid / slimmer cells.** The remaining lever on lookup
-      cost: makes each lookup cheaper rather than rarer, and also buys load
-      time (0.2–0.6s blocking) and heap (159MB at HighDefSweepers). Largest
-      refactor — do it last. Gate on `sim.org_cells_us_per_org` measured at
-      shrubland; the `npm run bench` lattice has no producers and responds
-      weakly, and its drift medians go stale when the machine is loaded, so
-      always interleave A/B runs rather than trusting the reported delta.
+- [x] ~~Typed-array grid / slimmer cells~~ — done, and it delivered on all
+      three counts. `GridMap` is now parallel arrays indexed `col*rows + row`
+      (a `Uint8Array` of `CellStates.all` indices, plus food_adj, durability,
+      stale, and two JS arrays for the owner references) instead of a
+      `Cell[][]`. `GridCell` is a `(map, index)` view built on demand for the
+      cold paths; the sim reads scalar accessors and allocates nothing.
+      Anything that remembers cells now remembers indices — the renderer's
+      dirty/highlight sets, `env.walls`, the cursor overlay, `cur_idx`.
+      Interleaved A/B, median of 5×120 ticks at shrubland:
+      `org_cells` 1.62→1.04 µs/org-tick (−36%), whole tick −19%, world load
+      362→284ms (−22%), heap 160→92MB (−43%). At HighDefSweepers, the world
+      that motivated this: load 551→176ms (−68%), heap 159→36MB (−77%).
+      Full-grid repaint −10%; the dirty-cell pass is unchanged.
+      Two notes for whoever measures here next: `npm run bench`'s lattice has
+      no producers and responds weakly, and its drift medians go stale when
+      the machine is loaded, so interleave A/B builds rather than trusting the
+      reported delta. And `grid_map.grid` still exists as a cached
+      materialization of the old `Cell[][]` — the specs read it, nothing in
+      the engine does, and touching it from engine code allocates the per-cell
+      objects this work removed.
 
 ---
 

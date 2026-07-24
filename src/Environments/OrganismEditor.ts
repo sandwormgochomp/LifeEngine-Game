@@ -84,11 +84,13 @@ class OrganismEditor extends Environment{
            stand-in and the real Renderer do not unify in either direction --
            EditorController.ts says as much where it declares them: its shape
            wants highlightOrganism(RenderOrganismLike) while Renderer's takes a
-           shape with getRealCell(). Both views are of this same object, so the
+           shape with getRealCellIndex(). Both views are of this same object, so the
            cast is a restatement, not a widening; it goes away when that
            stand-in collapses onto the real Renderer. */
         this.controller = new EditorController(this as unknown as EditorController['env']);
         this.grid_map = new GridMap(21, 21, this.cell_size);
+        // The renderer tracks cells by index; this is the map they index into.
+        this.renderer.grid_map = this.grid_map;
         // Undo history: strokes push the pre-mutation snapshot (beginStroke on
         // mousedown, committed by the first actual change of the stroke).
         this.history = [];
@@ -245,7 +247,7 @@ class OrganismEditor extends Environment{
     renderFull(): void {
         this.needs_render = false;
         if (!this.renderer.ctx) return;
-        this.renderer.renderFullGrid(this.grid_map.grid);
+        this.renderer.renderFullGrid();
         this.renderDecorations();
         this.organisms = [this.organism];
         /* Assigned on the line directly above, but the whole editor is what

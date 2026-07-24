@@ -41,6 +41,9 @@ async function loadedWorld(page) {
 
 async function openWorldsModal(page) {
   await openPanel(page, 'save');
+  // The save popup stays open behind the modal, so a second visit to the
+  // picker within one test must not toggle it shut
+  if (!(await page.locator('#browse-worlds-btn').isVisible())) await openPanel(page, 'save');
   await page.locator('#browse-worlds-btn').click();
   await expect(page.getByTestId('worlds-modal')).toBeVisible();
 }
@@ -126,6 +129,65 @@ test.describe('Bundled worlds load into their designed space', () => {
       // No petri dish was stamped over the rectangular design
       expect(loaded.glass).toBe(0);
       expect(loaded.invincible).toBe(0);
+    });
+  }
+});
+
+/* The camera used to survive a world load: pan is in screen px and the canvas
+   is re-sized to the incoming grid, so a pan that framed the outgoing world
+   either carried the new (smaller) canvas clean off screen, or -- on a world
+   big enough to render culled to the view -- left every cell flagged off
+   screen and nothing painted at all. Both read as "the world didn't load". */
+test.describe('Loading a world reframes it', () => {
+  // Fraction of sample points inside the on-screen part of the world canvas
+  // that got painted. A never-drawn region is transparent black, so alpha is
+  // the signal; even an empty cell paints an opaque backdrop.
+  async function paintedFraction(page) {
+    return await page.evaluate(() => {
+      const canvas = document.getElementById('env-canvas');
+      const cont = document.getElementById('env');
+      const cr = canvas.getBoundingClientRect();
+      const vr = cont.getBoundingClientRect();
+      const l = Math.max(cr.left, vr.left), r = Math.min(cr.right, vr.right);
+      const t = Math.max(cr.top, vr.top), b = Math.min(cr.bottom, vr.bottom);
+      if (r <= l || b <= t) return 0; // canvas entirely off screen
+      const sx = canvas.width / cr.width, sy = canvas.height / cr.height;
+      const ctx = canvas.getContext('2d');
+      let painted = 0, total = 0;
+      for (let i = 0; i < 20; i++) {
+        for (let j = 0; j < 20; j++) {
+          const x = Math.floor(((l - cr.left) + (r - l) * (i + 0.5) / 20) * sx);
+          const y = Math.floor(((t - cr.top) + (b - t) * (j + 0.5) / 20) * sy);
+          total++;
+          if (ctx.getImageData(x, y, 1, 1).data[3] > 0) painted++;
+        }
+      }
+      return painted / total;
+    });
+  }
+
+  // colony (140x140) renders in full; battleground (575x325) is over the
+  // renderer's cull threshold, so it paints the view and defers the rest --
+  // the two loads exercise both halves of renderFullGrid.
+  for (const [first, second] of [['SurvivalOfFittest', 'colony'], ['colony', 'battleground']]) {
+    test(`${second} is on screen after panning around ${first}`, async ({ page }) => {
+      test.slow();
+      await pauseEngine(page);
+      await openWorldsModal(page);
+      await loadWorld(page, first);
+
+      // Pan far, as a user exploring the first world would
+      await page.evaluate(() => {
+        const ctl = window.engine.env.controller;
+        ctl.pan_x = -2200;
+        ctl.pan_y = -700;
+        ctl.applyView();
+      });
+
+      await openWorldsModal(page);
+      await loadWorld(page, second);
+
+      expect(await paintedFraction(page)).toBe(1);
     });
   }
 });

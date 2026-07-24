@@ -3,9 +3,7 @@ import BodyCell from "./BodyCell";
 import type { BodyCellOrganism } from "./BodyCell";
 import Hyperparams from "../../../Hyperparameters";
 
-/* The grid cell / environment shapes are taken straight off BodyCellOrganism so
-   there is only ever one description of them. */
-type GridCellLike = ReturnType<BodyCellOrganism['env']['grid_map']['cellAt']>;
+/* Taken straight off BodyCellOrganism so there is only ever one description. */
 type EnvLike = BodyCellOrganism['env'];
 
 /* GridMap's food_adj counter covers the four orthogonal neighbours, so the
@@ -50,23 +48,17 @@ class MouthCell extends BodyCell{
            cell carries the count of adjacent food, so food_adj === 0 means
            the scan below could not find anything -- which is the case for
            99%+ of mouth cells on every world measured. A mouth standing off
-           the grid has no cell to ask, and falls through to the scan. */
-        if (edibleIsOrthogonal()) {
-            var own = env.grid_map.cellAt(real_c, real_r);
-            if (own != null && own.food_adj === 0)
-                return;
-        }
+           the grid gets -1 rather than 0, and so falls through to the scan. */
+        if (edibleIsOrthogonal() && env.grid_map.foodAdjAt(real_c, real_r) === 0)
+            return;
         for (var loc of Hyperparams.edibleNeighbors){
-            var cell = env.grid_map.cellAt(real_c+loc[0], real_r+loc[1]);
-            this.eatNeighbor(cell, env);
+            this.eatNeighbor(real_c+loc[0], real_r+loc[1], env);
         }
     }
 
-    eatNeighbor(n_cell: GridCellLike, env: EnvLike): void {
-        if (n_cell == null)
-            return;
-        if (n_cell.state == CellStates.food){
-            env.changeCell(n_cell.col, n_cell.row, CellStates.empty, null);
+    eatNeighbor(col: number, row: number, env: EnvLike): void {
+        if (env.grid_map.stateAt(col, row) == CellStates.food){
+            env.changeCell(col, row, CellStates.empty, null);
             this.org.food_collected++;
         }
     }

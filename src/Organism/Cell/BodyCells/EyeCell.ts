@@ -1,12 +1,14 @@
 import CellStates from "../CellStates";
+import type { CellState } from "../CellStates";
 import BodyCell from "./BodyCell";
 import type { BodyCellOrganism } from "./BodyCell";
 import Hyperparams from "../../../Hyperparameters";
 import Directions from "../../Directions";
 import Observation from "../../Perception/Observation";
 
-/* Taken off BodyCellOrganism so the grid cell shape is described in one place. */
-type GridCellLike = ReturnType<BodyCellOrganism['env']['grid_map']['cellAt']>;
+/* The owning organism as the grid hands it back, taken off BodyCellOrganism so
+   the shape is described in one place. */
+type OrganismLike = ReturnType<BodyCellOrganism['env']['grid_map']['ownerOf']>;
 
 class EyeCell extends BodyCell{
     /* Not set in the constructor -- one of initInherit/initRandom/initDefault
@@ -76,7 +78,12 @@ class EyeCell extends BodyCell{
         var start_row = this.getRealRow();
         var col = start_col;
         var row = start_row;
-        var cell: GridCellLike = null;
+        var grid_map = env.grid_map;
+        /* The last cell the ray reached, carried out of the loop the way the
+           cell object used to be: null once the ray leaves the grid, which is
+           the "saw nothing" observation the brain skips. */
+        var state: CellState | null = null;
+        var owner: OrganismLike | null = null;
 
         var maxRange = Hyperparams.lookRange;
         if (env.is_night) {
@@ -86,22 +93,26 @@ class EyeCell extends BodyCell{
         for (var i=0; i<maxRange; i++){
             col+=addCol;
             row+=addRow;
-            cell = env.grid_map.cellAt(col, row);
-            if (cell == null) {
+            var idx = grid_map.indexAt(col, row);
+            if (idx < 0) {
+                state = null;
+                owner = null;
                 break;
             }
-            if (cell.owner === this.org && Hyperparams.seeThroughSelf) {
+            state = grid_map.stateOf(idx);
+            owner = grid_map.ownerOf(idx);
+            if (owner === this.org && Hyperparams.seeThroughSelf) {
                 continue;
             }
-            if (cell.owner && cell.owner !== this.org && cell.owner.anatomy.has_chameleon) {
+            if (owner && owner !== this.org && owner.anatomy.has_chameleon) {
                 continue;
             }
-            if (cell.state !== CellStates.empty) {
+            if (state !== CellStates.empty) {
                 var distance = Math.abs(start_col-col) + Math.abs(start_row-row);
-                return new Observation(cell, distance, direction);
+                return new Observation(state, owner, distance, direction);
             }
         }
-        return new Observation(cell, maxRange, direction);
+        return new Observation(state, owner, maxRange, direction);
     }
 }
 

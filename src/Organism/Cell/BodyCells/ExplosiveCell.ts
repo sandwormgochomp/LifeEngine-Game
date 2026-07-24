@@ -26,27 +26,30 @@ class ExplosiveCell extends BodyCell {
                 if (c_offset * c_offset + r_offset * r_offset <= radius * radius) {
                     var target_c = center_c + c_offset;
                     var target_r = center_r + r_offset;
-                    var cell = env.grid_map.cellAt(target_c, target_r);
-                    if (cell == null) continue;
+                    var idx = env.grid_map.indexAt(target_c, target_r);
+                    if (idx < 0) continue;
+                    var owner = env.grid_map.ownerOf(idx);
 
                     // If it is another organism cell, harm it
-                    if (cell.owner != null && cell.owner !== this.org && cell.owner.living) {
-                        cell.owner.harm();
+                    if (owner != null && owner !== this.org && owner.living) {
+                        owner.harm();
                     }
 
                     // Deal 10 damage to walls, or immediately convert independent/our own cells to explosions
-                    if (cell.state === CellStates.wall) {
-                        if (typeof cell.durability !== 'undefined') {
-                            cell.durability -= 10;
-                            if (cell.durability <= 0) {
-                                env.changeCell(target_c, target_r, CellStates.explosion, null);
-                                env.active_explosions.push({col: target_c, row: target_r, ticks: 3});
-                            }
-                        } else {
+                    if (env.grid_map.stateOf(idx) === CellStates.wall) {
+                        /* Every cell carries a durability now (0 off a wall),
+                           so the undefined-durability branch this used to
+                           carry is gone -- see KillerCell.killNeighbor. */
+                        if (env.grid_map.damageWall(idx, 10)) {
                             env.changeCell(target_c, target_r, CellStates.explosion, null);
                             env.active_explosions.push({col: target_c, row: target_r, ticks: 3});
                         }
-                    } else if (cell.owner == null || cell.owner === this.org) {
+                    /* Re-read rather than reusing `owner`: the harm() above can
+                       have killed that organism, which turns its cells to food
+                       and clears their owner -- and this branch has to see the
+                       cell as it is now, exactly as the live cell object it
+                       replaces did. */
+                    } else if (env.grid_map.ownerOf(idx) == null || env.grid_map.ownerOf(idx) === this.org) {
                         env.changeCell(target_c, target_r, CellStates.explosion, null);
                         env.active_explosions.push({col: target_c, row: target_r, ticks: 3});
                     }

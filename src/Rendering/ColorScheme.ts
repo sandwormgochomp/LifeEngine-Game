@@ -1,14 +1,12 @@
 import CellStates from "../Organism/Cell/CellStates";
 import type { CellName } from "../Organism/Cell/CellStates";
-import type Cell from "../Organism/Cell/GridCell";
 
 /* Minimal shape of an environment as far as the colour scheme is concerned.
    Structural on purpose rather than for want of types: the constructor takes a
    world env *and* an editor env, two unrelated classes, and this is the slice
    they share. */
 interface ColorSchemeEnvLike {
-    renderer: { renderFullGrid(grid: Cell[][]): void };
-    grid_map: { grid: Cell[][] };
+    renderer: { renderFullGrid(): void };
 }
 
 /* Covers all 19 cell states, plus the eye slit, which is not a state of its
@@ -51,8 +49,8 @@ class ColorScheme {
             state.color = color_scheme[state.name];
         }
         CellStates.eye.slit_color=color_scheme['eye-slit']
-        this.world_env.renderer.renderFullGrid(this.world_env.grid_map.grid);
-        this.editor_env.renderer.renderFullGrid(this.editor_env.grid_map.grid);
+        this.world_env.renderer.renderFullGrid();
+        this.editor_env.renderer.renderFullGrid();
     }
 }
 

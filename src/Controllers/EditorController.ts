@@ -3,7 +3,6 @@ import Modes from "./ControlModes";
 import CellStates from "../Organism/Cell/CellStates";
 import type { CellState, RenderOrganismLike } from "../Organism/Cell/CellStates";
 import Directions from "../Organism/Directions";
-import type Cell from "../Organism/Cell/GridCell";
 import type GridMap from "../Grid/GridMap";
 
 /* The renderer, as the editor and its base class between them reach through
@@ -16,10 +15,10 @@ import type GridMap from "../Grid/GridMap";
    declaring its own. */
 interface EditorRendererLike {
     ctx: CanvasRenderingContext2D | null;
-    cells_to_highlight: Set<Cell>;
+    cells_to_highlight: Set<number>;
     clearAllHighlights(clear_to_highlight?: boolean): void;
     highlightOrganism(org: RenderOrganismLike): void;
-    highlightCell(cell: Cell): void;
+    highlightCell(idx: number): void;
 }
 
 /* One of the organism's body cells, as handed back by Anatomy.getLocalCell().
@@ -159,8 +158,8 @@ class EditorController extends CanvasController{
         if (!renderer.ctx || this.mouse_c == null)
             return;
         this.env.renderFull();
-        var cell = this.env.grid_map.cellAt(this.mouse_c, this.mouse_r);
-        if (cell == null)
+        var idx = this.env.grid_map.indexAt(this.mouse_c, this.mouse_r);
+        if (idx < 0)
             return;
         var loc_cell = this.getCurLocalCell();
         var ctx = renderer.ctx;
@@ -173,7 +172,7 @@ class EditorController extends CanvasController{
             return;
         ctx.globalAlpha = 0.45;
         ctx.fillStyle = color;
-        ctx.fillRect(cell.x, cell.y, this.env.cell_size, this.env.cell_size);
+        ctx.fillRect(this.env.grid_map.xOf(idx), this.env.grid_map.yOf(idx), this.env.cell_size, this.env.cell_size);
         ctx.globalAlpha = 1;
     }
 

@@ -66,10 +66,11 @@ class BodyCell{
         return this.org.r + this.rotatedRow(this.org.rotation);
     }
 
-    getRealCell() {
-        var real_c = this.getRealCol();
-        var real_r = this.getRealRow();
-        return this.org.env.grid_map.cellAt(real_c, real_r);
+    /* The linear grid index this cell currently sits on, or -1 if the organism
+       hangs off the edge of the world. Organism.getRealCellIndex is the same
+       query for a cell that is not `this`. */
+    getRealCellIndex() {
+        return this.org.env.grid_map.indexAt(this.getRealCol(), this.getRealRow());
     }
 
     /* No default branch: `dir` is always one of the four Directions values in

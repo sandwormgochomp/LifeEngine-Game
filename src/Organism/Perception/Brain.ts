@@ -170,18 +170,18 @@ class Brain {
         let should_shoot = false;
 
         for (var obs of this.observations) {
-            if (obs.cell == null || obs.cell.owner == this.owner) {
+            if (obs.state == null || obs.owner == this.owner) {
                 continue;
             }
 
-            var act = active_acts[obs.cell.state.name];
+            var act = active_acts[obs.state.name];
             if (act === "explode" && this.owner.anatomy.has_explosive) should_explode = true;
             if (act === "heal" && this.owner.anatomy.has_healer) should_heal = true;
             if (act === "hibernate") should_hibernate = true;
             if (act === "build") should_build = true;
             if (act === "shoot" && this.owner.anatomy.has_shooter) should_shoot = true;
 
-            var weight = active_decs[obs.cell.state.name];
+            var weight = active_decs[obs.state.name];
             if (weight === undefined || weight == 0) continue;
 
             // Attenuate weight by distance

@@ -12,7 +12,6 @@ import WorldConfig from '../WorldConfig';
 import SerializeHelper from '../Utils/SerializeHelper';
 import Species from '../Stats/Species';
 import type { CellState, RenderCellOwnerLike } from '../Organism/Cell/CellStates';
-import type Cell from '../Organism/Cell/GridCell';
 import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
 import type { OrganismEnv, OrganismProjectile, SerializedOrganism } from '../Organism/Organism';
 import type { SerializedGridMap } from '../Grid/GridMap';
@@ -22,27 +21,22 @@ import type { HyperparamsSingleton } from '../Hyperparameters';
    imports this module for real. */
 import type Engine from '../Engine';
 
-/* A grid cell as this environment reaches through it. GridCell declares `owner`
-   as RenderOrganismLike, which models only what CellState.render needs; this
-   class calls die() and takeDamage() on it, so the owner is renarrowed to the
-   real Organism here. Narrowing is legal because Organism satisfies
-   RenderOrganismLike and the value stored really is an Organism --
-   GridMap.setCellOwner derives it from `cell_owner.org`. Same pattern as
-   ControllerCell in EnvironmentController.ts.
+/* GridMap declares its owners as RenderOrganismLike, which models only what
+   CellState.render needs; this class calls die() and takeDamage() on what it
+   reads back, so the owner is renarrowed to the real Organism here. Narrowing
+   is legal because Organism satisfies RenderOrganismLike and the value stored
+   really is an Organism -- GridMap.setCellOwner derives it from
+   `cell_owner.org`. Same pattern as ControllerCell in EnvironmentController.ts.
 
    `cell_owner` is deliberately NOT renarrowed to BodyCell, even though that is
-   what it always holds: GridCell types it as RenderCellOwnerLike, which demands
+   what it always holds: GridMap types it as RenderCellOwnerLike, which demands
    getAbsoluteDirection(), and of the body cells only EyeCell implements that.
    The two views therefore do not unify -- the same gap EnvironmentController.ts
    documents at dropOrganism(), and the reason the OrganismEnv seam below needs
    an assertion. */
-interface WorldCell extends Cell {
-    owner: Organism | null;
-}
-
-/* GridMap with that narrowing threaded through cellAt(). */
 interface WorldGridMap extends GridMap {
-    cellAt(col: number, row: number): WorldCell | null;
+    ownerAt(col: number, row: number): Organism | null;
+    ownerOf(idx: number): Organism | null;
 }
 
 /* The saved world: whatever SerializeHelper.copyNonObjects leaves of a
@@ -137,7 +131,10 @@ class WorldEnvironment extends Environment{
     num_cols: number;
     grid_map: WorldGridMap;
     organisms: Organism[];
-    walls: WorldCell[];
+    /* Grid indices, not cell objects: the grid hands out fresh views rather
+       than keeping one object per cell (see GridMap), so a long-lived list of
+       cells has to be a list of indices. */
+    walls: number[];
     total_mutability: number;
     largest_cell_count: number;
     reset_count: number;
@@ -222,7 +219,7 @@ class WorldEnvironment extends Environment{
            and the two cannot unify today: that view's renderer types
            highlightOrganism() with the shared RenderOrganismLike, while the real
            Renderer types it with its own shape that additionally requires
-           getRealCell(). Neither is assignable to the other, so the mismatch is
+           getRealCellIndex(). Neither is assignable to the other, so the mismatch is
            in already-converted files, not here. Spelled as the field's declared
            type rather than re-declaring its unexported interface. */
         this.controller = new EnvironmentController(this as unknown as EnvironmentController['env'], this.renderer.canvas);
@@ -231,6 +228,10 @@ class WorldEnvironment extends Environment{
         /* The narrowing described on WorldGridMap: the map built here is an
            ordinary GridMap, only viewed through the narrower cell type. */
         this.grid_map = new GridMap(this.num_cols, this.num_rows, cell_size) as WorldGridMap;
+        /* The renderer tracks cells by index, so it needs the map those
+           indices are into. resize() mutates this same object, so this single
+           assignment holds for the life of the environment. */
+        this.renderer.grid_map = this.grid_map;
         this.organisms = [];
         this.walls = [];
         this.total_mutability = 0;
@@ -310,8 +311,7 @@ class WorldEnvironment extends Environment{
         for (var exp of this.active_explosions) {
             exp.ticks--;
             if (exp.ticks <= 0) {
-                var cell = this.grid_map.cellAt(exp.col, exp.row);
-                if (cell && cell.state === CellStates.explosion) {
+                if (this.grid_map.stateAt(exp.col, exp.row) === CellStates.explosion) {
                     this.changeCell(exp.col, exp.row, CellStates.empty, null);
                 }
             } else {
@@ -323,32 +323,32 @@ class WorldEnvironment extends Environment{
         // Update active projectiles
         var remaining_projectiles: OrganismProjectile[] = [];
         for (var proj of this.active_projectiles) {
-            // Clear current pos
-            var current_cell = this.grid_map.cellAt(proj.col, proj.row);
             // Move projectile
             proj.col += proj.dir_col;
             proj.row += proj.dir_row;
             proj.ticks++;
 
-            var target_cell = this.grid_map.cellAt(proj.col, proj.row);
+            var target = this.grid_map.indexAt(proj.col, proj.row);
             var hit = false;
 
-            if (target_cell) {
-                if (target_cell.state === CellStates.wall || target_cell.state === CellStates.invincible_wall) {
+            if (target >= 0) {
+                var target_state = this.grid_map.stateOf(target);
+                if (target_state === CellStates.wall || target_state === CellStates.invincible_wall) {
                     hit = true;
-                    if (target_cell.state === CellStates.wall) {
-                        if (typeof target_cell.durability !== 'undefined') {
-                            target_cell.durability -= 5;
-                            if (target_cell.durability <= 0) {
-                                this.changeCell(target_cell.col, target_cell.row, CellStates.empty, null);
-                            }
-                        } else {
-                            this.changeCell(target_cell.col, target_cell.row, CellStates.empty, null);
+                    if (target_state === CellStates.wall) {
+                        /* Every cell carries a durability now (0 off a wall),
+                           so the undefined-durability branch this used to
+                           carry is gone -- see KillerCell.killNeighbor. */
+                        if (this.grid_map.damageWall(target, 5)) {
+                            this.changeCell(proj.col, proj.row, CellStates.empty, null);
                         }
                     }
-                } else if (target_cell.owner && target_cell.owner !== proj.owner) {
-                    hit = true;
-                    target_cell.owner.takeDamage(5); // Projectile deals 5 damage
+                } else {
+                    var target_owner = this.grid_map.ownerOf(target);
+                    if (target_owner && target_owner !== proj.owner) {
+                        hit = true;
+                        target_owner.takeDamage(5); // Projectile deals 5 damage
+                    }
                 }
             } else {
                 hit = true; // Off screen
@@ -592,17 +592,13 @@ class WorldEnvironment extends Environment{
         sctx.setTransform(k, 0, 0, k, cam.ox / GLOW_DOWNSCALE, cam.oy / GLOW_DOWNSCALE);
         for (var org of this.organisms) {
             for (var body_cell of org.anatomy.cells) {
-                /* getRealCell() returns Organism's own structural view of a grid
-                   cell, which omits the pixel coordinates; every organism in this
-                   environment sits on this grid_map, so the value is one of its
-                   cells and carries x/y. Routed through `unknown` because the two
-                   views of a grid cell do not overlap for the checker: the
-                   organism's omits x/y/setType entirely. */
-                var cell = org.getRealCell(body_cell) as unknown as WorldCell | null;
-                if (cell == null) continue;
-                if (cell.x < x0 || cell.x > x1 || cell.y < y0 || cell.y > y1) continue;
+                var idx = org.getRealCellIndex(body_cell);
+                if (idx < 0) continue;
+                var cx = this.grid_map.xOf(idx);
+                var cy = this.grid_map.yOf(idx);
+                if (cx < x0 || cx > x1 || cy < y0 || cy > y1) continue;
                 sctx.fillStyle = body_cell.custom_color || body_cell.state.color;
-                sctx.fillRect(cell.x - margin, cell.y - margin, spread, spread);
+                sctx.fillRect(cx - margin, cy - margin, spread, spread);
             }
         }
         sctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -618,7 +614,7 @@ class WorldEnvironment extends Environment{
     }
 
     renderFull(): void {
-        this.renderer.renderFullGrid(this.grid_map.grid);
+        this.renderer.renderFullGrid();
         this.deco_dirty = true;
     }
 
@@ -649,9 +645,9 @@ class WorldEnvironment extends Environment{
         /* Organism declares its own view of this same environment
            (OrganismEnv) and the two still cannot unify -- but no longer for any
            reason this cleanup can reach. A grid cell's `cell_owner` is
-           RenderCellOwnerLike in GridCell and BodyCell in OrganismGridCell, and
+           RenderCellOwnerLike in GridMap and BodyCell in OrganismGrid, and
            neither satisfies the other: BodyCell lacks getAbsoluteDirection,
-           which lives on EyeCell alone. That is a GridCell-side variance
+           which lives on EyeCell alone. That is a grid-side variance
            problem, independent of Organism being typed. The cast stays until
            cell_owner has one type. Same assertion, same reason, as
            EnvironmentController.dropOrganism(). */
@@ -699,18 +695,24 @@ class WorldEnvironment extends Environment{
        Mirrors OrganismEditor.changeCell verbatim. */
     changeCell(c: number, r: number, state: CellState, owner: RenderCellOwnerLike | BodyCell | null): void {
         super.changeCell(c, r, state, owner as RenderCellOwnerLike | null);
-        /* cellAt is null only for out-of-range coordinates, which no caller
+        /* indexAt is -1 only for out-of-range coordinates, which no caller
            produces: every one either walks the grid's own bounds
            (buildPetriDish, generateFood), derives coordinates from a cell it
            already fetched (the body cells, updateGrid, die), or tests the cell
            first (dropCellType, randomizeWalls, Organism.buildWall). The save
            loader was the one path that could, and it now checks -- see the
-           guarded wall loop in loadRaw. */
-        this.renderer.addToRender(this.grid_map.cellAt(c, r)!);
+           guarded wall loop in loadRaw. Bailing rather than asserting keeps a
+           bad index out of the dirty set and the wall list, where it would
+           surface far from whatever produced it; super.changeCell above has
+           already no-opped for the same reason. */
+        var idx = this.grid_map.indexAt(c, r);
+        if (idx < 0)
+            return;
+        this.renderer.addToRender(idx);
         this.glow_dirty = true;
         this.deco_dirty = true;
         if(state == CellStates.wall || state == CellStates.invincible_wall)
-            this.walls.push(this.grid_map.cellAt(c, r)!);
+            this.walls.push(idx);
     }
 
     // Enclose the world in a circular dish of invincible wall: life lives
@@ -726,36 +728,34 @@ class WorldEnvironment extends Environment{
         var radius = Math.min(this.grid_map.cols, this.grid_map.rows) / 2 - 4;
         for (var c = 0; c < this.grid_map.cols; c++) {
             for (var r = 0; r < this.grid_map.rows; r++) {
-                /* The loop bounds are the grid's own dimensions, so cellAt()
-                   never returns null here. */
-                var cell = this.grid_map.cellAt(c, r)!;
                 var dx = c - cx;
                 var dy = r - cy;
                 var dist = Math.hypot(dx, dy);
                 if (dist < radius - 0.5) {
-                    cell.dish_glass = false;
-                    cell.dish_tier = 0;
+                    // Tier 0 is what "not glass" means; see GridMap.setDish.
+                    this.grid_map.setDish(c, r, 0, 0);
                     continue;
                 }
-                cell.dish_glass = true;
                 var angle = Math.atan2(dy, dx);
                 // Angle light factor: 1.0 at top-left (-135 deg), -1.0 at bottom-right (45 deg)
                 var light = -Math.cos(angle - Math.PI * 0.75);
 
+                var tier;
                 if (dist < radius + 0.5) {
-                    cell.dish_tier = 1; // Inner Lip
+                    tier = 1; // Inner Lip
                 } else if (dist < radius + 1.8) {
-                    cell.dish_tier = 2; // Main Rim
+                    tier = 2; // Main Rim
                 } else if (dist < radius + 2.8) {
-                    cell.dish_tier = 3; // Outer Shadow Rim
+                    tier = 3; // Outer Shadow Rim
                 } else {
-                    cell.dish_tier = 4; // Void
+                    tier = 4; // Void
                 }
-                cell.dish_light = light;
+                this.grid_map.setDish(c, r, tier, light);
 
-                if (cell.owner != null)
-                    cell.owner.die();
-                if (cell.state !== CellStates.invincible_wall)
+                var owner = this.grid_map.ownerAt(c, r);
+                if (owner != null)
+                    owner.die();
+                if (this.grid_map.stateAt(c, r) !== CellStates.invincible_wall)
                     this.changeCell(c, r, CellStates.invincible_wall, null);
             }
         }
@@ -766,16 +766,15 @@ class WorldEnvironment extends Environment{
     // petri dish: the glass is the world's bounds, not a wall in it, and is
     // recognized by the dish_glass flag buildPetriDish sets.
     clearWalls(): void {
-        let kept: WorldCell[] = [];
+        let kept: number[] = [];
         for(var wall of this.walls){
-            let wcell = this.grid_map.cellAt(wall.col, wall.row);
-            if (wcell == null) continue;
-            if (wcell.dish_glass) {
-                kept.push(wcell);
+            if (this.grid_map.dishTierOf(wall) !== 0) {
+                kept.push(wall);
                 continue;
             }
-            if (wcell.state == CellStates.wall || wcell.state == CellStates.invincible_wall) {
-                this.changeCell(wall.col, wall.row, CellStates.empty, null);
+            let state = this.grid_map.stateOf(wall);
+            if (state == CellStates.wall || state == CellStates.invincible_wall) {
+                this.changeCell(this.grid_map.colOf(wall), this.grid_map.rowOf(wall), CellStates.empty, null);
             }
         }
         /* Rebuilding the list also prunes the stale entries that used to
@@ -809,10 +808,7 @@ class WorldEnvironment extends Environment{
                 var c=Math.floor(Math.random() * this.grid_map.cols);
                 var r=Math.floor(Math.random() * this.grid_map.rows);
 
-                /* c and r are drawn from the grid's own dimensions, so cellAt()
-                   never returns null here -- the JS dereferenced it unguarded
-                   for the same reason. */
-                if (this.grid_map.cellAt(c, r)!.state == CellStates.empty){
+                if (this.grid_map.stateAt(c, r) == CellStates.empty){
                     this.changeCell(c, r, CellStates.food, null);
                 }
             }
@@ -823,7 +819,7 @@ class WorldEnvironment extends Environment{
     reset(reset_life: boolean = true): boolean {
         this.organisms = [];
         this.grid_map.fillGrid(CellStates.empty, !WorldConfig.clear_walls_on_reset);
-        this.renderer.renderFullGrid(this.grid_map.grid);
+        this.renderer.renderFullGrid();
         this.total_mutability = 0;
         this.total_ticks = 0;
         this.active_explosions = [];
@@ -844,11 +840,25 @@ class WorldEnvironment extends Environment{
         return true;
     }
 
+    /* A resize rebuilds every cell, so every grid index anything is still
+       holding -- the wall list, the renderer's dirty and highlight sets --
+       now names a different cell, or none at all. Drop them at the resize
+       rather than let one surface later against the new grid. Under the old
+       object grid the same lists went on referencing cells that were no
+       longer in any grid, which clearWalls had to re-look-up around. */
+    dropCellIndices(): void {
+        this.walls = [];
+        this.renderer.cells_to_render.clear();
+        this.renderer.cells_to_highlight.clear();
+        this.renderer.highlighted_cells.clear();
+    }
+
     resizeGridColRow(cell_size: number | string, cols: number, rows: number): void {
         cell_size = Number(cell_size);
         this.renderer.cell_size = cell_size;
         this.renderer.fillShape(rows*cell_size, cols*cell_size);
         this.grid_map.resize(cols, rows, cell_size);
+        this.dropCellIndices();
         this.syncOverlaySizes();
     }
 
@@ -859,6 +869,7 @@ class WorldEnvironment extends Environment{
         this.num_cols = Math.ceil(this.renderer.width / cell_size);
         this.num_rows = Math.ceil(this.renderer.height / cell_size);
         this.grid_map.resize(this.num_cols, this.num_rows, cell_size);
+        this.dropCellIndices();
     }
 
     serialize(): SerializedWorld {
@@ -893,15 +904,15 @@ class WorldEnvironment extends Environment{
         for (let wall of raw.grid.walls) {
             /* A save can name a wall outside the grid it declares -- both load
                paths validate only that `grid` and `organisms` are present, so a
-               hand-edited or version-mismatched file gets here intact. cellAt
-               returns null for those, and an unchecked push put the null in
+               hand-edited or version-mismatched file gets here intact. indexAt
+               returns -1 for those, and an unchecked push put a null cell in
                this.walls, where it surfaced far away and much later as a
-               TypeError in clearWalls (which reads wall.col). Skipping it
-               matches what every other wall-writing path already does:
+               TypeError in clearWalls (which read wall.col off it). Skipping
+               it matches what every other wall-writing path already does:
                randomizeWalls and dropCellType both test the cell first. */
-            let wall_cell = this.grid_map.cellAt(wall.c, wall.r);
-            if (wall_cell != null) {
-                this.walls.push(wall_cell);
+            let wall_idx = this.grid_map.indexAt(wall.c, wall.r);
+            if (wall_idx >= 0) {
+                this.walls.push(wall_idx);
             }
         }
         /* A world loads into the space it was designed for, so the save's own
@@ -958,7 +969,14 @@ class WorldEnvironment extends Environment{
             FossilRecord.addSpeciesObj(species[name]);
         FossilRecord.loadRaw(raw.fossil_record);
         SerializeHelper.overwriteNonObjects(raw, this as unknown as Record<string, unknown>);
-        this.renderer.renderFullGrid(this.grid_map.grid);
+        /* The camera belongs to the world that was on screen, not to this one:
+           pan is in screen px and the canvas is re-sized to the incoming grid,
+           so a pan that framed a 1540px world leaves a 560px one entirely off
+           screen -- the load looked like it had silently failed. Reset before
+           the repaint below, so updateView() measures the canvas where it now
+           sits rather than culling the whole world away as off screen. */
+        this.controller.resetView();
+        this.renderer.renderFullGrid();
     }
 }
 
