@@ -65,6 +65,18 @@ test.describe('Worlds picker', () => {
     await expect(card).toContainText('385×217');
   });
 
+  /* The minimaps are painted at build time by scripts/generate-world-thumbs.mjs
+     -- see the thumbnail suite at the bottom of this file for what's in them.
+     Here: every card actually resolves its image, so a world added to
+     _list.json without a regenerated thumbnail is caught. */
+  test('Every world tile shows its generated minimap', async ({ page }) => {
+    for (const { value } of worldList) {
+      const img = page.locator(`.world-card[data-world="${value}"] img`);
+      await expect(img).toHaveJSProperty('complete', true);
+      expect(await img.evaluate(el => el.naturalWidth)).toBeGreaterThan(0);
+    }
+  });
+
   test('Loading a world replaces the grid and applies its saved controls', async ({ page }) => {
     await page.evaluate(() => { window.Hyperparams_probe = null; });
 
@@ -232,7 +244,7 @@ test.describe('Worlds saved in the browser', () => {
 
     // Arming the trash asks rather than acting
     await savedCard(page, 'Doomed').locator('.saved-world-delete').click();
-    await expect(savedCard(page, 'Doomed')).toContainText('Delete Doomed?');
+    await expect(savedCard(page, 'Doomed')).toContainText('Delete?');
     expect(await page.evaluate(() => localStorage.length)).toBeGreaterThan(1);
 
     await savedCard(page, 'Doomed').locator('.saved-world-delete-confirm').click();
@@ -393,5 +405,49 @@ test.describe('World shape round-trip', () => {
     const after = await loadedWorld(page);
     expect(after.glass).toBe(0);
     expect(after.invincible).toBe(0);
+  });
+});
+
+/* The build paints a minimap per bundled world (scripts/generate-world-thumbs.mjs).
+   These checks read the PNGs off disk rather than through the page: a world
+   added to _list.json without a regenerated thumbnail, or a generator that
+   stops writing valid files, fails here rather than shipping a picker full of
+   fallback globes. */
+test.describe('Generated world thumbnails', () => {
+  const THUMBS_DIR = path.join(WORLDS_DIR, 'thumbs');
+  const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  // Width and height live in the IHDR chunk, which PNG pins at bytes 16..24
+  function readPng(value) {
+    const buf = fs.readFileSync(path.join(THUMBS_DIR, `${value}.png`));
+    return {
+      magic: buf.subarray(0, 8),
+      width: buf.readUInt32BE(16),
+      height: buf.readUInt32BE(20),
+      bytes: buf.length,
+    };
+  }
+
+  for (const { name, value } of worldList) {
+    test(`${name} has a minimap matching its grid`, () => {
+      const png = readPng(value);
+      expect(png.magic.equals(PNG_MAGIC)).toBe(true);
+      expect(png.bytes).toBeGreaterThan(0);
+
+      // Fits the tile's box, and is never upscaled past one pixel per cell
+      const world = savedWorld(value);
+      expect(png.width).toBeLessThanOrEqual(352);
+      expect(png.height).toBeLessThanOrEqual(224);
+      expect(png.width).toBeLessThanOrEqual(world.cols);
+      expect(png.height).toBeLessThanOrEqual(world.rows);
+
+      // Aspect ratio survives the downscale (one pixel of rounding either way)
+      expect(png.width / png.height).toBeCloseTo(world.cols / world.rows, 1);
+    });
+  }
+
+  test('Every bundled world has one, and there are no orphans', () => {
+    const files = fs.readdirSync(THUMBS_DIR).filter(f => f.endsWith('.png')).sort();
+    expect(files).toEqual(worldList.map(w => `${w.value}.png`).sort());
   });
 });

@@ -1256,25 +1256,26 @@
   flex-shrink: 0;
 }
 
-/* Wider than the organism picker: world cards carry a name and a grid size
-   on one line, and the names are long enough to ellipsize without the room */
+/* Wider than the organism picker: world tiles carry a minimap wide enough to
+   read, and the names are long enough to ellipsize without the room */
 .worldsModal {
   width: min(820px, 94vw);
 }
 
 .worldsList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
   padding: 14px 16px;
   overflow-y: auto;
 }
 
 .worldCard {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 6px;
   margin: 0;
   background: rgba(0, 0, 0, 0.6);
   border: 2px solid rgba(0, 255, 65, 0.2);
@@ -1285,6 +1286,41 @@
   transition: all 0.12s;
   min-width: unset;
   text-align: left;
+}
+
+/* The minimap sits in a fixed slot so tiles line up whatever a world's aspect
+   ratio is; the fallback globe sits behind it, uncovered only if the image is
+   missing (a checkout that hasn't run `npm run thumbs`). */
+.worldThumbSlot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  background: #0E1318;
+  border: 1px solid rgba(0, 255, 65, 0.15);
+  overflow: hidden;
+}
+
+.worldThumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.worldThumbFallback {
+  font-size: 26px;
+  color: rgba(0, 255, 65, 0.35);
+}
+
+.worldCardFoot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .worldCard:hover:not(:disabled) {
@@ -1323,35 +1359,24 @@
   padding: 6px 2px 2px;
 }
 
-/* A saved world carries a delete button, so its card is a container with two
-   buttons in it rather than one big button */
-.savedCard {
-  padding: 0 6px 0 0;
-  gap: 0;
-}
-
+/* A saved world carries a delete button, so its tile is a container holding
+   the load button and the delete button rather than one big button */
 .savedCardMain {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  padding: 5px 10px;
+  display: block;
+  padding: 0;
   margin: 0;
   background: transparent;
   border: none;
   border-radius: 0;
   box-shadow: none;
+  min-width: unset;
   color: inherit;
-  text-align: left;
   cursor: pointer;
 }
 
-/* The thumbnail sits inline in the row, unlike the organism picker's tiles */
+/* Its thumbnail is the largest organism, not a minimap: a save is the user's
+   own world, which they recognise by what lives in it. */
 .savedCardMain canvas {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
   background: none;
   border: none;
 }

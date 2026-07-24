@@ -203,12 +203,24 @@ const WorldsModal: React.FC<WorldsModalProps> = ({ engine, onClose }) => {
           {saved.map(entry => (
             <div
               key={entry.id}
-              className={`saved-world-card ${styles.worldCard} ${styles.savedCard} ${loading ? styles.worldCardDead : ''}`}
+              className={`saved-world-card ${styles.worldCard} ${loading ? styles.worldCardDead : ''}`}
               data-saved-world={entry.name}
             >
+              <button
+                className={`saved-world-load ${styles.savedCardMain}`}
+                disabled={loading !== null}
+                title={`Replace the current world with ${entry.name}`}
+                onClick={() => loadSaved(entry)}
+              >
+                <span className={styles.worldThumbSlot}>
+                  {entry.thumb?.length
+                    ? <OrganismThumb cells={entry.thumb} size={80} decorated />
+                    : <i className={`fa-solid fa-earth-americas ${styles.worldThumbFallback}`}></i>}
+                </span>
+              </button>
               {confirmDelete === entry.id ? (
-                <>
-                  <span className={styles.worldName}>Delete {entry.name}?</span>
+                <div className={styles.worldCardFoot}>
+                  <span className={styles.worldName}>Delete?</span>
                   <button
                     className={`saved-world-delete-confirm ${styles.savedIconBtn} ${styles.savedIconDanger}`}
                     title={`Delete ${entry.name} permanently`}
@@ -216,28 +228,14 @@ const WorldsModal: React.FC<WorldsModalProps> = ({ engine, onClose }) => {
                   >
                     <i className="fa-solid fa-check"></i>
                   </button>
-                  <button
-                    className={styles.savedIconBtn}
-                    title="Keep it"
-                    onClick={() => setConfirmDelete(null)}
-                  >
+                  <button className={styles.savedIconBtn} title="Keep it" onClick={() => setConfirmDelete(null)}>
                     <i className="fa-solid fa-xmark"></i>
                   </button>
-                </>
+                </div>
               ) : (
-                <>
-                  <button
-                    className={`saved-world-load ${styles.savedCardMain}`}
-                    disabled={loading !== null}
-                    title={`Replace the current world with ${entry.name}`}
-                    onClick={() => loadSaved(entry)}
-                  >
-                    {entry.thumb?.length
-                      ? <OrganismThumb cells={entry.thumb} size={30} decorated />
-                      : <i className="fa-solid fa-earth-americas"></i>}
-                    <span className={styles.worldName}>{entry.name}</span>
-                    <span className={styles.pickerMeta}>{entry.cols}×{entry.rows}</span>
-                  </button>
+                <div className={styles.worldCardFoot}>
+                  <span className={styles.worldName}>{entry.name}</span>
+                  <span className={styles.pickerMeta}>{entry.cols}×{entry.rows}</span>
                   <button
                     className={`saved-world-delete ${styles.savedIconBtn}`}
                     disabled={loading !== null}
@@ -246,7 +244,7 @@ const WorldsModal: React.FC<WorldsModalProps> = ({ engine, onClose }) => {
                   >
                     <i className="fa-solid fa-trash"></i>
                   </button>
-                </>
+                </div>
               )}
             </div>
           ))}
@@ -266,12 +264,25 @@ const WorldsModal: React.FC<WorldsModalProps> = ({ engine, onClose }) => {
               title={`Replace the current world with ${world.name}`}
               onClick={() => loadBundled(world)}
             >
-              <i className="fa-solid fa-earth-americas"></i>
-              <span className={styles.worldName}>{world.name}</span>
-              <span className={styles.pickerMeta}>
-                {loading === world.value
-                  ? 'loading…'
-                  : world.cols && world.rows ? `${world.cols}×${world.rows}` : ''}
+              <span className={styles.worldThumbSlot}>
+                {/* Painted at build time by scripts/generate-world-thumbs.mjs.
+                    A world that hasn't been through the build falls back to
+                    the globe rather than a broken image. */}
+                <img
+                  className={styles.worldThumb}
+                  src={`assets/worlds/thumbs/${world.value}.png`}
+                  alt=""
+                  onError={e => { e.currentTarget.style.display = 'none'; }}
+                />
+                <i className={`fa-solid fa-earth-americas ${styles.worldThumbFallback}`}></i>
+              </span>
+              <span className={styles.worldCardFoot}>
+                <span className={styles.worldName}>{world.name}</span>
+                <span className={styles.pickerMeta}>
+                  {loading === world.value
+                    ? 'loading…'
+                    : world.cols && world.rows ? `${world.cols}×${world.rows}` : ''}
+                </span>
               </span>
             </button>
           ))}
