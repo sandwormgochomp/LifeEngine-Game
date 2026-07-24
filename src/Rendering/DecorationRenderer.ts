@@ -98,26 +98,83 @@ function shade(color: string, factor: number): string {
     return out;
 }
 
-// A clean pixel-art diagonal connection with a sharp boundary line between colorA and colorB
-function drawStrand(ctx: CanvasRenderingContext2D, px: number, py: number, dy: number, t: number, colorA: string, colorB: string): void {
-    if (dy > 0) {
-        // SE diagonal (down-right): clean diagonal boundary between Cell A (top-left) and Cell B (bottom-right)
-        ctx.fillStyle = colorA;
-        ctx.fillRect(px - t, py - t, t, t);
-        ctx.fillRect(px - t, py, t, t);
-        ctx.fillRect(px, py - t, t, t);
+// A straight diagonal beam that visually fuses two cells touching only at the
+// shared corner (px, py) -- so the pair reads as one diagonal limb rather than
+// two checkerboard squares. We fill a diamond of radius r centred on the
+// corner. The two halves that fall inside cells A and B just repaint matching
+// body pixels; the two halves that spill into the empty flanking cells are
+// triangles whose outer edges are 45-degree lines parallel to the connection,
+// which is what makes the strut read as one continuous diagonal. A cut through
+// the corner, perpendicular to the beam, gives the sharp colorA/colorB seam.
+//
+// dy > 0 is the SE beam (A is up-left, B down-right); dy < 0 the NE beam (A
+// down-left, B up-right). open1/open2 gate the two spill triangles -- the one
+// above the corner (j < 0) and the one below it (j > 0) -- against the beam
+// bleeding over an occupied orthogonal neighbour; the caller passes false for
+// a side whose flanking cell is filled (an L-joint), where no gap exists.
+function drawStrand(ctx: CanvasRenderingContext2D, px: number, py: number, dy: number, r: number, colorA: string, colorB: string, open1: boolean, open2: boolean, skipCells?: boolean): void {
+    var se = dy > 0;
+    for (var j = -r; j <= r; j++) {
+        var w = r - Math.abs(j);
+        for (var i = -w; i <= w; i++) {
+            // Each pixel lands in exactly one quadrant around the corner (the
+            // axes fold into the E/S sides), so nothing is painted twice -- key
+            // for the translucent drop shadow. Two opposite quadrants are the
+            // cell bodies; the other two are the spill triangles that make the
+            // strut continuous. Which is which flips between the SE and NE beam.
+            var east = i >= 0, south = j >= 0;
+            var role; // 0 = cell A, 1 = cell B, 2 = upper spill, 3 = lower spill
+            if (se) {
+                role = !east && !south ? 0 : (east && south ? 1 : (east ? 2 : 3));
+            } else {
+                role = !east && south ? 0 : (east && !south ? 1 : (!east ? 2 : 3));
+            }
+            if (role === 2 && !open1) continue;
+            if (role === 3 && !open2) continue;
+            // skipCells: only the spill triangles are new geometry. The cell
+            // bodies already painted them, so the beam pass leaves them alone
+            // (and the shadow avoids double-darkening a translucent overlap).
+            if (skipCells && role < 2) continue;
 
-        ctx.fillStyle = colorB;
-        ctx.fillRect(px, py, t, t);
-    } else {
-        // NE diagonal (up-right): clean diagonal boundary between Cell A (bottom-left) and Cell B (top-right)
-        ctx.fillStyle = colorA;
-        ctx.fillRect(px - t, py, t, t);
-        ctx.fillRect(px - t, py - t, t, t);
-        ctx.fillRect(px, py, t, t);
+            // Split the beam across its width: SE seam along i + j = 0, NE along
+            // i - j = 0. Strict so the shared corner pixel resolves to one side.
+            var isA = se ? (i + j < 0) : (i < j);
+            ctx.fillStyle = isA ? colorA : colorB;
+            ctx.fillRect(px + i, py + j, 1, 1);
+        }
+    }
+}
 
-        ctx.fillStyle = colorB;
-        ctx.fillRect(px, py - t, t, t);
+// Retro dither for a connective beam's spill triangles, so the strut gets the
+// same beveled 3D read as the cell bodies: a light checker toward the top-left
+// (i + j small) and a dark checker toward the bottom-right (i + j large), with
+// a plain band through the middle. Parity keys off the global sprite grid, so
+// the beam's checker lines up seamlessly with the cells it bridges.
+function ditherStrand(ctx: CanvasRenderingContext2D, px: number, py: number, dy: number, r: number, open1: boolean, open2: boolean, dStep: number): void {
+    var se = dy > 0;
+    var band = Math.max(1, Math.round(r * 0.4));
+    for (var j = -r; j <= r; j++) {
+        var w = r - Math.abs(j);
+        for (var i = -w; i <= w; i++) {
+            var east = i >= 0, south = j >= 0;
+            var role;
+            if (se) {
+                role = !east && !south ? 0 : (east && south ? 1 : (east ? 2 : 3));
+            } else {
+                role = !east && south ? 0 : (east && !south ? 1 : (!east ? 2 : 3));
+            }
+            if (role < 2) continue;               // cells dither themselves
+            if (role === 2 && !open1) continue;
+            if (role === 3 && !open2) continue;
+
+            var gx = px + i, gy = py + j;
+            if ((Math.floor(gx / dStep) + Math.floor(gy / dStep)) % 2 !== 0) continue;
+            var d = i + j;
+            if (d <= -band) ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+            else if (d >= band) ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            else continue;
+            ctx.fillRect(gx, gy, 1, 1);
+        }
     }
 }
 
@@ -155,7 +212,9 @@ function generateOrganismSprite(org: DecoOrganismLike, sz: number): OrganismSpri
 
     var bw = Math.max(1, Math.floor(sz / 5));
     var cut = sz >= 12 ? 3 : (sz >= 6 ? 2 : 1);
-    var t = Math.max(1, Math.floor(sz / 4));
+    // Half-width of the diagonal connective beam. Bold enough (~0.8 of a cell
+    // across) that a diagonal pair fuses into one limb instead of two squares.
+    var strandR = Math.max(2, Math.round(sz * 0.4));
     var shadowOff = Math.max(1, Math.floor(sz / 5));
     var padding = sz + shadowOff + bw * 2;
 
@@ -195,8 +254,12 @@ function generateOrganismSprite(org: DecoOrganismLike, sz: number): OrganismSpri
         var sameW = same(rc - 1, rr);
 
         ctx.fillRect(x, y, sz, sz);
-        if (same(rc + 1, rr - 1)) ctx.fillRect(x + sz - t, y - t, t * 2, t * 2);
-        if (same(rc + 1, rr + 1)) ctx.fillRect(x + sz - t, y + sz - t, t * 2, t * 2);
+        // Cast the diagonal beam's own shadow so it does not leave a square
+        // knuckle poking past the strut's 45-degree edges. skipCells: the cell
+        // body shadow above already covers the beam's in-cell halves.
+        var shadowCol = 'rgba(0, 0, 0, 0.35)';
+        if (same(rc + 1, rr - 1)) drawStrand(ctx, x + sz, y, -1, strandR + bw, shadowCol, shadowCol, !sameN, !sameE, true);
+        if (same(rc + 1, rr + 1)) drawStrand(ctx, x + sz, y + sz, 1, strandR + bw, shadowCol, shadowCol, !sameE, !sameS, true);
 
         if (!sameN) ctx.fillRect(x, y - bw, sz, bw);
         if (!sameS) ctx.fillRect(x, y + sz, sz, bw);
@@ -233,20 +296,10 @@ function generateOrganismSprite(org: DecoOrganismLike, sz: number): OrganismSpri
         var sameNW = same(rc - 1, rr - 1);
         var sameSW = same(rc - 1, rr + 1);
 
-        // A. Solid Cell Body & Diagonal Joint Filler
+        // A. Solid Cell Body (diagonal connective beams are a later pass, so
+        // they can be dithered and outlined as one piece with the bodies).
         ctx.fillStyle = color;
         ctx.fillRect(pos.x, pos.y, sz, sz);
-
-        if (sameNE) {
-            var ne = cellMap.get((rc + 1) + ',' + (rr - 1));
-            var ne_color = (ne && ne.custom_color) || (ne && ne.state ? ne.state.color : color);
-            drawStrand(ctx, pos.x + sz, pos.y, -1, t, color, ne_color);
-        }
-        if (sameSE) {
-            var se = cellMap.get((rc + 1) + ',' + (rr + 1));
-            var se_color = (se && se.custom_color) || (se && se.state ? se.state.color : color);
-            drawStrand(ctx, pos.x + sz, pos.y + sz, 1, t, color, se_color);
-        }
 
         // B. 16-Bit Retro Pixel Dithering & Gradient Shading
         if (sz >= 3) {
@@ -285,6 +338,40 @@ function generateOrganismSprite(org: DecoOrganismLike, sz: number): OrganismSpri
         if (!sameN && !sameE && !sameNE) ctx.fillRect(pos.x + sz - cut, pos.y, cut, cut);
         if (!sameS && !sameW && !sameSW) ctx.fillRect(pos.x, pos.y + sz - cut, cut, cut);
         if (!sameS && !sameE && !sameSE) ctx.fillRect(pos.x + sz - cut, pos.y + sz - cut, cut, cut);
+    }
+
+    // Pass 1.5: Diagonal Connective Beams. Drawn after every cell body so the
+    // strut reads as one connected piece: an outline diamond (radius strandR +
+    // bw) lays the dark silhouette, the body diamond (radius strandR) fills the
+    // colours across the seam, then ditherStrand bevels it -- the same
+    // outline / body / shade order the cell bodies get. skipCells keeps all
+    // three to the spill triangles; the cells already own everything else.
+    for (var body_cell of cells) {
+        var rc = body_cell.rotatedCol ? body_cell.rotatedCol(rotation) : body_cell.loc_col;
+        var rr = body_cell.rotatedRow ? body_cell.rotatedRow(rotation) : body_cell.loc_row;
+        var pos = getCellPos(rc, rr);
+        var color = body_cell.custom_color || body_cell.state.color;
+
+        var sameN = same(rc, rr - 1);
+        var sameS = same(rc, rr + 1);
+        var sameE = same(rc + 1, rr);
+
+        if (same(rc + 1, rr - 1)) {
+            var ne = cellMap.get((rc + 1) + ',' + (rr - 1));
+            var ne_color = (ne && ne.custom_color) || (ne && ne.state ? ne.state.color : color);
+            // open1 = N side open, open2 = E side open (suppress an L-joint spill).
+            drawStrand(ctx, pos.x + sz, pos.y, -1, strandR + bw, shade(color, 0.45), shade(ne_color, 0.45), !sameN, !sameE, true);
+            drawStrand(ctx, pos.x + sz, pos.y, -1, strandR, color, ne_color, !sameN, !sameE, true);
+            ditherStrand(ctx, pos.x + sz, pos.y, -1, strandR, !sameN, !sameE, dStep);
+        }
+        if (same(rc + 1, rr + 1)) {
+            var se = cellMap.get((rc + 1) + ',' + (rr + 1));
+            var se_color = (se && se.custom_color) || (se && se.state ? se.state.color : color);
+            // open1 = E side open, open2 = S side open.
+            drawStrand(ctx, pos.x + sz, pos.y + sz, 1, strandR + bw, shade(color, 0.45), shade(se_color, 0.45), !sameE, !sameS, true);
+            drawStrand(ctx, pos.x + sz, pos.y + sz, 1, strandR, color, se_color, !sameE, !sameS, true);
+            ditherStrand(ctx, pos.x + sz, pos.y + sz, 1, strandR, !sameE, !sameS, dStep);
+        }
     }
 
     // Combined Pass 2: Cute Pixel Art Eyeballs (only for 'eye' cells)
