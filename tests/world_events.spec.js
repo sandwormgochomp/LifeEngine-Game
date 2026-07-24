@@ -23,12 +23,10 @@ test.describe('Tool palette tabs', () => {
     await expect(page.locator('#tool-select')).toBeHidden();
   });
 
-  test('Scaffolded events are present but disabled', async ({ page }) => {
+  test('Every event in the tab is live', async ({ page }) => {
     await page.locator('#tool-tab-events').click();
-    await expect(page.locator('#event-bloom')).toBeEnabled();
-    await expect(page.locator('#event-predator')).toBeEnabled();
-    for (const id of ['#event-iceage', '#event-radstorm']) {
-      await expect(page.locator(id)).toBeDisabled();
+    for (const id of ['#event-bloom', '#event-iceage', '#event-radstorm', '#event-predator']) {
+      await expect(page.locator(id)).toBeEnabled();
     }
   });
 
@@ -118,6 +116,73 @@ test.describe('World events', () => {
     expect(state.blooms).toBe(1);
   });
 
+  test('Ice age crashes food production, then restores it when the window ends', async ({ page }) => {
+    const base = await page.evaluate(() => window.hyperparams.foodProdProb);
+
+    await page.locator('#tool-tab-events').click();
+    await page.locator('#event-iceage').click();
+
+    const spiked = await page.evaluate(() => ({
+      prob: window.hyperparams.foodProdProb,
+      ages: window.engine.env.active_events.filter(e => e.kind === 'iceage').length,
+    }));
+    // A famine, not a glut: the same mechanism as the bloom with the
+    // multiplier under 1
+    expect(spiked.prob).toBeLessThan(base);
+    expect(spiked.ages).toBe(1);
+
+    const restored = await page.evaluate(() => {
+      const env = window.engine.env;
+      env.total_ticks = env.active_events.find(e => e.kind === 'iceage').ends_at;
+      env.tickWorldEvents();
+      return { prob: window.hyperparams.foodProdProb, events: env.active_events.length };
+    });
+    expect(restored.prob).toBe(base);
+    expect(restored.events).toBe(0);
+  });
+
+  test('An ice age cancels a running bloom instead of nesting inside it', async ({ page }) => {
+    const base = await page.evaluate(() => window.hyperparams.foodProdProb);
+
+    await page.locator('#tool-tab-events').click();
+    await page.locator('#event-bloom').click();
+    await page.locator('#event-iceage').click();
+
+    const during = await page.evaluate(() => ({
+      prob: window.hyperparams.foodProdProb,
+      kinds: window.engine.env.active_events.map(e => e.kind),
+    }));
+    // Only the ice age is left, and it crashed from the pre-bloom baseline —
+    // had it captured the spiked value, restoring would leave a permanent glut
+    expect(during.kinds).toEqual(['iceage']);
+    expect(during.prob).toBeLessThan(base);
+
+    const after = await page.evaluate(() => {
+      const env = window.engine.env;
+      env.total_ticks = env.active_events[0].ends_at;
+      env.tickWorldEvents();
+      return window.hyperparams.foodProdProb;
+    });
+    expect(after).toBe(base);
+  });
+
+  test('Saving mid-event stores the real food rate, not the spiked one', async ({ page }) => {
+    const base = await page.evaluate(() => window.hyperparams.foodProdProb);
+
+    await page.locator('#tool-tab-events').click();
+    await page.locator('#event-bloom').click();
+
+    const saved = await page.evaluate(() => {
+      const raw = JSON.parse(JSON.stringify(window.engine.env.serialize()));
+      return { onDisk: raw.controls.foodProdProb, live: window.hyperparams.foodProdProb };
+    });
+    // A save has no event to expire it, so a spiked value written to the file
+    // would be a permanent glut. The live world keeps its bloom regardless:
+    // saving doesn't call off the weather.
+    expect(saved.onDisk).toBe(base);
+    expect(saved.live).toBe(base * 3);
+  });
+
   test('Resetting the world winds back an active bloom', async ({ page }) => {
     const base = await page.evaluate(() => window.hyperparams.foodProdProb);
 
@@ -131,6 +196,220 @@ test.describe('World events', () => {
     });
     expect(after.prob).toBe(base);
     expect(after.events).toBe(0);
+  });
+});
+
+/* The Rad Storm is the one event that moves: a band of irradiated columns that
+   sweeps across the world, tick by tick, rather than a single spike held for a
+   window. Driven here by calling tickWorldEvents() directly on a paused engine. */
+test.describe('Radiation storm', () => {
+  test.beforeEach(async ({ page }) => {
+    await pauseEngine(page);
+    await page.locator('#tool-tab-events').click();
+  });
+
+  // The storm's currently-held columns, as a sorted array.
+  const litColumns = page => page.evaluate(() => {
+    const storm = window.engine.env.active_events.find(e => e.kind === 'radstorm');
+    return storm ? [...storm.lit].sort((a, b) => a - b) : null;
+  });
+
+  test('The front irradiates a band and carries it across the world', async ({ page }) => {
+    await page.locator('#event-radstorm').click();
+
+    // It blows in from off the edge, so nothing is irradiated at launch
+    expect(await page.evaluate(() => window.engine.env.radiation_map.size)).toBe(0);
+    expect(await litColumns(page)).toEqual([]);
+
+    const step = n => page.evaluate(n => {
+      for (let i = 0; i < n; i++) window.engine.env.tickWorldEvents();
+    }, n);
+
+    await step(40);
+    const early = await litColumns(page);
+    const rows = await page.evaluate(() => window.engine.env.num_rows);
+    // A band, not a line, and every cell of every column it holds
+    expect(early.length).toBeGreaterThan(1);
+    expect(await page.evaluate(() => window.engine.env.radiation_map.size)).toBe(early.length * rows);
+
+    await step(40);
+    const later = await litColumns(page);
+    // It moved on: the band travelled far enough to have left its old ground
+    expect(Math.min(...later)).not.toBe(Math.min(...early));
+    expect(later.some(c => early.includes(c))).toBe(false);
+    // ...and the world behind it is clean again
+    expect(await page.evaluate(() => window.engine.env.radiation_map.size)).toBe(later.length * rows);
+  });
+
+  test('The storm sweeps over hand-painted radiation and leaves it standing', async ({ page }) => {
+    // Paint a zone by hand first
+    await page.locator('#tool-tab-terrain').click();
+    await page.locator('#radiation-drop').click();
+    await page.locator('#env-canvas').click({ position: { x: 300, y: 200 } });
+    const painted = await page.evaluate(() => [...window.engine.env.radiation_map]);
+    expect(painted.length).toBeGreaterThan(0);
+
+    await page.locator('#tool-tab-events').click();
+    await page.locator('#event-radstorm').click();
+
+    // Run the front all the way past the far edge and let the event expire
+    const after = await page.evaluate(painted => {
+      const env = window.engine.env;
+      const storm = env.active_events.find(e => e.kind === 'radstorm');
+      const span = storm.ends_at - env.total_ticks;
+      for (let i = 0; i < span; i++) {
+        env.total_ticks++;
+        env.tickWorldEvents();
+      }
+      return {
+        events: env.active_events.length,
+        remaining: [...env.radiation_map].sort(),
+        expected: [...painted].sort(),
+      };
+    }, painted);
+
+    // The storm expired, taking every cell it laid with it and none of the
+    // player's — the whole point of it owning its cells individually
+    expect(after.events).toBe(0);
+    expect(after.remaining).toEqual(after.expected);
+  });
+
+  test('Only one storm sweeps at a time', async ({ page }) => {
+    await page.locator('#event-radstorm').click();
+    await page.locator('#event-radstorm').click();
+
+    await expect(page.getByTestId('hud-notifications')).toContainText('already sweeping');
+    expect(await page.evaluate(() =>
+      window.engine.env.active_events.filter(e => e.kind === 'radstorm').length)).toBe(1);
+  });
+
+  test('Clear Radiation calls off the storm rather than letting it repaint', async ({ page }) => {
+    await page.locator('#event-radstorm').click();
+    await page.evaluate(() => {
+      for (let i = 0; i < 40; i++) window.engine.env.tickWorldEvents();
+    });
+    expect(await page.evaluate(() => window.engine.env.radiation_map.size)).toBeGreaterThan(0);
+
+    await page.locator('#tool-tab-terrain').click();
+    await page.locator('#clear-radiation').click();
+
+    // Cleared, and it stays cleared: a storm left running would re-irradiate
+    // the band it is standing on with the very next tick
+    const after = await page.evaluate(() => {
+      const env = window.engine.env;
+      const cleared = env.radiation_map.size;
+      for (let i = 0; i < 5; i++) env.tickWorldEvents();
+      return { cleared, later: env.radiation_map.size, events: env.active_events.length };
+    });
+    expect(after.cleared).toBe(0);
+    expect(after.later).toBe(0);
+    expect(after.events).toBe(0);
+  });
+
+  test('Resetting the world winds back a storm in flight', async ({ page }) => {
+    await page.locator('#event-radstorm').click();
+    await page.evaluate(() => {
+      for (let i = 0; i < 40; i++) window.engine.env.tickWorldEvents();
+    });
+
+    const after = await page.evaluate(() => {
+      window.engine.env.reset(true);
+      return {
+        radiation: window.engine.env.radiation_map.size,
+        events: window.engine.env.active_events.length,
+      };
+    });
+    expect(after.radiation).toBe(0);
+    expect(after.events).toBe(0);
+  });
+
+  test('The smoke overlay is told the map changed even when its size does not', async ({ page }) => {
+    await page.locator('#event-radstorm').click();
+    // Run the front into the world so it is adding and dropping columns
+    await page.evaluate(() => {
+      for (let i = 0; i < 60; i++) window.engine.env.tickWorldEvents();
+    });
+
+    // A moving front can add one column and drop another in the same step, so
+    // radiation_map.size is not a change signal — radiation_version is.
+    const moved = await page.evaluate(() => {
+      const env = window.engine.env;
+      const before = { size: env.radiation_map.size, version: env.radiation_version };
+      for (let i = 0; i < 8; i++) env.tickWorldEvents();
+      return { before, after: { size: env.radiation_map.size, version: env.radiation_version } };
+    });
+    expect(moved.after.size).toBe(moved.before.size); // a band of fixed width
+    expect(moved.after.version).toBeGreaterThan(moved.before.version);
+  });
+});
+
+/* The auto-scheduler behind Evolution Controls' "Random world events". Off by
+   default: it draws from Math.random, so an unattended world only stays
+   reproducible while nothing is scheduled. */
+test.describe('Random world events', () => {
+  test.beforeEach(async ({ page }) => {
+    await pauseEngine(page);
+  });
+
+  test('Off by default, and silent however long the world runs', async ({ page }) => {
+    expect(await page.evaluate(() => window.hyperparams.randomEvents)).toBe(false);
+
+    const fired = await page.evaluate(() => {
+      const env = window.engine.env;
+      const toasts = [];
+      const unsub = window.notifier.subscribe(m => toasts.push(m));
+      // Well past several intervals' worth of ticks
+      for (let i = 0; i < 6000; i++) {
+        env.total_ticks = i;
+        env.maybeScheduleRandomEvent();
+      }
+      unsub();
+      return { events: env.active_events.length, meteors: env.active_meteors.length, toasts };
+    });
+    expect(fired.events).toBe(0);
+    expect(fired.meteors).toBe(0);
+    expect(fired.toasts).toHaveLength(0);
+  });
+
+  test('On, it fires on the interval and nowhere in between', async ({ page }) => {
+    const rolls = await page.evaluate(() => {
+      const env = window.engine.env;
+      window.hyperparams.randomEvents = true;
+      window.hyperparams.randomEventInterval = 100;
+      const on_interval = [];
+      const off_interval = [];
+      try {
+        for (let tick = 1; tick <= 1000; tick++) {
+          env.total_ticks = tick;
+          const before = env.active_events.length + env.active_meteors.length;
+          env.maybeScheduleRandomEvent();
+          const after = env.active_events.length + env.active_meteors.length;
+          (tick % 100 === 0 ? on_interval : off_interval).push(after - before);
+        }
+      } finally {
+        window.hyperparams.randomEvents = false;
+      }
+      return { on_interval, off_interval };
+    });
+    // Nothing ever fires off the interval...
+    expect(rolls.off_interval.every(d => d === 0)).toBe(true);
+    // ...and on it, something does — bar the rolls that land on an event
+    // already running (a re-triggered bloom extends rather than enqueues)
+    expect(rolls.on_interval.filter(d => d > 0).length).toBeGreaterThan(0);
+  });
+
+  test('The interval slider only appears once the scheduler is on', async ({ page }) => {
+    await page.locator('#tool-rules').click();
+    await expect(page.locator('#randomEvents')).toBeVisible();
+    await expect(page.locator('#randomEventInterval')).toBeHidden();
+
+    await page.locator('#randomEvents').check();
+    await expect(page.locator('#randomEventInterval')).toBeVisible();
+    expect(await page.evaluate(() => window.hyperparams.randomEvents)).toBe(true);
+
+    // Leave the world as we found it: the scheduler is off by default
+    await page.locator('#randomEvents').uncheck();
+    expect(await page.evaluate(() => window.hyperparams.randomEvents)).toBe(false);
   });
 });
 

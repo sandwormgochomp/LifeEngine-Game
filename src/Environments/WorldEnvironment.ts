@@ -108,17 +108,66 @@ interface OverlayCamera { ox: number; oy: number; s: number; }
 
 /* A timed world event. `ends_at` is an absolute total_ticks value; `restore`
    undoes any global spike the event applied (e.g. resets Hyperparams.foodProdProb
-   after a bloom). Instantaneous events (a meteor is one impact) don't enqueue --
-   only the ones that hold the world in an altered state for a while do. */
+   after a bloom). `step` is for events that don't just hold the world in one
+   altered state but move through it -- the radiation storm's front is the only
+   one so far -- and runs once per tick while the event is live. Instantaneous
+   events (a meteor is one impact) don't enqueue at all. */
 interface WorldEvent {
     kind: string;
     ends_at: number;
+    step?: () => void;
     restore: () => void;
 }
 
-// Bloom: producers grow food this many times faster, for this many ticks.
+/* The two food-multiplier events: same mechanism, opposite signs. A bloom is a
+   short glut, an ice age a longer famine -- long enough that surviving it is
+   about efficiency rather than luck, which is the whole point of the squeeze. */
 const BLOOM_MULTIPLIER = 3;
 const BLOOM_TICKS = 600;
+const ICE_AGE_MULTIPLIER = 0.15;
+const ICE_AGE_TICKS = 1200;
+
+/* A live bloom or ice age. `baseline` is the foodProdProb the event will
+   restore, kept on the event (rather than only captured in the restore
+   closure) so serialize() can save the world's true food rate instead of the
+   spiked one -- see the note there. */
+interface FoodShiftEvent extends WorldEvent {
+    kind: 'bloom' | 'iceage';
+    baseline: number;
+}
+
+/* Radiation storm: a band of irradiated columns RAD_STORM_WIDTH deep, sweeping
+   across the world at RAD_STORM_SPEED columns per tick. Sub-1 speeds are the
+   point -- the front should crawl visibly rather than teleport -- and the width
+   is what makes it a front rather than a line: an organism caught in it stays
+   caught for width/speed ticks, long enough to breed under x5 mutability. */
+const RAD_STORM_WIDTH = 8;
+const RAD_STORM_SPEED = 0.5;
+
+/* An in-flight radiation storm. `front` is the leading edge in (fractional)
+   columns, `dir` which way it travels; `lit` is the columns the storm currently
+   holds and `owned` the exact radiation cells it painted. Owning cells
+   individually is what lets a storm sweep over a zone the player painted by
+   hand and leave it standing afterwards. */
+interface RadStormEvent extends WorldEvent {
+    kind: 'radstorm';
+    front: number;
+    dir: 1 | -1;
+    lit: Set<number>;
+    owned: Set<string>;
+}
+
+/* Which events the auto-scheduler draws from, when Hyperparams.randomEvents is
+   on. The invasive predator is deliberately not in here: it introduces a
+   lineage the world could not have reached on its own and registers a species,
+   which is a decision to make rather than weather to endure. */
+type ScheduledEvent = 'meteor' | 'bloom' | 'iceage' | 'radstorm';
+const SCHEDULED_EVENTS: ScheduledEvent[] = ['meteor', 'bloom', 'iceage', 'radstorm'];
+// Blast radius range for an auto-scheduled meteor, in cells.
+const AUTO_METEOR_MIN_RADIUS = 5;
+const AUTO_METEOR_MAX_RADIUS = 14;
+// Floor on the scheduler's interval, so a slider at zero can't fire every tick.
+const MIN_RANDOM_EVENT_INTERVAL = 60;
 
 /* Smallest radius a predator pack scatters over, in cells. The brush sets the
    spread, but a brush of 0-4 cannot hold six organisms several cells wide, and
@@ -216,6 +265,12 @@ class WorldEnvironment extends Environment{
        never fight over ownership. */
     fx_cells: Set<number>;
     radiation_map: Set<string>;
+    /* Bumped on every mutation of radiation_map. The RadiationSmoke overlay
+       caches parsed cell positions and needs to know when to rebuild them; the
+       map's size is not enough of a signal, because the storm's front adds one
+       column and drops another in the same step and so can move across the
+       world without the size ever changing. */
+    radiation_version: number;
     /* In-flight world events (Events tool tab). Each carries the tick it ends
        on and a restore() that undoes whatever global state it spiked, so the
        tick loop can expire it and reset() can wind them all back at once. The
@@ -323,6 +378,7 @@ class WorldEnvironment extends Environment{
         this.active_meteors = [];
         this.fx_cells = new Set();
         this.radiation_map = new Set();
+        this.radiation_version = 0;
         this.active_events = [];
         this.day_timer = 0;
         this.is_night = false;
@@ -402,6 +458,7 @@ class WorldEnvironment extends Environment{
         }
 
         this.tickWorldEvents();
+        this.maybeScheduleRandomEvent();
 
         this.total_ticks ++;
         if (this.total_ticks % this.data_update_rate == 0) {
@@ -831,6 +888,17 @@ class WorldEnvironment extends Environment{
         this.renderFull();
     }
 
+    /* Wipes every radiation zone, hand-painted or storm-laid. Any storm still
+       in flight is ended too: leaving it running would have it re-irradiate the
+       band it is standing on the very next tick, so the button would look
+       broken for as long as the front lasts. */
+    clearRadiation(): void {
+        this.endWorldEvent('radstorm');
+        this.radiation_map.clear();
+        this.markRadiationChanged();
+        this.renderFull();
+    }
+
     clearOrganisms(): void {
         for (var org of this.organisms)
             org.die();
@@ -862,39 +930,187 @@ class WorldEnvironment extends Environment{
         }
     }
 
-    // Expire any world event whose window has elapsed, running its restore().
-    // Iterated back-to-front so splicing doesn't skip the next entry.
+    /* Advance every live world event, then expire the ones whose window has
+       elapsed, running their restore(). Iterated back-to-front so splicing
+       doesn't skip the next entry. Expiry is checked after the step so an
+       event's last step lands before it is wound back. */
     tickWorldEvents(): void {
         for (let i = this.active_events.length - 1; i >= 0; i--) {
-            if (this.total_ticks >= this.active_events[i].ends_at) {
-                this.active_events[i].restore();
+            const ev = this.active_events[i];
+            if (ev.step) ev.step();
+            if (this.total_ticks >= ev.ends_at) {
+                ev.restore();
                 this.active_events.splice(i, 1);
             }
         }
     }
 
-    // Bloom (Events tab): spike food production globally for a while, then
-    // restore it. Idempotent -- re-triggering an active bloom just extends the
-    // window from the current tick without stacking the multiplier, so the
-    // captured pre-bloom value can never drift. Mutating the Hyperparams
-    // singleton is the same swap-a-global pattern noted in TODO.md; kept because
-    // every producer reads foodProdProb straight off it, and restore() winds it
-    // back on expiry, on re-trigger, and on reset().
-    triggerBloom(): void {
-        const existing = this.active_events.find(e => e.kind === 'bloom');
+    // End an in-flight event of this kind early, winding back whatever it
+    // spiked. A no-op when none is running.
+    endWorldEvent(kind: string): void {
+        const i = this.active_events.findIndex(e => e.kind === kind);
+        if (i < 0) return;
+        this.active_events[i].restore();
+        this.active_events.splice(i, 1);
+    }
+
+    /* Bloom and Ice Age (Events tab): shift food production globally for a
+       while, then restore it. Idempotent -- re-triggering the active one just
+       extends its window from the current tick without stacking the multiplier,
+       so the captured pre-event value can never drift. The two are mutually
+       exclusive for the same reason: an ice age started mid-bloom would capture
+       the *spiked* value as its baseline and restore the world to a permanent
+       glut, so the other one is wound back first.
+
+       Mutating the Hyperparams singleton is the same swap-a-global pattern
+       noted in TODO.md; kept because every producer reads foodProdProb straight
+       off it, and restore() winds it back on expiry, on re-trigger, on the
+       opposite event, and on reset(). */
+    triggerFoodShift(kind: 'bloom' | 'iceage', multiplier: number, ticks: number, message: string): void {
+        const existing = this.active_events.find(e => e.kind === kind);
         if (existing) {
-            existing.ends_at = this.total_ticks + BLOOM_TICKS;
+            existing.ends_at = this.total_ticks + ticks;
         } else {
+            this.endWorldEvent(kind === 'bloom' ? 'iceage' : 'bloom');
             const prev = Hyperparams.foodProdProb;
-            Hyperparams.foodProdProb = prev * BLOOM_MULTIPLIER;
-            this.active_events.push({
-                kind: 'bloom',
-                ends_at: this.total_ticks + BLOOM_TICKS,
-                restore: () => { Hyperparams.foodProdProb = prev; },
-            });
+            Hyperparams.foodProdProb = prev * multiplier;
+            const ev: FoodShiftEvent = {
+                kind,
+                baseline: prev,
+                ends_at: this.total_ticks + ticks,
+                restore: () => { Hyperparams.foodProdProb = ev.baseline; },
+            };
+            this.active_events.push(ev);
         }
-        Notifier.notify('✿ Bloom — food is flourishing');
+        Notifier.notify(message);
         if (this.engine) this.engine.emitChange(true);
+    }
+
+    triggerBloom(): void {
+        this.triggerFoodShift('bloom', BLOOM_MULTIPLIER, BLOOM_TICKS, '✿ Bloom — food is flourishing');
+    }
+
+    triggerIceAge(): void {
+        this.triggerFoodShift('iceage', ICE_AGE_MULTIPLIER, ICE_AGE_TICKS, '❄ Ice age — the world goes hungry');
+    }
+
+    /* Radiation storm (Events tab): a mutagenic front that sweeps the world
+       from one side to the other, irradiating the band it currently covers and
+       letting it fade behind. Unlike the bloom's single spike this event has to
+       move, which is what step() on WorldEvent exists for.
+
+       Only one storm runs at a time. Two overlapping fronts would each think
+       they owned the cells in the overlap -- the first to leave would strip
+       radiation the second is still standing on -- and the fix (shared
+       ownership counts) buys nothing a player would ever notice. */
+    triggerRadStorm(): void {
+        if (this.active_events.some(e => e.kind === 'radstorm')) {
+            Notifier.notify('☢ A storm front is already sweeping through');
+            return;
+        }
+        // Which edge it blows in from is a coin flip; everything downstream is
+        // symmetric in `dir`.
+        const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
+        const span = this.num_cols + RAD_STORM_WIDTH * 2;
+        const ev: RadStormEvent = {
+            kind: 'radstorm',
+            // Starts fully off the near edge, so the front arrives rather than
+            // appearing mid-world, and ends once the tail has cleared the far one.
+            front: dir === 1 ? -RAD_STORM_WIDTH : this.num_cols + RAD_STORM_WIDTH,
+            dir,
+            lit: new Set(),
+            owned: new Set(),
+            ends_at: this.total_ticks + Math.ceil(span / RAD_STORM_SPEED) + 1,
+            step: () => this.stepRadStorm(ev),
+            restore: () => {
+                for (const col of ev.lit) this.darkenStormColumn(ev, col);
+                ev.lit.clear();
+                this.markRadiationChanged();
+            },
+        };
+        this.active_events.push(ev);
+        Notifier.notify('☢ Radiation storm — a mutagenic front is rolling in');
+        if (this.engine) this.engine.emitChange(true);
+    }
+
+    /* One tick of the front: move it, irradiate the columns it now covers, and
+       drop the ones it has left behind. Only the columns that changed hands are
+       walked, so the cost is a couple of columns' worth of cells per tick
+       however wide the band is. */
+    stepRadStorm(ev: RadStormEvent): void {
+        ev.front += ev.dir * RAD_STORM_SPEED;
+        const lead = Math.round(ev.front);
+        const tail = lead - ev.dir * RAD_STORM_WIDTH;
+        const lo = Math.min(lead, tail);
+        const hi = Math.max(lead, tail);
+        let changed = false;
+
+        for (let col = Math.max(0, lo); col <= Math.min(this.num_cols - 1, hi); col++) {
+            if (ev.lit.has(col)) continue;
+            ev.lit.add(col);
+            for (let row = 0; row < this.num_rows; row++) {
+                const key = col + ',' + row;
+                // A cell the player irradiated by hand is left alone -- not
+                // claimed, so not stripped when the front moves on.
+                if (this.radiation_map.has(key)) continue;
+                this.radiation_map.add(key);
+                ev.owned.add(key);
+                changed = true;
+            }
+        }
+        for (const col of ev.lit) {
+            if (col >= lo && col <= hi) continue;
+            this.darkenStormColumn(ev, col);
+            ev.lit.delete(col);
+            changed = true;
+        }
+        if (changed) this.markRadiationChanged();
+    }
+
+    // Give back one column of storm-owned radiation.
+    darkenStormColumn(ev: RadStormEvent, col: number): void {
+        for (let row = 0; row < this.num_rows; row++) {
+            const key = col + ',' + row;
+            if (!ev.owned.delete(key)) continue;
+            this.radiation_map.delete(key);
+        }
+    }
+
+    // Announce that radiation_map has changed; every writer of it must call
+    // this, including the brush in EnvironmentController (see the field).
+    markRadiationChanged(): void {
+        this.radiation_version++;
+    }
+
+    /* The auto-scheduler behind Evolution Controls' "Random world events". Off
+       by default, and consulted only when on -- no RNG is drawn otherwise, so a
+       benchmark or test run with the toggle off ticks exactly as it did before
+       the scheduler existed (concepts/proposals/07-world-events). */
+    maybeScheduleRandomEvent(): void {
+        if (!Hyperparams.randomEvents) return;
+        const interval = Math.max(MIN_RANDOM_EVENT_INTERVAL, Math.round(Hyperparams.randomEventInterval));
+        if (this.total_ticks === 0 || this.total_ticks % interval !== 0) return;
+        this.triggerRandomEvent();
+    }
+
+    // Roll one event from the scheduler's library and fire it where it lands.
+    triggerRandomEvent(): ScheduledEvent {
+        const kind = SCHEDULED_EVENTS[Math.floor(Math.random() * SCHEDULED_EVENTS.length)];
+        switch (kind) {
+            case 'meteor': {
+                const radius = AUTO_METEOR_MIN_RADIUS +
+                    Math.floor(Math.random() * (AUTO_METEOR_MAX_RADIUS - AUTO_METEOR_MIN_RADIUS + 1));
+                this.meteorStrike(
+                    Math.floor(Math.random() * this.num_cols),
+                    Math.floor(Math.random() * this.num_rows),
+                    radius);
+                break;
+            }
+            case 'bloom': this.triggerBloom(); break;
+            case 'iceage': this.triggerIceAge(); break;
+            case 'radstorm': this.triggerRadStorm(); break;
+        }
+        return kind;
     }
 
     /* Invasive predator (Events tab): release a founding pack of one bestiary
@@ -1280,6 +1496,7 @@ class WorldEnvironment extends Environment{
         this.deco_dirty = true;
         this.glow_dirty = true;
         this.radiation_map.clear();
+        this.markRadiationChanged();
         FossilRecord.clear_record();
         // Drop the narration baseline so the reseeded world isn't announced as
         // brand-new drama on the next sample.
@@ -1333,7 +1550,14 @@ class WorldEnvironment extends Environment{
             env.organisms.push(org.serialize());
         }
         env.fossil_record = FossilRecord.serialize();
-        env.controls = Hyperparams;
+        /* A bloom or ice age is transient weather, but it works by holding
+           Hyperparams.foodProdProb at a multiple of its real value -- and that
+           is the object the save writes. Saving mid-event would bake the spike
+           into the file for good (it has no event to expire and wind it back),
+           so the baseline is substituted in. The live world keeps its event:
+           saving shouldn't call off the weather. */
+        const shift = this.active_events.find(e => e.kind === 'bloom' || e.kind === 'iceage') as FoodShiftEvent | undefined;
+        env.controls = shift ? { ...Hyperparams, foodProdProb: shift.baseline } : Hyperparams;
         // See the interface comment: the glass never lands in env.grid, so the
         // dish is saved as a flag for loadRaw to rebuild from.
         env.petri_dish = WorldConfig.petri_dish;

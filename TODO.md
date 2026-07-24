@@ -18,15 +18,29 @@ Notifier / FossilRecord / Floaties infrastructure.
       `tests/narrator.spec.js` covers every event type, the coalescing/threshold
       boundaries, silent re-seed on reset/load, the live `update()`→DOM path, and
       that registry changes without a sample stay silent (the preview-gating proof).
-- [ ] **Finish the world-event library.** Meteor, Bloom and Predator ship; Ice
-      Age and Rad Storm are still scaffolded `soon` buttons in the Events tab.
-      Ice Age is a bloom with the multiplier inverted (the framework already
-      restores on expiry and on reset). Rad Storm is the one genuinely new
-      piece — a radiation front that moves, so it needs per-tick state rather
-      than a single spike plus a restore. Neither is auto-scheduled yet: the
-      proposal's "random events" toggle and frequency slider are unbuilt, and
-      `concepts/proposals/07-world-events.md` argues for defaulting them off so
-      `npm run bench` stays reproducible.
+- [x] ~~**Finish the world-event library.**~~ — done. All five events ship and
+      the `soon` scaffolding is gone. Ice Age is the bloom with the multiplier
+      inverted (0.15× for 1200 ticks), so both now go through one
+      `triggerFoodShift`; they are mutually exclusive because an ice age started
+      mid-bloom would capture the *spiked* foodProdProb as its baseline and
+      restore the world to a permanent glut. Rad Storm needed the genuinely new
+      piece: `WorldEvent` gained an optional `step()` run once per tick, and the
+      storm carries a band of irradiated columns across the world, owning its
+      cells individually so it sweeps over hand-painted zones and leaves them
+      standing. One storm at a time — two overlapping fronts would each think
+      they owned the overlap. Auto-scheduling is built too:
+      `Hyperparams.randomEvents` / `randomEventInterval` in Evolution Controls,
+      off by default, and `maybeScheduleRandomEvent` draws no RNG at all while
+      off, so `npm run bench` ticks exactly as it did before. The predator is
+      deliberately out of the rotation — it introduces a lineage and registers a
+      species, which is a decision rather than weather.
+      One trap worth remembering: `RadiationSmoke` cached its parsed cells on
+      `radiation_map.size`, which a moving front defeats (it adds one column and
+      drops another in the same step, so size never changes). Hence
+      `env.radiation_version`, bumped by every writer. `tests/world_events.spec.js`
+      covers both new events, the mutual exclusion, storm ownership, and the
+      scheduler's silence when off; the ownership and version guards were each
+      verified to fail when deliberately broken.
 - [ ] **Predator bestiary: what the trials showed.** Six species in
       `src/Organism/Predators.ts`, each tuned against a 2400-tick trial in
       several grown worlds. Three lessons, if more are added: a functional cell

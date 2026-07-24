@@ -37,6 +37,9 @@ export interface HyperparamsData {
     wallDurability: number;
 
     maxOrganisms: number;
+
+    randomEvents: boolean;
+    randomEventInterval: number;
 }
 
 export interface HyperparamsSingleton extends HyperparamsData {
@@ -84,6 +87,14 @@ function applyDefaults(h: HyperparamsData): void {
     h.wallDurability = 15;
 
     h.maxOrganisms = -1;
+
+    /* Auto-scheduled world events, off by default. On is a deliberate choice:
+       the scheduler draws from Math.random, so leaving it off is what keeps a
+       benchmark or test run reproducible (see the determinism risk in
+       concepts/proposals/07-world-events.md). The interval is in ticks --
+       1800 is roughly half a minute at full speed. */
+    h.randomEvents = false;
+    h.randomEventInterval = 1800;
 }
 
 /* A fresh, standalone defaults object -- NOT the shared singleton. The

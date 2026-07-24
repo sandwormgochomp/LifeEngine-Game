@@ -297,30 +297,6 @@
   border-color: #FFB03C;
 }
 
-/* Scaffolded events whose logic isn't wired yet: present but inert. */
-.toolPaletteActionSoon {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: rgba(0, 255, 65, 0.4);
-  border-color: rgba(0, 255, 65, 0.18);
-  cursor: not-allowed;
-}
-
-.toolPaletteActionSoon:hover {
-  background: rgba(0, 0, 0, 0.6);
-  border-color: rgba(0, 255, 65, 0.18);
-}
-
-.toolPaletteSoonBadge {
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: rgba(0, 255, 65, 0.35);
-  border: 1px solid rgba(0, 255, 65, 0.2);
-  padding: 1px 3px;
-}
-
 /* ---- Top-Center: Stats Bar ---- */
 .topCenter {
   position: fixed;

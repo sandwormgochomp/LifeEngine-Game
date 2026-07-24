@@ -71,8 +71,10 @@ interface EnvControllerEnvLike {
        it explicitly. */
     engine?: EnvEngineLike;
     /* Keys are "col,row". dropRadiation() creates it when missing rather than
-       assuming the environment brought one. */
+       assuming the environment brought one -- so the change signal that goes
+       with it is optional for the same reason. */
     radiation_map?: Set<string>;
+    markRadiationChanged?(): void;
     changeCell(c: number, r: number, state: CellState, owner: BodyCell | null): void;
     addOrganism(organism: Organism): void;
     meteorStrike(col: number, row: number, radius: number): void;
@@ -571,6 +573,7 @@ class EnvironmentController extends CanvasController{
 
     dropRadiation(col: number, row: number, isAdding: boolean): void {
         if (!this.env.radiation_map) this.env.radiation_map = new Set();
+        let any_changed = false;
         for (var loc of Neighbors.inRange(WorldConfig.brush_size)){
             var c = col + loc[0];
             var r = row + loc[1];
@@ -589,11 +592,15 @@ class EnvironmentController extends CanvasController{
                     }
                 }
                 if (changed) {
+                    any_changed = true;
                     var idx = this.env.grid_map.indexAt(c, r);
                     if (idx >= 0) this.env.renderer.addToRender(idx);
                 }
             }
         }
+        // One bump per brush stamp, not per cell: the smoke overlay only needs
+        // to know that the map moved.
+        if (any_changed && this.env.markRadiationChanged) this.env.markRadiationChanged();
     }
 
     findNearOrganism(): Organism | null {

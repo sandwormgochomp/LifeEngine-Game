@@ -91,6 +91,13 @@ const GROUPS: { title: string; fields: Field[] }[] = [
       { kind: 'num', key: 'maxOrganisms', label: 'Maximum organisms', title: 'Maximum number of organisms (-1 is unlimited).', min: -1, max: 100000, step: 1 },
     ],
   },
+  {
+    title: 'World events',
+    fields: [
+      { kind: 'bool', key: 'randomEvents', label: 'Random world events', title: 'When on, the world periodically throws one of the Events tab’s cataclysms at itself: a meteor, a bloom, an ice age or a radiation storm. Off by default — the schedule is random, so leaving it off is what keeps a run repeatable.' },
+      { kind: 'num', key: 'randomEventInterval', label: 'Event interval (ticks)', title: 'Ticks between auto-scheduled events. 1800 is about half a minute at full speed.', min: 60, max: 12000, step: 60 },
+    ],
+  },
 ];
 
 const ALL_KEYS = GROUPS.flatMap(g => g.fields.map(f => f.key));
@@ -153,6 +160,8 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
   const renderField = (field: Field) => {
     // The global rate only applies when evolved rates are off
     if (field.key === 'globalMutability' && !params.useGlobalMutability) return null;
+    // ...and the schedule only means anything when the scheduler is on
+    if (field.key === 'randomEventInterval' && !params.randomEvents) return null;
 
     if (field.kind === 'bool') {
       const checked = field.invert ? !params[field.key] : !!params[field.key];

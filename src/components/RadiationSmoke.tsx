@@ -62,8 +62,10 @@ interface RadiationSmokeProps {
 }
 
 // Parse the radiation_map's "col,row" keys once per mutation instead of every
-// frame. Rebuilt when the Set instance or its size changes (dropRadiation and
-// clearRadiation only ever add or delete, so size tracks every mutation).
+// frame. Rebuilt when the Set instance changes or the environment's
+// radiation_version moves — size alone is not enough, because a rad storm's
+// front adds one column and drops another in the same step, so it can sweep the
+// whole world without the map ever changing size.
 const buildCells = (map: Set<string>, cell_size: number): RadCell[] => {
   const out: RadCell[] = [];
   for (const key of map) {
@@ -116,7 +118,7 @@ const RadiationSmoke: React.FC<RadiationSmokeProps> = ({ engine }) => {
     resize();
 
     let cached_map: Set<string> | null = null;
-    let cached_size = -1;
+    let cached_version = -1;
     let cells: RadCell[] = [];
 
     const tick = () => {
@@ -127,16 +129,17 @@ const RadiationSmoke: React.FC<RadiationSmokeProps> = ({ engine }) => {
       const map = env?.radiation_map;
       if (!env || !map || !map.size) {
         cached_map = map ?? null;
-        cached_size = map ? map.size : -1;
+        cached_version = -1;
         cells = [];
         return;
       }
 
       const cell_size = env.renderer.cell_size;
-      if (map !== cached_map || map.size !== cached_size) {
+      const version = env.radiation_version ?? 0;
+      if (map !== cached_map || version !== cached_version) {
         cells = buildCells(map, cell_size);
         cached_map = map;
-        cached_size = map.size;
+        cached_version = version;
       }
 
       const t = deterministic ? STATIC_T : performance.now() / 1000;

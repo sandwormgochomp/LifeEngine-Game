@@ -24,8 +24,7 @@ interface Tool {
   title: string;
 }
 
-/* A one-shot action: fires immediately rather than arming a mode. `soon` marks
-   a scaffolded event whose logic isn't wired yet — rendered disabled.
+/* A one-shot action: fires immediately rather than arming a mode.
 
    `opens` is the exception to "fires immediately": the action opens a picker
    and what the player chooses there arms a world tool. `armsMode` names the
@@ -38,7 +37,6 @@ interface Action {
   run?: (engine: Engine) => void;
   opens?: 'predators';
   armsMode?: number;
-  soon?: boolean;
 }
 
 interface Tab {
@@ -76,7 +74,7 @@ const TABS: Tab[] = [
     actions: [
       { id: 'randomize-walls-btn', label: 'Random Walls', title: 'Generate organic wall shapes using Perlin noise', run: e => { e.env.controller.randomizeWalls(); Notifier.notify('Random walls generated'); } },
       { id: 'clear-walls', label: 'Clear Walls', title: 'Remove every wall in the world (the petri dish stays). Hotkey: B', run: e => { e.env.clearWalls(); Notifier.notify('Walls cleared'); } },
-      { id: 'clear-radiation', label: 'Clear Radiation', title: 'Remove all radiation zones', run: e => { e.env.radiation_map.clear(); e.env.renderFull(); Notifier.notify('Radiation cleared'); } },
+      { id: 'clear-radiation', label: 'Clear Radiation', title: 'Remove all radiation zones, and call off any storm still sweeping', run: e => { e.env.clearRadiation(); Notifier.notify('Radiation cleared'); } },
     ],
   },
   {
@@ -101,8 +99,8 @@ const TABS: Tab[] = [
     ],
     actions: [
       { id: 'event-bloom', label: 'Bloom', title: 'A burst of fertility: food production spikes worldwide for a while, then fades.', run: e => e.env.triggerBloom() },
-      { id: 'event-iceage', label: 'Ice Age', title: 'Coming soon: a long food crash that culls all but the most efficient forms.', soon: true },
-      { id: 'event-radstorm', label: 'Rad Storm', title: 'Coming soon: a moving radiation front that makes evolution run hot along its edge.', soon: true },
+      { id: 'event-iceage', label: 'Ice Age', title: 'A long food crash that culls all but the most efficient forms. Cancels a bloom, and vice versa.', run: e => e.env.triggerIceAge() },
+      { id: 'event-radstorm', label: 'Rad Storm', title: 'A radiation front sweeps across the world: everything it passes over mutates hard while it is inside.', run: e => e.env.triggerRadStorm() },
       { id: 'event-predator', label: 'Predator', title: 'Release an invasive hunter: pick one from the bestiary, then click the world to drop its founding pack.', opens: 'predators', armsMode: Modes.ReleasePredator },
     ],
   },
@@ -215,12 +213,10 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
               key={action.id}
               id={action.id}
               title={action.title}
-              disabled={action.soon}
-              className={`${styles.toolPaletteAction} ${action.soon ? styles.toolPaletteActionSoon : ''} ${action.armsMode !== undefined && action.armsMode === activeMode ? styles.toolPaletteActionArmed : ''}`}
+              className={`${styles.toolPaletteAction} ${action.armsMode !== undefined && action.armsMode === activeMode ? styles.toolPaletteActionArmed : ''}`}
               onClick={() => runAction(action)}
             >
               {action.label}
-              {action.soon && <span className={styles.toolPaletteSoonBadge}>soon</span>}
             </button>
           ))}
         </div>
