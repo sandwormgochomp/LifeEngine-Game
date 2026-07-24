@@ -1256,9 +1256,15 @@
   flex-shrink: 0;
 }
 
+/* Wider than the organism picker: world cards carry a name and a grid size
+   on one line, and the names are long enough to ellipsize without the room */
+.worldsModal {
+  width: min(820px, 94vw);
+}
+
 .worldsList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
   gap: 6px;
   padding: 14px 16px;
   overflow-y: auto;
@@ -1281,12 +1287,25 @@
   text-align: left;
 }
 
-.worldCard:hover {
+.worldCard:hover:not(:disabled) {
   border-color: #00FF41;
   background: rgba(0, 255, 65, 0.08);
 }
 
+/* One world at a time: the rest fade out for the duration of the fetch */
+.worldCard:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.worldCard.worldCardLoading:disabled {
+  opacity: 1;
+  border-color: #00FF41;
+}
+
 .worldName {
+  flex: 1;
+  min-width: 0;
   font-family: 'VT323', monospace;
   font-size: 16px;
   overflow: hidden;
@@ -1616,6 +1635,18 @@
 .ctrlFooter button:hover {
   background: rgba(0, 255, 65, 0.15);
   border-color: #00FF41;
+}
+
+/* The worlds footer carries the load option above its file actions */
+.worldsFooter {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.worldsActions {
+  display: flex;
+  gap: 6px;
 }
 
 /* The LIFEFORMS stat doubles as the modal trigger */

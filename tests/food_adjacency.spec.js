@@ -36,7 +36,6 @@ const runTicks = (page, n) =>
 
 async function loadWorld(page, value) {
   await openPanel(page, 'save');
-  await page.locator('#browse-worlds-btn').click();
   await page.locator(`.world-card[data-world="${value}"]`).click();
   await expect(page.getByTestId('worlds-modal')).toBeHidden({ timeout: 15000 });
 }

@@ -84,7 +84,7 @@ test.describe('Simulation Controls', () => {
     expect(cornerAfterReset).toBe('invincible_wall');
   });
 
-  test('Save panel downloads a world snapshot', async ({ page }) => {
+  test('Worlds picker downloads a world snapshot', async ({ page }) => {
     await openPanel(page, 'save');
     const downloadPromise = page.waitForEvent('download');
     await page.locator('#save-world-btn').click();

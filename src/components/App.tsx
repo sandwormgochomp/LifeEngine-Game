@@ -30,7 +30,6 @@ import MicroscopeOverlay from './MicroscopeOverlay';
 import PerfPanel from './PerfPanel';
 
 // Tab content
-import SaveTab from './Tabs/SaveTab';
 import NewGameModal from './NewGameModal';
 import EvolutionControlsModal from './EvolutionControlsModal';
 import StatsTab from './Tabs/StatsTab';
@@ -65,7 +64,6 @@ declare global {
 }
 
 const PANEL_TITLES: Record<string, string> = {
-  save: 'WORLDS',
   about: 'ABOUT',
   stats: 'STATS',
 };
@@ -270,6 +268,11 @@ const App: React.FC = () => {
       closeModals();
       setRulesOpen(next);
       setActivePanel(null);
+    } else if (item === 'save') {
+      const next = !worldsOpen;
+      closeModals();
+      setWorldsOpen(next);
+      setActivePanel(null);
     } else {
       setActivePanel(prev => prev === item ? null : item);
     }
@@ -277,8 +280,6 @@ const App: React.FC = () => {
 
   const renderPanelContent = () => {
     switch (activePanel) {
-      case 'save':
-        return <SaveTab engine={engine} onBrowseWorlds={() => setWorldsOpen(true)} />;
       case 'stats':
         return <StatsTab engine={engine} />;
       case 'about':
@@ -316,6 +317,7 @@ const App: React.FC = () => {
         activePanel={activePanel}
         editorOpen={editorOpen}
         rulesOpen={rulesOpen}
+        worldsOpen={worldsOpen}
         onItemClick={handleToolbarClick}
       />
       <HudNotifications />

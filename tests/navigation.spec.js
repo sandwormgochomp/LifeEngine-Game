@@ -8,11 +8,11 @@ test.describe('Navigation and UI', () => {
 
   test('Toolbar items toggle their panel, modal or dock', async ({ page }) => {
     // Popups
-    await openPanel(page, 'save');
-    await expect(page.locator('#save-world-btn')).toBeVisible();
+    await openPanel(page, 'about');
+    await expect(page.locator('#tool-about')).toHaveClass(/toolbarBtnActive/);
     await openPanel(page, 'stats');
     await expect(page.locator('#org-count')).toBeVisible();
-    await expect(page.locator('#save-world-btn')).toBeHidden();
+    await expect(page.locator('#tool-about')).not.toHaveClass(/toolbarBtnActive/);
     await openPanel(page, 'stats');
     await expect(page.locator('#org-count')).toBeHidden();
 
@@ -22,6 +22,12 @@ test.describe('Navigation and UI', () => {
     await expect(page.locator('#tool-rules')).toHaveClass(/toolbarBtnActive/);
     await expect(page.getByTestId('evolution-modal')).toBeVisible();
     await closeModal(page, 'evolution-modal');
+
+    await openPanel(page, 'save');
+    await expect(page.locator('#tool-save')).toHaveClass(/toolbarBtnActive/);
+    await expect(page.getByTestId('worlds-modal')).toBeVisible();
+    await closeModal(page, 'worlds-modal');
+    await expect(page.locator('#tool-save')).not.toHaveClass(/toolbarBtnActive/);
 
     // Dock
     await openEditor(page);

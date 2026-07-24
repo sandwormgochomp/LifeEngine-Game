@@ -43,11 +43,8 @@ test.describe('Visual Regression Tests', () => {
     await page.evaluate(() => window.engine.stop());
 
     await openPanel(page, 'save');
-    await page.locator('#browse-worlds-btn').click();
     await page.locator('.world-card[data-world="SurvivalOfFittest"]').click();
     await expect(page.getByTestId('worlds-modal')).toBeHidden();
-    // Close the save popup left open behind the modal
-    await openPanel(page, 'save');
     // Let the "Loaded ..." toast expire so the shot holds only the world
     await expect(page.getByTestId('hud-notifications')).toBeHidden({ timeout: 5000 });
 

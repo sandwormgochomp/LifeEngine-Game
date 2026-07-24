@@ -1,9 +1,9 @@
 const { test, expect, pauseEngine } = require('./helpers/fixtures');
 
 // A save whose wall list points outside the grid it declares. Both load paths
-// (SaveTab's file picker and the Worlds picker) validate only that `grid` and
-// `organisms` exist, so a hand-edited or version-mismatched file reaches
-// loadRaw intact.
+// in the Worlds picker (its file picker and its bundled-world cards) validate
+// only that `grid` and `organisms` exist, so a hand-edited or version-mismatched
+// file reaches loadRaw intact.
 const OUT_OF_RANGE_SAVE = {
   grid: {
     cols: 10,

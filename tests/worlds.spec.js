@@ -39,12 +39,9 @@ async function loadedWorld(page) {
   });
 }
 
+// The toolbar's WORLDS button is the picker: it toggles the modal directly
 async function openWorldsModal(page) {
   await openPanel(page, 'save');
-  // The save popup stays open behind the modal, so a second visit to the
-  // picker within one test must not toggle it shut
-  if (!(await page.locator('#browse-worlds-btn').isVisible())) await openPanel(page, 'save');
-  await page.locator('#browse-worlds-btn').click();
   await expect(page.getByTestId('worlds-modal')).toBeVisible();
 }
 
@@ -57,14 +54,15 @@ async function loadWorld(page, value) {
 
 test.describe('Worlds picker', () => {
   test.beforeEach(async ({ page }) => {
-    await openPanel(page, 'save');
-    await page.locator('#browse-worlds-btn').click();
-    await expect(page.getByTestId('worlds-modal')).toBeVisible();
+    await openWorldsModal(page);
   });
 
-  test('Lists the bundled worlds', async ({ page }) => {
-    expect(await page.locator('.world-card').count()).toBeGreaterThan(5);
-    await expect(page.locator('.world-card[data-world="SurvivalOfFittest"]')).toBeVisible();
+  test('Lists the bundled worlds with their grid size', async ({ page }) => {
+    expect(await page.locator('.world-card').count()).toBe(worldList.length);
+    const card = page.locator('.world-card[data-world="SurvivalOfFittest"]');
+    await expect(card).toBeVisible();
+    // The size is on the card so a multi-second load is never a surprise
+    await expect(card).toContainText('385×217');
   });
 
   test('Loading a world replaces the grid and applies its saved controls', async ({ page }) => {
@@ -89,19 +87,57 @@ test.describe('Worlds picker', () => {
   test('Unchecking override keeps the current evolution controls', async ({ page }) => {
     // Set a distinctive value, then load with override off
     await page.keyboard.press('Escape');
-    await openPanel(page, 'save'); // close save popup
     await page.locator('#tool-rules').click();
     await page.locator('#lookRange').fill('11');
     await page.keyboard.press('Escape');
 
-    await openPanel(page, 'save');
-    await page.locator('#browse-worlds-btn').click();
+    await openWorldsModal(page);
     await page.locator('#override-controls').uncheck();
     await page.locator('.world-card[data-world="SurvivalOfFittest"]').click();
     await expect(page.getByTestId('worlds-modal')).toBeHidden();
 
     await page.locator('#tool-rules').click();
     await expect(page.locator('#lookRange')).toHaveValue('11');
+  });
+
+  /* A world takes seconds to fetch and rebuild. The load used to run to
+     completion regardless, so backing out of the picker mid-fetch still
+     replaced the world -- seconds after the modal had gone. */
+  test('Closing mid-load abandons the fetch and freezes the other cards', async ({ page }) => {
+    await pauseEngine(page);
+    const before = await page.evaluate(() => ({
+      cols: window.engine.env.grid_map.cols,
+      rows: window.engine.env.grid_map.rows,
+    }));
+
+    // Hold the response open so the click sits in its loading state
+    await page.route('**/assets/worlds/colony.json', async route => {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await route.continue();
+    });
+
+    const colony = page.locator('.world-card[data-world="colony"]');
+    await colony.click();
+    await expect(colony).toContainText('loading…');
+    // The rest go dead rather than looking clickable while they no-op
+    await expect(page.locator('.world-card[data-world="huggers"]')).toBeDisabled();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('worlds-modal')).toBeHidden();
+
+    // Well past the point the held response lands
+    await page.waitForTimeout(4000);
+    expect(await page.evaluate(() => ({
+      cols: window.engine.env.grid_map.cols,
+      rows: window.engine.env.grid_map.rows,
+    }))).toEqual(before);
+  });
+
+  test('A failed world list says so instead of loading forever', async ({ page }) => {
+    await page.keyboard.press('Escape');
+    await page.route('**/assets/worlds/_list.json', route => route.abort());
+    await openWorldsModal(page);
+    await expect(page.getByTestId('worlds-modal')).toContainText('Could not load the world list');
   });
 });
 

@@ -1,82 +1,122 @@
 [
     {
         "name": "Survival of the Fittest",
-        "value": "SurvivalOfFittest"
+        "value": "SurvivalOfFittest",
+        "cols": 385,
+        "rows": 217
     },
     {
         "name": "Computer Zoo",
-        "value": "ComputerZoo"
+        "value": "ComputerZoo",
+        "cols": 427,
+        "rows": 191
     },
     {
         "name": "Huggers",
-        "value": "huggers"
+        "value": "huggers",
+        "cols": 200,
+        "rows": 200
     },
     {
         "name": "Colony",
-        "value": "colony"
+        "value": "colony",
+        "cols": 140,
+        "rows": 140
     },
     {
         "name": "Ephemeral World",
-        "value": "ephemeral"
+        "value": "ephemeral",
+        "cols": 512,
+        "rows": 231
     },
     {
         "name": "Trailblazer",
-        "value": "Trailblazer3"
+        "value": "Trailblazer3",
+        "cols": 759,
+        "rows": 399
     },
     {
         "name": "Scarcity",
-        "value": "scarcity"
+        "value": "scarcity",
+        "cols": 854,
+        "rows": 400
     },
     {
         "name": "High Def Sweepers",
-        "value": "world_HighDefSweepers_start"
+        "value": "world_HighDefSweepers_start",
+        "cols": 2048,
+        "rows": 1041
     },
     {
         "name": "Shrub Swamp",
-        "value": "shrubland"
+        "value": "shrubland",
+        "cols": 800,
+        "rows": 379
     },
     {
         "name": "Computer (unprogrammed)",
-        "value": "computer_unprogrammed"
+        "value": "computer_unprogrammed",
+        "cols": 1200,
+        "rows": 800
     },
     {
         "name": "Computer (fibonacci)",
-        "value": "compV2_fixed_labeled_fibofancy"
+        "value": "compV2_fixed_labeled_fibofancy",
+        "cols": 1200,
+        "rows": 800
     },
     {
         "name": "Life Engine of Nurgle",
-        "value": "Life_Engine_of_Nurgle"
+        "value": "Life_Engine_of_Nurgle",
+        "cols": 308,
+        "rows": 149
     },
     {
         "name": "Zoo",
-        "value": "zoo"
+        "value": "zoo",
+        "cols": 342,
+        "rows": 190
     },
     {
         "name": "Chains",
-        "value": "Chains"
+        "value": "Chains",
+        "cols": 239,
+        "rows": 146
     },
     {
         "name": "Symbiotic Colony",
-        "value": "SymbioticColony"
+        "value": "SymbioticColony",
+        "cols": 384,
+        "rows": 175
     },
     {
         "name": "Sand Grid",
-        "value": "Sand_Grid"
+        "value": "Sand_Grid",
+        "cols": 342,
+        "rows": 190
     },
     {
         "name": "Epic",
-        "value": "Epic"
+        "value": "Epic",
+        "cols": 980,
+        "rows": 478
     },
     {
         "name": "Ostracod Slide",
-        "value": "Ostracod_Slide"
+        "value": "Ostracod_Slide",
+        "cols": 512,
+        "rows": 260
     },
     {
         "name": "Altruistic Arthurs",
-        "value": "ArthursWorld"
+        "value": "ArthursWorld",
+        "cols": 356,
+        "rows": 170
     },
     {
         "name": "☣️Unnatural Battle Royale⚔️",
-        "value": "battleground"
+        "value": "battleground",
+        "cols": 575,
+        "rows": 325
     }
 ]

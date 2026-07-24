@@ -10,12 +10,13 @@ interface HudBottomBarProps {
   activePanel: string | null;
   editorOpen: boolean;
   rulesOpen: boolean;
+  worldsOpen: boolean;
   onItemClick: (item: string) => void;
 }
 
 const toolbarItems = [
   { id: 'new-game', iconClass: 'fa-seedling', label: 'NEW', item: 'new', title: 'Start a new game: choose a fresh world and seed life' },
-  { id: 'tool-save', iconClass: 'fa-earth-americas', label: 'WORLDS', item: 'save', title: 'Save, load, or browse whole worlds' },
+  { id: 'tool-save', iconClass: 'fa-earth-americas', label: 'WORLDS', item: 'save', title: 'Browse the bundled worlds, or save and load your own' },
   { id: 'tool-edit', iconClass: 'fa-flask', label: 'LAB', item: 'edit', title: 'Open the Organism Lab: design, edit, and deploy life forms' },
   { id: 'tool-rules', iconClass: 'fa-dna', label: 'EVOLUTION', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
   { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats', title: 'Population, species, and evolution charts over time' },
@@ -108,7 +109,7 @@ function renderClickHint(mode: number, brushSize: number) {
   }
 }
 
-const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editorOpen, rulesOpen, onItemClick }) => {
+const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editorOpen, rulesOpen, worldsOpen, onItemClick }) => {
   const envMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // hint bar tracks the slider
@@ -119,6 +120,7 @@ const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editor
   const isActive = (item: string) => {
     if (item === 'edit') return editorOpen;
     if (item === 'rules') return rulesOpen;
+    if (item === 'save') return worldsOpen;
     return activePanel === item;
   };
 
