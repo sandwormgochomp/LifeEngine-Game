@@ -7,6 +7,8 @@ import GridMap from '../Grid/GridMap';
 import Organism from '../Organism/Organism';
 import CellStates from '../Organism/Cell/CellStates';
 import EnvironmentController from '../Controllers/EnvironmentController';
+import Neighbors from '../Grid/Neighbors';
+import Notifier from '../Utils/Notifier';
 import Hyperparams from '../Hyperparameters.js';
 import FossilRecord from '../Stats/FossilRecord';
 import Narrator from '../Stats/Narrator';
@@ -102,6 +104,59 @@ const OVERLAY_MAX_AGE_MS = 200;
    px ox + x*s. Computed by overlayCamera() from the controller's pan/zoom. */
 interface OverlayCamera { ox: number; oy: number; s: number; }
 
+/* A timed world event. `ends_at` is an absolute total_ticks value; `restore`
+   undoes any global spike the event applied (e.g. resets Hyperparams.foodProdProb
+   after a bloom). Instantaneous events (a meteor is one impact) don't enqueue --
+   only the ones that hold the world in an altered state for a while do. */
+interface WorldEvent {
+    kind: string;
+    ends_at: number;
+    restore: () => void;
+}
+
+// Bloom: producers grow food this many times faster, for this many ticks.
+const BLOOM_MULTIPLIER = 3;
+const BLOOM_TICKS = 600;
+
+/* Meteor timeline, in wall-clock ms. The whole animation is driven from the
+   render loop rather than sim ticks so it plays at the same speed whatever
+   the sim speed -- including paused, where the rAF loop keeps running. The
+   strike's sim effects (kills, food scatter) land at impact time, not click
+   time, so what the player sees is what actually happens. */
+const METEOR_FALL_MS = 500;
+const METEOR_FLASH_MS = 200;
+const METEOR_SHOCK_MS = 650;
+/* Crater afterglow; also the fx tail stepMeteors() prunes on, so it must be
+   the longest post-impact phase (>= shockwave and every ember lifetime). */
+const METEOR_GLOW_MS = 1400;
+const METEOR_EMBER_MIN_MS = 450;
+const METEOR_EMBER_MAX_MS = 1000;
+// White-hot core through cooling rust; embers and the streak's trail sample it.
+const METEOR_COLORS = ['#fff7ae', '#ffd166', '#ff8c42', '#ff4d2e', '#b3202a'];
+
+/* One spark thrown from the crater: a chunky pixel square that shoots out
+   fast, drifts to a stop at `reach`, and cools out over `life`. */
+interface MeteorEmber {
+    angle: number;
+    reach: number;  // world px travelled over its full life
+    size: number;   // px at birth; shrinks as it cools
+    life: number;   // ms
+    color: string;
+}
+
+/* An in-flight strike. Cosmetic state plus the one piece of pending sim
+   mutation: `resolved` flips when stepMeteors() lands the blast. */
+interface MeteorFx {
+    col: number;
+    row: number;
+    radius: number;
+    start: number;   // performance.now() at launch
+    from_x: number;  // world px the streak falls in from
+    from_y: number;
+    resolved: boolean;
+    embers: MeteorEmber[];
+}
+
 /* Decoration culling margin, in cells, around the visible rect. Sprites are
    culled by their anchor cell before the sprite cache is even touched, so the
    margin has to cover how far an organism's artwork can reach from its
@@ -143,7 +198,22 @@ class WorldEnvironment extends Environment{
     data_update_rate: number;
     active_explosions: { col: number; row: number; ticks: number }[];
     active_projectiles: OrganismProjectile[];
+    /* In-flight meteor strikes: launched by meteorStrike(), landed and drawn
+       by the render loop (stepMeteors / renderMeteorFx). Runtime-only --
+       serialize() skips arrays -- so a save taken during the half-second fall
+       loses that strike; acceptable for a click-scale window. */
+    active_meteors: MeteorFx[];
+    /* Cells the meteor pass painted over last frame, repainted first thing
+       next pass so the animation never smears -- the same immediate-mode
+       contract the cursor overlay keeps, via its own set so the two passes
+       never fight over ownership. */
+    fx_cells: Set<number>;
     radiation_map: Set<string>;
+    /* In-flight world events (Events tool tab). Each carries the tick it ends
+       on and a restore() that undoes whatever global state it spiked, so the
+       tick loop can expire it and reset() can wind them all back at once. The
+       first minimal event framework -- see concepts/proposals/07-world-events. */
+    active_events: WorldEvent[];
     day_timer: number;
     is_night: boolean;
     /* Genuinely absent for a real window: syncOverlaySizes() is the only writer
@@ -243,7 +313,10 @@ class WorldEnvironment extends Environment{
         this.data_update_rate = 100;
         this.active_explosions = [];
         this.active_projectiles = [];
+        this.active_meteors = [];
+        this.fx_cells = new Set();
         this.radiation_map = new Set();
+        this.active_events = [];
         this.day_timer = 0;
         this.is_night = false;
         this.pheromone_index = { tick: -1, bucket: 0, map: new Map() };
@@ -321,6 +394,8 @@ class WorldEnvironment extends Environment{
             this.setNightMode(!this.is_night);
         }
 
+        this.tickWorldEvents();
+
         this.total_ticks ++;
         if (this.total_ticks % this.data_update_rate == 0) {
             t = Perf.begin();
@@ -355,6 +430,10 @@ class WorldEnvironment extends Environment{
         // Sampled before the headless early-out clears the set, so the gauge
         // stays honest about how much churn each tick produces either way.
         Perf.gauge('dirty_cells', this.renderer.cells_to_render.size);
+        const now = performance.now();
+        // Before the headless early-out: landing a meteor is sim mutation,
+        // not painting, and must happen even when nothing is drawn.
+        this.stepMeteors(now);
         if (WorldConfig.headless) {
             this.renderer.cells_to_render.clear();
             return;
@@ -365,6 +444,7 @@ class WorldEnvironment extends Environment{
         Perf.end('cells_draw', t);
         this.renderer.renderHighlights();
         this.controller.renderCursorOverlay();
+        this.renderMeteorFx(now);
         /* Both overlay passes early-out on their dirty flags and the
            overlayMayRepaint() schedule, so their avg stays near zero; the max
            column is what shows the repaint spike. */
@@ -775,8 +855,285 @@ class WorldEnvironment extends Environment{
         }
     }
 
+    // Expire any world event whose window has elapsed, running its restore().
+    // Iterated back-to-front so splicing doesn't skip the next entry.
+    tickWorldEvents(): void {
+        for (let i = this.active_events.length - 1; i >= 0; i--) {
+            if (this.total_ticks >= this.active_events[i].ends_at) {
+                this.active_events[i].restore();
+                this.active_events.splice(i, 1);
+            }
+        }
+    }
+
+    // Bloom (Events tab): spike food production globally for a while, then
+    // restore it. Idempotent -- re-triggering an active bloom just extends the
+    // window from the current tick without stacking the multiplier, so the
+    // captured pre-bloom value can never drift. Mutating the Hyperparams
+    // singleton is the same swap-a-global pattern noted in TODO.md; kept because
+    // every producer reads foodProdProb straight off it, and restore() winds it
+    // back on expiry, on re-trigger, and on reset().
+    triggerBloom(): void {
+        const existing = this.active_events.find(e => e.kind === 'bloom');
+        if (existing) {
+            existing.ends_at = this.total_ticks + BLOOM_TICKS;
+        } else {
+            const prev = Hyperparams.foodProdProb;
+            Hyperparams.foodProdProb = prev * BLOOM_MULTIPLIER;
+            this.active_events.push({
+                kind: 'bloom',
+                ends_at: this.total_ticks + BLOOM_TICKS,
+                restore: () => { Hyperparams.foodProdProb = prev; },
+            });
+        }
+        Notifier.notify('✿ Bloom — food is flourishing');
+        if (this.engine) this.engine.emitChange(true);
+    }
+
+    /* Meteor (Events tab): launch a strike at (col, row). The click only sets
+       the fireball falling; the blast itself lands METEOR_FALL_MS later, when
+       stepMeteors() -- driven by the render loop, which never stops -- runs
+       resolveMeteorStrike(). So a strike aimed while paused still lands, and
+       the sim keeps moving under the falling meteor: organisms can wander
+       into (or out of) the doomed circle during the fall. */
+    meteorStrike(col: number, row: number, radius: number): void {
+        const cs = this.renderer.cell_size;
+        // Streak in from high off to one side; which side is a cosmetic coin flip.
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const dist = Math.max(30, radius * 5) * cs;
+        this.active_meteors.push({
+            col, row, radius,
+            start: performance.now(),
+            from_x: (col + 0.5) * cs + side * dist * 0.75,
+            from_y: (row + 0.5) * cs - dist,
+            resolved: false,
+            embers: [],
+        });
+        Notifier.notify('☄ Meteor incoming');
+        if (this.engine) this.engine.emitChange(true);
+    }
+
+    // The blast, run at impact time. Everything living in the radius dies,
+    // and the crater is strewn with food from the dead -- a
+    // mass-extinction-then-boom the Narrator's own crash detection then
+    // reports on its next window. Skips the dish glass and its exterior so a
+    // strike never punches the bounds.
+    resolveMeteorStrike(col: number, row: number, radius: number): void {
+        const SCATTER_PROB = 0.45;
+        for (const loc of Neighbors.inRange(radius)) {
+            const c = col + loc[0];
+            const r = row + loc[1];
+            const idx = this.grid_map.indexAt(c, r);
+            if (idx < 0 || this.grid_map.dishTierOf(idx) !== 0) continue;
+            const owner = this.grid_map.ownerAt(c, r);
+            if (owner != null) owner.die();
+            const state = this.grid_map.stateAt(c, r);
+            // Leave walls standing; scatter food onto the bared ground.
+            if (state === CellStates.empty || state === CellStates.food) {
+                this.changeCell(c, r, Math.random() < SCATTER_PROB ? CellStates.food : CellStates.empty, null);
+            }
+        }
+        if (this.engine) this.engine.emitChange(true);
+    }
+
+    /* Land any meteor whose fall has elapsed, then drop fully-finished fx.
+       Called from render() BEFORE the headless early-out: landing is sim
+       mutation, not cosmetics, so it must run even when nothing is painted.
+       Resolution runs before pruning, so even a frame gap longer than the
+       whole timeline (tab hidden throughout) still lands the strike. */
+    stepMeteors(now: number): void {
+        if (this.active_meteors.length === 0) return;
+        for (const fx of this.active_meteors) {
+            if (!fx.resolved && now - fx.start >= METEOR_FALL_MS) {
+                fx.resolved = true;
+                this.resolveMeteorStrike(fx.col, fx.row, fx.radius);
+                this.spawnMeteorEmbers(fx);
+                this.shakeWorld();
+            }
+        }
+        this.active_meteors = this.active_meteors.filter(fx => now - fx.start < METEOR_FALL_MS + METEOR_GLOW_MS);
+    }
+
+    spawnMeteorEmbers(fx: MeteorFx): void {
+        const cs = this.renderer.cell_size;
+        const blast_r = (fx.radius + 0.5) * cs;
+        const n = Math.min(40, 12 + fx.radius * 2);
+        for (let i = 0; i < n; i++) {
+            fx.embers.push({
+                angle: Math.random() * Math.PI * 2,
+                reach: blast_r * (0.8 + Math.random() * 1.6),
+                size: cs * (0.5 + Math.random() * 0.9),
+                life: METEOR_EMBER_MIN_MS + Math.random() * (METEOR_EMBER_MAX_MS - METEOR_EMBER_MIN_MS),
+                color: METEOR_COLORS[Math.floor(Math.random() * METEOR_COLORS.length)],
+            });
+        }
+    }
+
+    /* One jolt of the whole canvas stack -- world, glow and deco overlays all
+       live inside #env, so shaking the container keeps them coherent, and its
+       static transform (index.css) means the animation overriding it is safe.
+       The remove/reflow/add restarts a shake already in flight. */
+    shakeWorld(): void {
+        const el = this.container;
+        if (!el) return;
+        el.classList.remove('meteor-shake');
+        void el.offsetWidth;
+        el.classList.add('meteor-shake');
+    }
+
+    // Every cell under the rectangle (world px) repaints at the start of the
+    // next fx pass; anything the fx drew there this frame can't smear.
+    markFxBounds(x0: number, y0: number, x1: number, y1: number): void {
+        const cs = this.renderer.cell_size;
+        const c0 = Math.max(0, Math.floor(x0 / cs));
+        const c1 = Math.min(this.grid_map.cols - 1, Math.floor(x1 / cs));
+        const r0 = Math.max(0, Math.floor(y0 / cs));
+        const r1 = Math.min(this.grid_map.rows - 1, Math.floor(y1 / cs));
+        for (let c = c0; c <= c1; c++) {
+            for (let r = r0; r <= r1; r++) {
+                this.fx_cells.add(this.grid_map.indexAt(c, r));
+            }
+        }
+    }
+
+    /* Immediate-mode meteor pass, drawn after the cursor overlay so the
+       fireball and blast paint over everything on the world canvas. */
+    renderMeteorFx(now: number): void {
+        const renderer = this.renderer;
+        const ctx = renderer.ctx;
+        if (!ctx) return;
+        for (const idx of this.fx_cells)
+            renderer.renderCell(idx);
+        this.fx_cells.clear();
+        if (this.active_meteors.length === 0) return;
+        ctx.save();
+        for (const fx of this.active_meteors) {
+            const t = now - fx.start;
+            if (t < METEOR_FALL_MS) this.drawMeteorFall(ctx, fx, t / METEOR_FALL_MS);
+            else this.drawMeteorImpact(ctx, fx, t - METEOR_FALL_MS);
+        }
+        ctx.restore();
+    }
+
+    drawMeteorFall(ctx: CanvasRenderingContext2D, fx: MeteorFx, p: number): void {
+        const cs = this.renderer.cell_size;
+        const ix = (fx.col + 0.5) * cs;
+        const iy = (fx.row + 0.5) * cs;
+        const ease = p * p; // gravity: the streak accelerates into the ground
+        const head_r = Math.max(cs * 1.3, fx.radius * cs * 0.4);
+        const hx = fx.from_x + (ix - fx.from_x) * ease;
+        const hy = fx.from_y + (iy - fx.from_y) * ease;
+        ctx.globalCompositeOperation = 'lighter';
+        /* The trail is the same path sampled at earlier eased positions, so
+           its on-screen length grows with speed; radii flicker per frame --
+           purely visual randomness, nothing feeds back into the sim. */
+        const SEGS = 7;
+        for (let i = SEGS; i >= 1; i--) {
+            const back = Math.max(0, ease - i * 0.045);
+            const tx = fx.from_x + (ix - fx.from_x) * back;
+            const ty = fx.from_y + (iy - fx.from_y) * back;
+            const r = head_r * (1 - i / (SEGS + 2)) * (0.9 + Math.random() * 0.2);
+            const cool = Math.min(METEOR_COLORS.length - 1, 1 + Math.floor(i * 0.6));
+            ctx.globalAlpha = 0.5 * (1 - i / (SEGS + 1));
+            ctx.fillStyle = METEOR_COLORS[cool];
+            ctx.beginPath();
+            ctx.arc(tx, ty, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // White-hot head: three additive layers read as one glowing fireball.
+        const layers: [number, string][] = [[1, 'rgba(255,140,66,0.7)'], [0.65, 'rgba(255,209,102,0.9)'], [0.35, 'rgba(255,255,255,1)']];
+        ctx.globalAlpha = 1;
+        for (const [scale, color] of layers) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(hx, hy, head_r * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        const tail = Math.max(0, ease - SEGS * 0.045);
+        const tail_x = fx.from_x + (ix - fx.from_x) * tail;
+        const tail_y = fx.from_y + (iy - fx.from_y) * tail;
+        const pad = head_r + 2;
+        this.markFxBounds(Math.min(hx, tail_x) - pad, Math.min(hy, tail_y) - pad,
+            Math.max(hx, tail_x) + pad, Math.max(hy, tail_y) + pad);
+    }
+
+    // u: ms since impact. Layers: crater afterglow under an overexposed
+    // flash, a double shockwave ring, and the embers -- chunky pixel squares
+    // to match the art style, not anti-aliased particles.
+    drawMeteorImpact(ctx: CanvasRenderingContext2D, fx: MeteorFx, u: number): void {
+        const cs = this.renderer.cell_size;
+        const ix = (fx.col + 0.5) * cs;
+        const iy = (fx.row + 0.5) * cs;
+        const blast_r = (fx.radius + 0.5) * cs;
+
+        if (u < METEOR_GLOW_MS) {
+            const p = u / METEOR_GLOW_MS;
+            const g = ctx.createRadialGradient(ix, iy, 0, ix, iy, blast_r);
+            g.addColorStop(0, `rgba(255,120,40,${0.5 * (1 - p)})`);
+            g.addColorStop(1, 'rgba(255,60,20,0)');
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(ix, iy, blast_r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.globalCompositeOperation = 'lighter';
+
+        if (u < METEOR_FLASH_MS) {
+            const p = u / METEOR_FLASH_MS;
+            const flash_r = blast_r * (0.6 + 0.9 * p);
+            const g = ctx.createRadialGradient(ix, iy, 0, ix, iy, flash_r);
+            g.addColorStop(0, `rgba(255,255,255,${0.95 * (1 - p)})`);
+            g.addColorStop(0.55, `rgba(255,220,120,${0.8 * (1 - p)})`);
+            g.addColorStop(1, 'rgba(255,150,50,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(ix, iy, flash_r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (u < METEOR_SHOCK_MS) {
+            const p = u / METEOR_SHOCK_MS;
+            const eased = 1 - (1 - p) * (1 - p) * (1 - p);
+            const ring_r = blast_r * (0.35 + 1.45 * eased);
+            ctx.lineWidth = Math.max(1, cs * 1.4 * (1 - p));
+            ctx.strokeStyle = `rgba(255,170,80,${0.85 * (1 - p)})`;
+            ctx.beginPath();
+            ctx.arc(ix, iy, ring_r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.lineWidth = Math.max(1, cs * 0.5 * (1 - p));
+            ctx.strokeStyle = `rgba(255,255,220,${0.7 * (1 - p)})`;
+            ctx.beginPath();
+            ctx.arc(ix, iy, ring_r * 0.8, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        for (const e of fx.embers) {
+            if (u >= e.life) continue;
+            const p = u / e.life;
+            const d = e.reach * (1 - (1 - p) * (1 - p)); // fast exit, drifting stop
+            const ex = ix + Math.cos(e.angle) * d;
+            const ey = iy + Math.sin(e.angle) * d;
+            const sz = Math.max(1, e.size * (1 - 0.5 * p));
+            ctx.globalAlpha = p < 0.6 ? 1 : (1 - p) / 0.4;
+            ctx.fillStyle = e.color;
+            ctx.fillRect(Math.round(ex - sz / 2), Math.round(ey - sz / 2), Math.round(sz), Math.round(sz));
+        }
+        ctx.globalAlpha = 1;
+
+        // Embers fly furthest (up to 2.4x the blast radius); after they die
+        // only the afterglow disc is left to keep clean.
+        const reach = u < METEOR_EMBER_MAX_MS ? blast_r * 2.6 + cs * 2 : blast_r + cs;
+        this.markFxBounds(ix - reach, iy - reach, ix + reach, iy + reach);
+    }
+
     // Destructive: callers are responsible for confirming with the user first
     reset(reset_life: boolean = true): boolean {
+        // Wind back any in-flight event before wiping the clock, so a bloom's
+        // foodProdProb spike never survives into the fresh world.
+        for (const ev of this.active_events) ev.restore();
+        this.active_events = [];
         this.organisms = [];
         this.grid_map.fillGrid(CellStates.empty, !WorldConfig.clear_walls_on_reset);
         this.renderer.renderFullGrid();
@@ -784,6 +1141,16 @@ class WorldEnvironment extends Environment{
         this.total_ticks = 0;
         this.active_explosions = [];
         this.active_projectiles = [];
+        /* A strike still falling was aimed at a world that no longer exists;
+           one that already landed keeps its fireworks. That matters beyond
+           looks: a big blast can extinguish the world and trip auto_reset on
+           the very next tick, and without this the explosion vanished at the
+           exact moment of impact -- the aftermath playing over the fresh
+           world is what tells the player their meteor caused the reset.
+           The repaint set can clear outright: renderFullGrid below repaints
+           every cell anyway. */
+        this.active_meteors = this.active_meteors.filter(fx => fx.resolved);
+        this.fx_cells.clear();
         this.setNightMode(false);
         /* Both overlays must repaint from the emptied world. Nothing else in
            this method routes through changeCell (fillGrid writes the grid

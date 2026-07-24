@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
@@ -11,25 +11,101 @@ interface HudToolPaletteProps {
   engine: Engine | null;
 }
 
-// The world paint tools, lifted out of the World Controls modal so they live
-// as an always-visible palette next to the world. Icons mirror the click-hint
-// bar; titles keep the hotkeys discoverable. Sample leads the group so picking
-// an organism from the world sits alongside the tools that reshape it.
-const TOOLS = [
-  { id: 'tool-select', label: 'Sample', iconClass: 'fa-eye-dropper', mode: Modes.Select, title: 'Take a sample — pick an organism from the world to examine it in the Organism Lab. Hotkey: Z' },
-  { id: 'food', label: 'Food', iconClass: 'fa-drumstick-bite', mode: Modes.FoodDrop, title: 'Paint food onto the world; organisms eat it to survive and reproduce. Hotkey: F' },
-  { id: 'wall', label: 'Wall', iconClass: 'fa-cube', mode: Modes.WallDrop, title: 'Paint walls that block movement (killers and explosions can destroy them). Hotkey: D' },
-  { id: 'invincible-wall', label: 'Glass', iconClass: 'fa-gem', mode: Modes.InvincibleWallDrop, title: 'Paint permanent walls that nothing can destroy' },
-  { id: 'radiation-drop', label: 'Rad', iconClass: 'fa-radiation', mode: Modes.RadiationDrop, title: 'Paint radiation zones that raise mutation rates for organisms inside. Hotkey: R' },
-  { id: 'seed-life', label: 'Life', iconClass: 'fa-seedling', mode: Modes.SeedLife, title: 'Paint scattered random organisms within the brush (right-click clears them). Hotkey: L' },
-  { id: 'kill', label: 'Kill', iconClass: 'fa-skull', mode: Modes.ClickKill, title: 'Kill organisms under the brush. Hotkey: G' },
+// An arming tool: clicking it sets the controller mode; the world canvas then
+// interprets clicks/drags in that mode. Ids are kept stable across the tab
+// reorg because the tests and hotkey bar address the buttons by them.
+interface Tool {
+  id: string;
+  label: string;
+  iconClass: string;
+  mode: number;
+  title: string;
+}
+
+// A one-shot action: fires immediately rather than arming a mode. `soon` marks
+// a scaffolded event whose logic isn't wired yet — rendered disabled.
+interface Action {
+  id: string;
+  label: string;
+  title: string;
+  run?: (engine: Engine) => void;
+  soon?: boolean;
+}
+
+interface Tab {
+  id: string;
+  label: string;
+  title: string;
+  tools: Tool[];
+  actions: Action[];
+}
+
+// Wipe every organism but keep the terrain. reset(false) empties the world
+// without reseeding, so unlike the Kill brush it clears the whole population at
+// once and unlike New Game it leaves your walls in place.
+const clearLife = (engine: Engine) => {
+  if (!window.confirm('Remove every organism? Walls are kept.')) return;
+  engine.env.reset(false);
+  Notifier.notify('All organisms cleared');
+};
+
+// Tools and actions grouped by category. Terrain shapes the environment
+// substrate, Life manipulates organisms, Events are the dramatic global
+// happenings — see concepts/proposals/07-world-events.
+const TABS: Tab[] = [
+  {
+    id: 'terrain',
+    label: 'Terrain',
+    title: 'Shape the environment: food, walls, glass and radiation',
+    tools: [
+      { id: 'food', label: 'Food', iconClass: 'fa-drumstick-bite', mode: Modes.FoodDrop, title: 'Paint food onto the world; organisms eat it to survive and reproduce. Hotkey: F' },
+      { id: 'wall', label: 'Wall', iconClass: 'fa-cube', mode: Modes.WallDrop, title: 'Paint walls that block movement (killers and explosions can destroy them). Hotkey: D' },
+      { id: 'invincible-wall', label: 'Glass', iconClass: 'fa-gem', mode: Modes.InvincibleWallDrop, title: 'Paint permanent walls that nothing can destroy' },
+      { id: 'radiation-drop', label: 'Rad', iconClass: 'fa-radiation', mode: Modes.RadiationDrop, title: 'Paint radiation zones that raise mutation rates for organisms inside. Hotkey: R' },
+    ],
+    actions: [
+      { id: 'randomize-walls-btn', label: 'Random Walls', title: 'Generate organic wall shapes using Perlin noise', run: e => { e.env.controller.randomizeWalls(); Notifier.notify('Random walls generated'); } },
+      { id: 'clear-walls', label: 'Clear Walls', title: 'Remove every wall in the world (the petri dish stays). Hotkey: B', run: e => { e.env.clearWalls(); Notifier.notify('Walls cleared'); } },
+      { id: 'clear-radiation', label: 'Clear Radiation', title: 'Remove all radiation zones', run: e => { e.env.radiation_map.clear(); e.env.renderFull(); Notifier.notify('Radiation cleared'); } },
+    ],
+  },
+  {
+    id: 'life',
+    label: 'Life',
+    title: 'Work with organisms: sample, seed and kill',
+    tools: [
+      { id: 'tool-select', label: 'Sample', iconClass: 'fa-eye-dropper', mode: Modes.Select, title: 'Take a sample — pick an organism from the world to examine it in the Organism Lab. Hotkey: Z' },
+      { id: 'seed-life', label: 'Seed', iconClass: 'fa-seedling', mode: Modes.SeedLife, title: 'Paint scattered random organisms within the brush (right-click clears them). Hotkey: L' },
+      { id: 'kill', label: 'Kill', iconClass: 'fa-skull', mode: Modes.ClickKill, title: 'Kill organisms under the brush. Hotkey: G' },
+    ],
+    actions: [
+      { id: 'clear-life', label: 'Clear Life', title: 'Wipe every organism and start from an empty world (walls are kept)', run: clearLife },
+    ],
+  },
+  {
+    id: 'events',
+    label: 'Events',
+    title: 'Punctuate the equilibrium: cataclysms, blooms and invasions',
+    tools: [
+      { id: 'event-meteor', label: 'Meteor', iconClass: 'fa-meteor', mode: Modes.MeteorStrike, title: 'Click the world to call down a meteor: it streaks in, and everything in the blast radius dies with the crater strewn with food. Brush sets the radius.' },
+    ],
+    actions: [
+      { id: 'event-bloom', label: 'Bloom', title: 'A burst of fertility: food production spikes worldwide for a while, then fades.', run: e => e.env.triggerBloom() },
+      { id: 'event-iceage', label: 'Ice Age', title: 'Coming soon: a long food crash that culls all but the most efficient forms.', soon: true },
+      { id: 'event-radstorm', label: 'Rad Storm', title: 'Coming soon: a moving radiation front that makes evolution run hot along its edge.', soon: true },
+      { id: 'event-predator', label: 'Predator', title: 'Coming soon: drop a pre-evolved hunter into a settled world and watch the arms race.', soon: true },
+    ],
+  },
 ];
 
 const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
+  const [activeTabId, setActiveTabId] = useState<string>('terrain');
   const activeMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // slider stays in sync with the hotkeys and the click-hint bar
   const brushSize = useEngineValue(engine, () => WorldConfig.brush_size, WorldConfig.brush_size);
+
+  const activeTab = TABS.find(t => t.id === activeTabId) ?? TABS[0];
 
   // Clicking a tool arms it; clicking the armed tool again puts it away.
   const toggleMode = (mode: number) => {
@@ -44,47 +120,37 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
     engine?.emitChange(true);
   };
 
-  // One-shot terrain actions: unlike the tools above these fire immediately
-  // rather than arming a mode, so they render as a separate row and repaint
-  // the world themselves.
-  const randomizeWalls = () => {
-    if (!engine) return;
-    engine.env.controller.randomizeWalls();
+  const runAction = (action: Action) => {
+    if (!engine || !action.run) return;
+    action.run(engine);
     engine.emitChange(true);
-    Notifier.notify('Random walls generated');
   };
 
-  const clearWalls = () => {
-    if (!engine) return;
-    engine.env.clearWalls();
-    engine.emitChange(true);
-    Notifier.notify('Walls cleared');
-  };
-
-  const clearRadiation = () => {
-    if (!engine) return;
-    engine.env.radiation_map.clear();
-    engine.env.renderFull();
-    engine.emitChange(true);
-    Notifier.notify('Radiation cleared');
-  };
-
-  // Wipe every organism but keep the terrain. reset(false) empties the world
-  // without reseeding, so unlike the Kill brush it clears the whole population
-  // at once and unlike New Game it leaves your walls in place.
-  const clearLife = () => {
-    if (!engine) return;
-    if (!window.confirm('Remove every organism? Walls are kept.')) return;
-    engine.env.reset(false);
-    engine.emitChange(true);
-    Notifier.notify('All organisms cleared');
-  };
+  // A tab whose tool is currently armed gets a marker, so an armed tool stays
+  // discoverable even while a different tab is open.
+  const tabHoldsActiveTool = (tab: Tab) =>
+    activeMode !== Modes.None && tab.tools.some(t => t.mode === activeMode);
 
   return (
     <div className={styles.toolPalette} data-testid="tool-palette">
-      <span className={styles.toolPaletteTitle}>TOOLS</span>
+      <div className={styles.toolPaletteTabs} role="tablist">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            id={`tool-tab-${tab.id}`}
+            role="tab"
+            aria-selected={tab.id === activeTabId}
+            title={tab.title}
+            className={`${styles.toolPaletteTab} ${tab.id === activeTabId ? styles.toolPaletteTabActive : ''} ${tabHoldsActiveTool(tab) ? styles.toolPaletteTabArmed : ''}`}
+            onClick={() => setActiveTabId(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className={styles.toolPaletteGrid}>
-        {TOOLS.map(tool => (
+        {activeTab.tools.map(tool => (
           <button
             key={tool.id}
             id={tool.id}
@@ -97,7 +163,8 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
           </button>
         ))}
       </div>
-      <label className={styles.toolPaletteBrush} title="Size of the brush for food, walls, radiation, life and killing">
+
+      <label className={styles.toolPaletteBrush} title="Size of the brush for food, walls, radiation, life, killing and the meteor blast">
         <span className={styles.toolPaletteBrushLabel}>Brush</span>
         <PixelSlider
           id="brush-slider"
@@ -108,20 +175,24 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
         />
         <span className={styles.toolPaletteBrushValue}>Radius: {brushSize}</span>
       </label>
-      <div className={styles.toolPaletteActions}>
-        <button className={styles.toolPaletteAction} id="randomize-walls-btn" title="Generate organic wall shapes using Perlin noise" onClick={randomizeWalls}>
-          Random Walls
-        </button>
-        <button className={styles.toolPaletteAction} id="clear-walls" title="Remove every wall in the world (the petri dish stays). Hotkey: B" onClick={clearWalls}>
-          Clear Walls
-        </button>
-        <button className={styles.toolPaletteAction} id="clear-radiation" title="Remove all radiation zones" onClick={clearRadiation}>
-          Clear Radiation
-        </button>
-        <button className={styles.toolPaletteAction} id="clear-life" title="Wipe every organism and start from an empty world (walls are kept)" onClick={clearLife}>
-          Clear Life
-        </button>
-      </div>
+
+      {activeTab.actions.length > 0 && (
+        <div className={styles.toolPaletteActions}>
+          {activeTab.actions.map(action => (
+            <button
+              key={action.id}
+              id={action.id}
+              title={action.title}
+              disabled={action.soon}
+              className={`${styles.toolPaletteAction} ${action.soon ? styles.toolPaletteActionSoon : ''}`}
+              onClick={() => runAction(action)}
+            >
+              {action.label}
+              {action.soon && <span className={styles.toolPaletteSoonBadge}>soon</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

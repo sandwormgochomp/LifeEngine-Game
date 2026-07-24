@@ -53,7 +53,8 @@ test.describe('Simulation Controls', () => {
        running either way). */
     await page.locator('#speed-0').click();
 
-    // Clear Life is a one-shot palette action, sibling of Clear Walls/Radiation
+    // Clear Life is a one-shot palette action on the Life tab
+    await page.locator('#tool-tab-life').click();
     page.once('dialog', dialog => dialog.accept());
     await page.locator('#clear-life').click();
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBe(0);

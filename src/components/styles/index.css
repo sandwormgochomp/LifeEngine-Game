@@ -51,6 +51,24 @@ body{
     pointer-events: none;
 }
 
+/* Meteor impact: one decaying jolt of the whole canvas stack, class-toggled
+   by WorldEnvironment.shakeWorld(). #env's own transform is a static
+   scale(1) (above), so the animation overriding it for 400ms is safe, and
+   the pan/zoom transform lives on the canvases, untouched. */
+@keyframes meteor-shake {
+    0%   { transform: translate(0, 0) scale(1); }
+    15%  { transform: translate(-6px, 4px) scale(1); }
+    30%  { transform: translate(5px, -5px) scale(1); }
+    45%  { transform: translate(-4px, -3px) scale(1); }
+    60%  { transform: translate(3px, 4px) scale(1); }
+    75%  { transform: translate(-2px, 2px) scale(1); }
+    100% { transform: translate(0, 0) scale(1); }
+}
+
+#env.meteor-shake {
+    animation: meteor-shake 0.4s linear;
+}
+
 /* Microscope-lens vignette over the world (fixed to the viewport, like the
    eyepiece: it deliberately does not pan with the specimen) */
 #env::after {

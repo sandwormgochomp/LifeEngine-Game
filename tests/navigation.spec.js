@@ -44,6 +44,7 @@ test.describe('Navigation and UI', () => {
     await page.locator('#wall').click();
     await expect(page.getByText(/place wall .* brush Radius: 2/)).toBeVisible();
 
+    await page.locator('#tool-tab-life').click();
     await page.locator('#kill').click();
     await expect(page.getByText(/kill organism .* brush Radius: 2/)).toBeVisible();
 

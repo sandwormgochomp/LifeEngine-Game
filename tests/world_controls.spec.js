@@ -43,6 +43,7 @@ test.describe('World tools palette', () => {
   test('Clear Life removes every organism but keeps the walls', async ({ page }) => {
     expect(await page.evaluate(() => window.engine.env.organisms.length)).toBeGreaterThan(0);
 
+    await page.locator('#tool-tab-life').click();
     page.once('dialog', dialog => dialog.accept());
     await page.locator('#clear-life').click();
 
@@ -74,6 +75,7 @@ test.describe('World tools palette', () => {
   test('Seed Life paints random organisms into the world', async ({ page }) => {
     // A wide brush scatters a few random organisms per click.
     await page.locator('#brush-slider').fill('15');
+    await page.locator('#tool-tab-life').click();
     await page.locator('#seed-life').click();
 
     const before = await page.evaluate(() => window.engine.env.organisms.length);

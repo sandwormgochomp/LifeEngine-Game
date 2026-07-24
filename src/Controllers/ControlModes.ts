@@ -10,6 +10,7 @@ const Modes = {
     Paint: 9,
     RadiationDrop: 10,
     SeedLife: 12,
+    MeteorStrike: 13,
 }
 
 export default Modes;

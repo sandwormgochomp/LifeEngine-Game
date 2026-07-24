@@ -74,10 +74,13 @@ interface EnvControllerEnvLike {
     radiation_map?: Set<string>;
     changeCell(c: number, r: number, state: CellState, owner: BodyCell | null): void;
     addOrganism(organism: Organism): void;
+    meteorStrike(col: number, row: number, radius: number): void;
 }
 
-// Modes where the click affects a brush_size-radius area
-const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill, Modes.SeedLife];
+// Modes where the cursor overlay draws a brush_size-radius footprint. Meteor
+// only strikes once per click (see performModeAction), but shares the reticle
+// so its blast radius is previewed like any other brush.
+const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill, Modes.SeedLife, Modes.MeteorStrike];
 
 // Seed Life paints sparsely: each brush cell has this chance of spawning a
 // random organism per paint tick, so a drag lays down scattered life rather
@@ -341,6 +344,14 @@ class EnvironmentController extends CanvasController{
                     }
                     break;
 
+                case Modes.MeteorStrike:
+                    // One impact per click, not a drag-paint: gated to the
+                    // mousedown so a held drag doesn't carpet-bomb the world.
+                    if (left_click && from_mouse_down) {
+                        this.env.meteorStrike(this.mouse_c, this.mouse_r, WorldConfig.brush_size);
+                    }
+                    break;
+
                 case Modes.Select:
                     if (right_click) {
                         this.mode = Modes.None;
@@ -410,7 +421,8 @@ class EnvironmentController extends CanvasController{
         var cs = renderer.cell_size;
 
         if (BRUSH_MODES.includes(this.mode)) {
-            var is_kill = this.mode === Modes.ClickKill;
+            // Destructive brushes ring in red; Meteor reads as a blast reticle.
+            var is_kill = this.mode === Modes.ClickKill || this.mode === Modes.MeteorStrike;
             var b = WorldConfig.brush_size;
             // Fill the disc (matches Neighbors.inRange), but sweep one cell wider
             // for the clear set: the ring outline's line width and anti-aliasing

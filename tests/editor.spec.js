@@ -302,7 +302,9 @@ test.describe('Select from world', () => {
   test('Picking a world organism loads it into the editor and opens the dock', async ({ page }) => {
     await pauseEngine(page);
 
-    // Arm select from the always-on tool palette (no popup panel)
+    // Arm select from the always-on tool palette (no popup panel). Sample
+    // lives on the Life tab now that the palette is grouped by category.
+    await page.locator('#tool-tab-life').click();
     await page.locator('#tool-select').click();
     await expect(page.locator('#tool-select')).toHaveClass(/toolPaletteBtnActive/);
     await expect(page.getByTestId('editor-dock')).toBeHidden();
@@ -462,6 +464,7 @@ test.describe('Select from world', () => {
 
   test('Right-click cancels select mode without picking', async ({ page }) => {
     await pauseEngine(page);
+    await page.locator('#tool-tab-life').click();
     await page.locator('#tool-select').click();
     await expect(page.locator('#tool-select')).toHaveClass(/toolPaletteBtnActive/);
 
