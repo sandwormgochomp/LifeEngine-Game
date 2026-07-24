@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="540" viewBox="0 0 880 540" font-family="'Courier New',monospace" shape-rendering="crispEdges">
+  <rect width="880" height="540" fill="#0E1318"/>
+  <g shape-rendering="auto">
+    <text x="28" y="46" fill="#B6C1EA" font-size="26" font-weight="bold" letter-spacing="3">03 · RECOMBINATION</text>
+    <text x="28" y="70" fill="#5f7183" font-size="13" letter-spacing="1">compatible neighbours breed a mixed child — two lineages' innovations combine in one step</text>
+  </g>
+  <line x1="28" y1="84" x2="852" y2="84" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- PARENT A : the seer (eyes + mover) -->
+  <g shape-rendering="auto"><text x="150" y="130" fill="#60D4FF" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">PARENT A · seer</text></g>
+  <g>
+    <rect x="104" y="150" width="18" height="18" fill="#B6C1EA"/><rect x="122" y="150" width="18" height="18" fill="#B6C1EA"/>
+    <rect x="104" y="168" width="18" height="18" fill="#60D4FF"/><rect x="122" y="168" width="18" height="18" fill="#DEB14D"/><rect x="140" y="168" width="18" height="18" fill="#60D4FF"/>
+    <rect x="122" y="186" width="18" height="18" fill="#60D4FF"/><rect x="122" y="204" width="18" height="18" fill="#DEB14D"/>
+    <!-- eye slits -->
+    <rect x="110" y="156" width="6" height="6" fill="#0E1318" shape-rendering="auto"/><rect x="128" y="156" width="6" height="6" fill="#0E1318" shape-rendering="auto"/>
+  </g>
+  <g shape-rendering="auto"><text x="150" y="244" fill="#5f7183" font-size="11" text-anchor="middle">eyes · brain · mover</text></g>
+
+  <!-- PARENT B : the tank (armor + killer) -->
+  <g shape-rendering="auto"><text x="150" y="320" fill="#7230DB" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">PARENT B · tank</text></g>
+  <g>
+    <rect x="104" y="340" width="18" height="18" fill="#7230DB"/><rect x="122" y="340" width="18" height="18" fill="#7230DB"/><rect x="140" y="340" width="18" height="18" fill="#7230DB"/>
+    <rect x="104" y="358" width="18" height="18" fill="#7230DB"/><rect x="122" y="358" width="18" height="18" fill="#DEB14D"/><rect x="140" y="358" width="18" height="18" fill="#F82380"/>
+    <rect x="122" y="376" width="18" height="18" fill="#7230DB"/><rect x="140" y="376" width="18" height="18" fill="#7230DB"/>
+  </g>
+  <g shape-rendering="auto"><text x="150" y="416" fill="#5f7183" font-size="11" text-anchor="middle">armor · killer</text></g>
+
+  <!-- compatibility gate + arrows -->
+  <g shape-rendering="auto" font-family="'Courier New',monospace">
+    <rect x="250" y="250" width="150" height="52" rx="4" fill="#12202a" stroke="#243441"/>
+    <text x="325" y="272" fill="#0AEBAF" font-size="12" font-weight="bold" text-anchor="middle">COMPAT GATE</text>
+    <text x="325" y="290" fill="#5f7183" font-size="10" text-anchor="middle">shared ancestor ≤ N gen</text>
+    <path d="M175 200 C 230 210, 235 255, 252 262" fill="none" stroke="#3a4a58" stroke-width="2"/>
+    <path d="M175 375 C 230 365, 235 300, 252 290" fill="none" stroke="#3a4a58" stroke-width="2"/>
+    <path d="M402 276 L 470 276" fill="none" stroke="#0AEBAF" stroke-width="2" marker-end="url(#ar)"/>
+  </g>
+  <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="5" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="#0AEBAF"/></marker></defs>
+
+  <!-- crossover diagram: split axis -->
+  <g shape-rendering="auto"><text x="600" y="130" fill="#0AEBAF" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">CROSSOVER · spatial split</text></g>
+  <!-- grid child, left half from A (blue-ish), right half from B (purple) -->
+  <g>
+    <rect x="520" y="160" width="20" height="20" fill="#B6C1EA"/><rect x="540" y="160" width="20" height="20" fill="#B6C1EA"/><rect x="580" y="160" width="20" height="20" fill="#7230DB"/>
+    <rect x="520" y="180" width="20" height="20" fill="#60D4FF"/><rect x="540" y="180" width="20" height="20" fill="#DEB14D"/><rect x="560" y="180" width="20" height="20" fill="#DEB14D"/><rect x="580" y="180" width="20" height="20" fill="#F82380"/>
+    <rect x="520" y="200" width="20" height="20" fill="#60D4FF"/><rect x="540" y="200" width="20" height="20" fill="#B6C1EA"/><rect x="580" y="200" width="20" height="20" fill="#7230DB"/><rect x="600" y="200" width="20" height="20" fill="#7230DB"/>
+    <rect x="540" y="220" width="20" height="20" fill="#60D4FF"/><rect x="580" y="220" width="20" height="20" fill="#7230DB"/>
+    <!-- slit -->
+    <rect x="526" y="166" width="7" height="7" fill="#0E1318" shape-rendering="auto"/>
+  </g>
+  <!-- split line -->
+  <line x1="570" y1="150" x2="570" y2="250" stroke="#0AEBAF" stroke-width="2" stroke-dasharray="5 4" shape-rendering="auto"/>
+  <g shape-rendering="auto" font-family="'Courier New',monospace" font-size="11">
+    <text x="500" y="266" fill="#60D4FF">◀ left of split — from Parent A</text>
+    <text x="500" y="282" fill="#9a6ff0">right of split — from Parent B ▶</text>
+  </g>
+
+  <!-- brain crossover -->
+  <g shape-rendering="auto" font-family="'Courier New',monospace">
+    <text x="520" y="308" fill="#8fa0b0" font-size="12" font-weight="bold">BRAIN · uniform crossover of weights</text>
+    <g font-size="11">
+      <text x="520" y="330" fill="#60D4FF">food  +10 (A)</text>
+      <text x="640" y="330" fill="#9a6ff0">killer −8 (B)</text>
+      <text x="520" y="348" fill="#9a6ff0">armor +5 (B)</text>
+      <text x="640" y="348" fill="#60D4FF">eye  +8 (A)</text>
+    </g>
+    <text x="520" y="372" fill="#5f7183" font-size="10">+ normal mutation roll on top</text>
+  </g>
+
+  <!-- OFFSPRING result -->
+  <path d="M620 210 C 700 210, 700 420, 640 430" fill="none" stroke="#0AEBAF" stroke-width="2" marker-end="url(#ar)" shape-rendering="auto"/>
+  <g shape-rendering="auto"><text x="600" y="418" fill="#0AEBAF" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">CHILD · armored seer</text></g>
+  <g>
+    <rect x="520" y="430" width="18" height="18" fill="#B6C1EA"/><rect x="538" y="430" width="18" height="18" fill="#7230DB"/>
+    <rect x="520" y="448" width="18" height="18" fill="#60D4FF"/><rect x="538" y="448" width="18" height="18" fill="#DEB14D"/><rect x="556" y="448" width="18" height="18" fill="#7230DB"/>
+    <rect x="538" y="466" width="18" height="18" fill="#F82380"/><rect x="556" y="466" width="18" height="18" fill="#7230DB"/>
+    <rect x="526" y="436" width="6" height="6" fill="#0E1318" shape-rendering="auto"/>
+  </g>
+  <g shape-rendering="auto"><text x="600" y="452" fill="#15DE59" font-size="12" font-weight="bold">sees AND survives</text><text x="600" y="470" fill="#5f7183" font-size="11">both innovations, one birth</text></g>
+
+  <line x1="28" y1="500" x2="852" y2="500" stroke="#1c2630" stroke-width="2"/>
+  <g shape-rendering="auto"><text x="28" y="524" fill="#5f7183" font-size="11">recombinationProb default 0 (pure cloning) · ancestry becomes a DAG — record primary parent + hybrid edge (see 06)</text></g>
+</svg>

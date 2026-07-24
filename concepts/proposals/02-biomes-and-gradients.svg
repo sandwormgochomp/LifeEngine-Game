@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="540" viewBox="0 0 880 540" font-family="'Courier New',monospace" shape-rendering="crispEdges">
+  <defs>
+    <radialGradient id="light" cx="32%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#1c3a24"/>
+      <stop offset="45%" stop-color="#122019"/>
+      <stop offset="100%" stop-color="#0b0f13"/>
+    </radialGradient>
+    <radialGradient id="dish" cx="50%" cy="50%" r="50%">
+      <stop offset="97%" stop-color="#5E93A3" stop-opacity="0"/>
+      <stop offset="98%" stop-color="#5E93A3" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#26424c" stop-opacity="0.9"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="880" height="540" fill="#0E1318"/>
+  <g shape-rendering="auto">
+    <text x="28" y="46" fill="#60D4FF" font-size="26" font-weight="bold" letter-spacing="3">02 · BIOMES &amp; GRADIENTS</text>
+    <text x="28" y="70" fill="#5f7183" font-size="13">per-cell light &amp; hazard fields — regions reward different body plans → visible speciation</text>
+  </g>
+  <line x1="28" y1="84" x2="852" y2="84" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- the dish -->
+  <circle cx="300" cy="320" r="196" fill="url(#light)"/>
+  <circle cx="300" cy="320" r="196" fill="url(#dish)"/>
+  <circle cx="300" cy="320" r="196" fill="none" stroke="#5E93A3" stroke-width="3" opacity="0.6" shape-rendering="auto"/>
+
+  <!-- hazard patches (radiation) -->
+  <g opacity="0.5" shape-rendering="auto">
+    <circle cx="380" cy="410" r="52" fill="#C2FF00"/>
+    <circle cx="230" cy="430" r="34" fill="#C2FF00"/>
+  </g>
+  <g fill="#C2FF00" opacity="0.9">
+    <rect x="372" y="402" width="5" height="5"/><rect x="392" y="418" width="5" height="5"/><rect x="360" y="424" width="5" height="5"/><rect x="400" y="400" width="5" height="5"/>
+    <rect x="224" y="424" width="5" height="5"/><rect x="240" y="438" width="5" height="5"/>
+  </g>
+
+  <!-- BRIGHT zone: lush producers, top-left -->
+  <g>
+    <rect x="210" y="200" width="13" height="13" fill="#15DE59"/><rect x="223" y="200" width="13" height="13" fill="#15DE59"/><rect x="236" y="200" width="13" height="13" fill="#DEB14D"/>
+    <rect x="210" y="213" width="13" height="13" fill="#15DE59"/><rect x="223" y="213" width="13" height="13" fill="#15DE59"/><rect x="236" y="213" width="13" height="13" fill="#15DE59"/>
+    <rect x="223" y="226" width="13" height="13" fill="#15DE59"/>
+    <rect x="280" y="210" width="13" height="13" fill="#15DE59"/><rect x="293" y="210" width="13" height="13" fill="#DEB14D"/><rect x="293" y="223" width="13" height="13" fill="#15DE59"/><rect x="280" y="223" width="13" height="13" fill="#15DE59"/>
+  </g>
+  <g fill="#34593C"><rect x="252" y="196" width="5" height="5"/><rect x="204" y="230" width="5" height="5"/><rect x="270" y="200" width="5" height="5"/><rect x="312" y="216" width="5" height="5"/></g>
+
+  <!-- DIM zone: sparse tough forms, right edge -->
+  <g>
+    <rect x="410" y="300" width="13" height="13" fill="#7230DB"/><rect x="423" y="300" width="13" height="13" fill="#DEB14D"/><rect x="410" y="313" width="13" height="13" fill="#7230DB"/>
+    <rect x="440" y="340" width="13" height="13" fill="#7230DB"/><rect x="453" y="340" width="13" height="13" fill="#7230DB"/><rect x="453" y="327" width="13" height="13" fill="#DEB14D"/>
+  </g>
+
+  <!-- HAZARD zone dweller: killer/armor form running hot -->
+  <g>
+    <rect x="356" y="396" width="13" height="13" fill="#F82380"/><rect x="369" y="396" width="13" height="13" fill="#7230DB"/><rect x="382" y="396" width="13" height="13" fill="#F82380"/>
+    <rect x="369" y="409" width="13" height="13" fill="#DEB14D"/><rect x="369" y="383" width="13" height="13" fill="#B6C1EA"/>
+  </g>
+
+  <!-- mover crossing the dead water toward the bright patch -->
+  <g>
+    <rect x="150" y="330" width="13" height="13" fill="#60D4FF"/><rect x="163" y="330" width="13" height="13" fill="#DEB14D"/><rect x="150" y="317" width="13" height="13" fill="#B6C1EA"/>
+    <g shape-rendering="auto" stroke="#60D4FF" stroke-width="2" stroke-dasharray="4 4" opacity="0.7"><path d="M176 336 L235 250" marker-end="url(#a)"/></g>
+  </g>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#60D4FF"/></marker></defs>
+
+  <!-- zone labels -->
+  <g shape-rendering="auto" font-size="12" font-family="'Courier New',monospace" font-weight="bold" letter-spacing="1">
+    <text x="230" y="180" fill="#15DE59">TIDEPOOL · bright</text>
+    <text x="430" y="285" fill="#9a6ff0">SHADE · lean, tough</text>
+    <text x="330" y="470" fill="#C2FF00">BADLANDS · mutate hot</text>
+    <text x="120" y="360" fill="#60D4FF">↖ dispersal pays</text>
+  </g>
+
+  <!-- RIGHT: legend + field strips -->
+  <g shape-rendering="auto" font-family="'Courier New',monospace">
+    <text x="560" y="130" fill="#8fa0b0" font-size="14" font-weight="bold" letter-spacing="2">DATA LAYER</text>
+    <text x="560" y="152" fill="#5f7183" font-size="12">two scalar lanes in GridMap</text>
+
+    <text x="560" y="196" fill="#15DE59" font-size="13">light[idx]</text>
+    <text x="560" y="214" fill="#5f7183" font-size="11">scales local foodProdProb</text>
+  </g>
+  <g>
+    <rect x="560" y="222" width="260" height="20" fill="none" stroke="#243441"/>
+    <rect x="560" y="222" width="20" height="20" fill="#15DE59"/><rect x="580" y="222" width="20" height="20" fill="#12b34a"/><rect x="600" y="222" width="20" height="20" fill="#0e8c3a"/><rect x="620" y="222" width="20" height="20" fill="#0b662c"/><rect x="640" y="222" width="20" height="20" fill="#0a4f24"/><rect x="660" y="222" width="20" height="20" fill="#0c3a1e"/><rect x="680" y="222" width="20" height="20" fill="#0d2a18"/><rect x="700" y="222" width="20" height="20" fill="#0d2015"/><rect x="720" y="222" width="20" height="20" fill="#0c1811"/><rect x="740" y="222" width="20" height="20" fill="#0b120d"/><rect x="760" y="222" width="20" height="20" fill="#0b0f0b"/><rect x="780" y="222" width="20" height="20" fill="#0a0d0a"/><rect x="800" y="222" width="20" height="20" fill="#0a0c0a"/>
+  </g>
+  <g shape-rendering="auto" font-family="'Courier New',monospace">
+    <text x="560" y="290" fill="#C2FF00" font-size="13">hazard[idx]</text>
+    <text x="560" y="308" fill="#5f7183" font-size="11">passive damage · mutability ×</text>
+  </g>
+  <g>
+    <rect x="560" y="316" width="260" height="20" fill="none" stroke="#243441"/>
+    <rect x="560" y="316" width="20" height="20" fill="#0d1810"/><rect x="580" y="316" width="20" height="20" fill="#1a2610"/><rect x="600" y="316" width="20" height="20" fill="#33420e"/><rect x="620" y="316" width="20" height="20" fill="#586b0a"/><rect x="640" y="316" width="20" height="20" fill="#8aa406"/><rect x="660" y="316" width="20" height="20" fill="#b4d803"/><rect x="680" y="316" width="20" height="20" fill="#C2FF00"/><rect x="700" y="316" width="20" height="20" fill="#b4d803"/><rect x="720" y="316" width="20" height="20" fill="#8aa406"/><rect x="740" y="316" width="20" height="20" fill="#586b0a"/><rect x="760" y="316" width="20" height="20" fill="#33420e"/><rect x="780" y="316" width="20" height="20" fill="#1a2610"/><rect x="800" y="316" width="20" height="20" fill="#0d1810"/>
+  </g>
+
+  <g shape-rendering="auto" font-family="'Courier New',monospace">
+    <text x="560" y="380" fill="#8fa0b0" font-size="14" font-weight="bold" letter-spacing="2">PRESETS</text>
+    <text x="560" y="404" fill="#B6C1EA" font-size="12">▸ Tidepool — bright core, dim rim</text>
+    <text x="560" y="424" fill="#B6C1EA" font-size="12">▸ Irradiated badlands — hazard patches</text>
+    <text x="560" y="444" fill="#B6C1EA" font-size="12">▸ Archipelago — Perlin light islands</text>
+    <text x="560" y="476" fill="#5f7183" font-size="11">uniform field = today's behaviour (default)</text>
+    <text x="560" y="494" fill="#5f7183" font-size="11">painterly brushes let players author geography</text>
+  </g>
+</svg>

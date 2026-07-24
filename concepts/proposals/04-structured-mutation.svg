@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="540" viewBox="0 0 880 540" font-family="'Courier New',monospace" shape-rendering="crispEdges">
+  <rect width="880" height="540" fill="#0E1318"/>
+  <g shape-rendering="auto">
+    <text x="28" y="46" fill="#15DE59" font-size="26" font-weight="bold" letter-spacing="3">04 · STRUCTURED MUTATION</text>
+    <text x="28" y="70" fill="#5f7183" font-size="13" letter-spacing="1">macro-operators beside the three point-ops — symmetric, segmented body plans become reachable</text>
+  </g>
+  <line x1="28" y1="84" x2="852" y2="84" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- four panels: POINT (baseline) / MIRROR / DUPLICATE / CLUSTER -->
+  <!-- panel frame helper drawn inline -->
+
+  <!-- PANEL 1 : POINT (today) -->
+  <rect x="28" y="104" width="196" height="196" rx="4" fill="#0c1116" stroke="#243441"/>
+  <g shape-rendering="auto"><text x="40" y="128" fill="#8fa0b0" font-size="13" font-weight="bold">POINT · today</text><text x="40" y="146" fill="#5f7183" font-size="10">one cell add / retype / remove</text></g>
+  <!-- before -->
+  <g>
+    <rect x="60" y="200" width="14" height="14" fill="#DEB14D"/><rect x="74" y="200" width="14" height="14" fill="#15DE59"/>
+    <rect x="60" y="214" width="14" height="14" fill="#15DE59"/><rect x="74" y="214" width="14" height="14" fill="#DEB14D"/>
+  </g>
+  <text x="120" y="222" fill="#3a4a58" font-size="20" shape-rendering="auto">→</text>
+  <g>
+    <rect x="150" y="200" width="14" height="14" fill="#DEB14D"/><rect x="164" y="200" width="14" height="14" fill="#15DE59"/>
+    <rect x="150" y="214" width="14" height="14" fill="#15DE59"/><rect x="164" y="214" width="14" height="14" fill="#DEB14D"/>
+    <rect x="178" y="214" width="14" height="14" fill="#F82380"/>
+  </g>
+  <rect x="178" y="214" width="14" height="14" fill="none" stroke="#F82380" stroke-width="2" shape-rendering="auto"/>
+  <g shape-rendering="auto"><text x="126" y="288" fill="#5f7183" font-size="10" text-anchor="middle">fine hill-climb · lumpy</text></g>
+
+  <!-- PANEL 2 : MIRROR -->
+  <rect x="240" y="104" width="196" height="196" rx="4" fill="#0c1116" stroke="#243441"/>
+  <g shape-rendering="auto"><text x="252" y="128" fill="#60D4FF" font-size="13" font-weight="bold">MIRROR</text><text x="252" y="146" fill="#5f7183" font-size="10">reflect anatomy across pivot</text></g>
+  <g>
+    <rect x="288" y="200" width="14" height="14" fill="#B6C1EA"/><rect x="288" y="214" width="14" height="14" fill="#60D4FF"/>
+    <rect x="302" y="214" width="14" height="14" fill="#DEB14D"/>
+  </g>
+  <text x="332" y="222" fill="#3a4a58" font-size="20" shape-rendering="auto">→</text>
+  <line x1="392" y1="188" x2="392" y2="248" stroke="#60D4FF" stroke-width="1.5" stroke-dasharray="4 3" shape-rendering="auto"/>
+  <g>
+    <rect x="364" y="200" width="14" height="14" fill="#B6C1EA"/><rect x="364" y="214" width="14" height="14" fill="#60D4FF"/><rect x="378" y="214" width="14" height="14" fill="#DEB14D"/>
+    <rect x="392" y="214" width="14" height="14" fill="#DEB14D"/><rect x="406" y="200" width="14" height="14" fill="#B6C1EA"/><rect x="406" y="214" width="14" height="14" fill="#60D4FF"/>
+  </g>
+  <g shape-rendering="auto"><text x="338" y="288" fill="#60D4FF" font-size="10" text-anchor="middle">instant bilateral symmetry</text></g>
+
+  <!-- PANEL 3 : DUPLICATE -->
+  <rect x="452" y="104" width="196" height="196" rx="4" fill="#0c1116" stroke="#243441"/>
+  <g shape-rendering="auto"><text x="464" y="128" fill="#DEB14D" font-size="13" font-weight="bold">DUPLICATE</text><text x="464" y="146" fill="#5f7183" font-size="10">copy a segment, graft adjacent</text></g>
+  <g>
+    <rect x="480" y="200" width="14" height="14" fill="#15DE59"/><rect x="494" y="200" width="14" height="14" fill="#DEB14D"/>
+    <rect x="480" y="214" width="14" height="14" fill="#DEB14D"/><rect x="494" y="214" width="14" height="14" fill="#15DE59"/>
+  </g>
+  <text x="524" y="222" fill="#3a4a58" font-size="20" shape-rendering="auto">→</text>
+  <g>
+    <rect x="556" y="200" width="14" height="14" fill="#15DE59"/><rect x="570" y="200" width="14" height="14" fill="#DEB14D"/><rect x="584" y="200" width="14" height="14" fill="#15DE59"/><rect x="598" y="200" width="14" height="14" fill="#DEB14D"/>
+    <rect x="556" y="214" width="14" height="14" fill="#DEB14D"/><rect x="570" y="214" width="14" height="14" fill="#15DE59"/><rect x="584" y="214" width="14" height="14" fill="#DEB14D"/><rect x="598" y="214" width="14" height="14" fill="#15DE59"/>
+  </g>
+  <rect x="584" y="200" width="28" height="28" fill="none" stroke="#DEB14D" stroke-width="2" stroke-dasharray="3 2" shape-rendering="auto"/>
+  <g shape-rendering="auto"><text x="550" y="288" fill="#DEB14D" font-size="10" text-anchor="middle">repeated segments · worms</text></g>
+
+  <!-- PANEL 4 : CLUSTER RETYPE -->
+  <rect x="664" y="104" width="188" height="196" rx="4" fill="#0c1116" stroke="#243441"/>
+  <g shape-rendering="auto"><text x="676" y="128" fill="#7230DB" font-size="13" font-weight="bold">CLUSTER</text><text x="676" y="146" fill="#5f7183" font-size="10">retype a whole patch → organs</text></g>
+  <g>
+    <rect x="692" y="200" width="14" height="14" fill="#808080"/><rect x="706" y="200" width="14" height="14" fill="#808080"/>
+    <rect x="692" y="214" width="14" height="14" fill="#808080"/><rect x="706" y="214" width="14" height="14" fill="#DEB14D"/>
+  </g>
+  <text x="736" y="222" fill="#3a4a58" font-size="20" shape-rendering="auto">→</text>
+  <g>
+    <rect x="768" y="200" width="14" height="14" fill="#7230DB"/><rect x="782" y="200" width="14" height="14" fill="#7230DB"/>
+    <rect x="768" y="214" width="14" height="14" fill="#7230DB"/><rect x="782" y="214" width="14" height="14" fill="#DEB14D"/>
+  </g>
+  <rect x="768" y="200" width="28" height="28" fill="none" stroke="#7230DB" stroke-width="2" stroke-dasharray="3 2" shape-rendering="auto"/>
+  <g shape-rendering="auto"><text x="758" y="288" fill="#9a6ff0" font-size="10" text-anchor="middle">an armor plate, an eye field</text></g>
+
+  <!-- morphospace reach illustration -->
+  <line x1="28" y1="330" x2="852" y2="330" stroke="#1c2630" stroke-width="2"/>
+  <g shape-rendering="auto"><text x="28" y="360" fill="#8fa0b0" font-size="14" font-weight="bold" letter-spacing="2">REACH INTO MORPHOSPACE</text></g>
+
+  <!-- left: point-only reach (small cluster) -->
+  <g shape-rendering="auto"><text x="150" y="388" fill="#5f7183" font-size="11" text-anchor="middle">point-ops only</text></g>
+  <circle cx="150" cy="450" r="6" fill="#DEB14D"/>
+  <g stroke="#243441" stroke-width="1" shape-rendering="auto">
+    <line x1="150" y1="450" x2="120" y2="430"/><line x1="150" y1="450" x2="178" y2="432"/><line x1="150" y1="450" x2="132" y2="478"/><line x1="150" y1="450" x2="172" y2="474"/>
+  </g>
+  <g fill="#3a4a58"><circle cx="120" cy="430" r="4"/><circle cx="178" cy="432" r="4"/><circle cx="132" cy="478" r="4"/><circle cx="172" cy="474" r="4"/></g>
+  <g shape-rendering="auto"><text x="150" y="508" fill="#5f7183" font-size="10" text-anchor="middle">complex forms astronomically rare</text></g>
+
+  <!-- right: with macro-ops (jumps) -->
+  <g shape-rendering="auto"><text x="580" y="388" fill="#15DE59" font-size="11" text-anchor="middle">+ macro-ops · occasional saltation</text></g>
+  <circle cx="480" cy="450" r="6" fill="#DEB14D"/>
+  <g stroke="#243441" stroke-width="1" shape-rendering="auto">
+    <line x1="480" y1="450" x2="452" y2="432"/><line x1="480" y1="450" x2="506" y2="470"/>
+  </g>
+  <g stroke="#15DE59" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.8" shape-rendering="auto">
+    <line x1="480" y1="450" x2="600" y2="410"/><line x1="480" y1="450" x2="640" y2="470"/><line x1="480" y1="450" x2="560" y2="500"/><line x1="600" y1="410" x2="700" y2="428"/><line x1="640" y1="470" x2="740" y2="452"/>
+  </g>
+  <g fill="#3a4a58"><circle cx="452" cy="432" r="4"/><circle cx="506" cy="470" r="4"/></g>
+  <g fill="#15DE59"><circle cx="600" cy="410" r="5"/><circle cx="640" cy="470" r="5"/><circle cx="560" cy="500" r="5"/><circle cx="700" cy="428" r="5"/><circle cx="740" cy="452" r="5"/></g>
+  <g shape-rendering="auto"><text x="620" y="508" fill="#15DE59" font-size="10" text-anchor="middle">segmented &amp; radial forms merely rare, not impossible</text></g>
+</svg>

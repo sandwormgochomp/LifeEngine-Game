@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="540" viewBox="0 0 880 540" font-family="'Courier New',monospace" shape-rendering="crispEdges">
+  <rect width="880" height="540" fill="#0E1318"/>
+  <rect x="0" y="0" width="880" height="540" fill="none" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- title -->
+  <g shape-rendering="auto" font-family="'Courier New',monospace">
+    <text x="28" y="46" fill="#DEB14D" font-size="26" font-weight="bold" letter-spacing="3">01 · METABOLIC ECONOMY</text>
+    <text x="28" y="70" fill="#5f7183" font-size="13" letter-spacing="1">every cell pays upkeep each tick — size becomes a budget, not a free win</text>
+  </g>
+  <line x1="28" y1="84" x2="852" y2="84" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- LEFT: bloated blob starving -->
+  <g shape-rendering="auto"><text x="150" y="120" fill="#F82380" font-size="15" font-weight="bold" letter-spacing="2" text-anchor="middle">BLOAT · STARVING</text></g>
+  <!-- a big irregular producer/mouth blob -->
+  <g>
+    <!-- rows of cells -->
+    <g>
+      <rect x="70" y="140" width="16" height="16" fill="#15DE59"/><rect x="86" y="140" width="16" height="16" fill="#15DE59"/><rect x="102" y="140" width="16" height="16" fill="#DEB14D"/><rect x="118" y="140" width="16" height="16" fill="#15DE59"/><rect x="134" y="140" width="16" height="16" fill="#15DE59"/><rect x="150" y="140" width="16" height="16" fill="#DEB14D"/>
+      <rect x="70" y="156" width="16" height="16" fill="#DEB14D"/><rect x="86" y="156" width="16" height="16" fill="#15DE59"/><rect x="102" y="156" width="16" height="16" fill="#15DE59"/><rect x="118" y="156" width="16" height="16" fill="#15DE59"/><rect x="134" y="156" width="16" height="16" fill="#DEB14D"/><rect x="150" y="156" width="16" height="16" fill="#15DE59"/><rect x="166" y="156" width="16" height="16" fill="#15DE59"/>
+      <rect x="70" y="172" width="16" height="16" fill="#15DE59"/><rect x="86" y="172" width="16" height="16" fill="#15DE59"/><rect x="102" y="172" width="16" height="16" fill="#DEB14D"/><rect x="118" y="172" width="16" height="16" fill="#15DE59"/><rect x="134" y="172" width="16" height="16" fill="#15DE59"/><rect x="150" y="172" width="16" height="16" fill="#15DE59"/><rect x="166" y="172" width="16" height="16" fill="#DEB14D"/>
+      <rect x="86" y="188" width="16" height="16" fill="#15DE59"/><rect x="102" y="188" width="16" height="16" fill="#15DE59"/><rect x="118" y="188" width="16" height="16" fill="#DEB14D"/><rect x="134" y="188" width="16" height="16" fill="#15DE59"/><rect x="150" y="188" width="16" height="16" fill="#15DE59"/>
+      <rect x="102" y="204" width="16" height="16" fill="#15DE59"/><rect x="118" y="204" width="16" height="16" fill="#15DE59"/><rect x="134" y="204" width="16" height="16" fill="#DEB14D"/>
+    </g>
+    <!-- damage cracks -->
+    <g stroke="#F82380" stroke-width="2" opacity="0.85" shape-rendering="auto">
+      <line x1="94" y1="146" x2="110" y2="166"/><line x1="140" y1="150" x2="128" y2="180"/><line x1="112" y1="196" x2="126" y2="214"/>
+    </g>
+  </g>
+  <!-- upkeep tally -->
+  <g shape-rendering="auto" font-size="13" font-family="'Courier New',monospace">
+    <text x="70" y="252" fill="#8fa0b0">UPKEEP / TICK</text>
+    <text x="70" y="272" fill="#F82380">− 18 food  ▏ 12 movers, 34 filler</text>
+    <text x="70" y="292" fill="#15DE59">+ 11 food  ▏ producers</text>
+    <text x="70" y="312" fill="#F82380" font-weight="bold">NET  − 7 / tick  →  bank empty  →  ✕ damage</text>
+  </g>
+  <!-- draining food bank meter -->
+  <g shape-rendering="auto">
+    <text x="70" y="352" fill="#8fa0b0" font-size="12">FOOD BANK</text>
+    <rect x="70" y="360" width="300" height="18" fill="#12202a" stroke="#243441"/>
+    <rect x="72" y="362" width="46" height="14" fill="#34593C"/>
+    <text x="380" y="373" fill="#F82380" font-size="12">◀ draining</text>
+  </g>
+
+  <!-- divider -->
+  <line x1="440" y1="100" x2="440" y2="430" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- RIGHT: efficient lean form -->
+  <g shape-rendering="auto"><text x="640" y="120" fill="#15DE59" font-size="15" font-weight="bold" letter-spacing="2" text-anchor="middle">LEAN · NET POSITIVE</text></g>
+  <!-- thin producer fringe with a couple mouths -->
+  <g>
+    <rect x="560" y="156" width="16" height="16" fill="#15DE59"/><rect x="576" y="156" width="16" height="16" fill="#15DE59"/><rect x="592" y="156" width="16" height="16" fill="#15DE59"/><rect x="608" y="156" width="16" height="16" fill="#15DE59"/><rect x="624" y="156" width="16" height="16" fill="#15DE59"/><rect x="640" y="156" width="16" height="16" fill="#15DE59"/><rect x="656" y="156" width="16" height="16" fill="#15DE59"/>
+    <rect x="592" y="172" width="16" height="16" fill="#DEB14D"/><rect x="624" y="172" width="16" height="16" fill="#DEB14D"/>
+    <rect x="560" y="172" width="16" height="16" fill="#15DE59"/><rect x="656" y="172" width="16" height="16" fill="#15DE59"/>
+    <rect x="576" y="188" width="16" height="16" fill="#15DE59"/><rect x="608" y="188" width="16" height="16" fill="#15DE59"/><rect x="640" y="188" width="16" height="16" fill="#15DE59"/>
+  </g>
+  <!-- new food it grows -->
+  <g fill="#34593C">
+    <rect x="548" y="150" width="6" height="6"/><rect x="678" y="152" width="6" height="6"/><rect x="612" y="212" width="6" height="6"/><rect x="590" y="214" width="6" height="6"/><rect x="662" y="206" width="6" height="6"/>
+  </g>
+  <g shape-rendering="auto" font-size="13" font-family="'Courier New',monospace">
+    <text x="560" y="252" fill="#8fa0b0">UPKEEP / TICK</text>
+    <text x="560" y="272" fill="#F82380">− 4 food   ▏ 2 mouths, 3 filler</text>
+    <text x="560" y="292" fill="#15DE59">+ 13 food  ▏ producers</text>
+    <text x="560" y="312" fill="#15DE59" font-weight="bold">NET  + 9 / tick  →  reproduces  →  ✦ thrives</text>
+  </g>
+  <g shape-rendering="auto">
+    <text x="560" y="352" fill="#8fa0b0" font-size="12">FOOD BANK</text>
+    <rect x="560" y="360" width="300" height="18" fill="#12202a" stroke="#243441"/>
+    <rect x="562" y="362" width="264" height="14" fill="#15DE59"/>
+    <text x="826" y="373" fill="#15DE59" font-size="12" text-anchor="end">filling ▶</text>
+  </g>
+
+  <!-- footer takeaway -->
+  <line x1="28" y1="452" x2="852" y2="452" stroke="#1c2630" stroke-width="2"/>
+  <g shape-rendering="auto" font-family="'Courier New',monospace">
+    <text x="28" y="482" fill="#B6C1EA" font-size="14">SELECTION NOW OPTIMISES  <tspan fill="#DEB14D" font-weight="bold">food per cell per tick</tspan>  — the blob attractor stops being free.</text>
+    <text x="28" y="506" fill="#5f7183" font-size="12">toggle: upkeepEnabled (default off)  ·  cost map per cell type  ·  cached, recomputed only on anatomy change</text>
+  </g>
+</svg>

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="540" viewBox="0 0 880 540" font-family="'Courier New',monospace" shape-rendering="crispEdges">
+  <rect width="880" height="540" fill="#0E1318"/>
+  <g shape-rendering="auto">
+    <text x="28" y="46" fill="#0AEBAF" font-size="26" font-weight="bold" letter-spacing="3">06 · ECOLOGY AT A GLANCE</text>
+    <text x="28" y="70" fill="#5f7183" font-size="13">the tree of life is already recorded — show it: branch width = population, ✕ = extinction</text>
+  </g>
+  <line x1="28" y1="84" x2="852" y2="84" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- PHYLO TREE -->
+  <g shape-rendering="auto"><text x="28" y="112" fill="#8fa0b0" font-size="13" font-weight="bold" letter-spacing="2">LIVING PHYLOGENY</text></g>
+  <!-- time axis -->
+  <line x1="60" y1="360" x2="690" y2="360" stroke="#243441" stroke-width="1.5" shape-rendering="auto"/>
+  <g shape-rendering="auto" font-size="10" fill="#4a5865"><text x="60" y="378">t=0</text><text x="690" y="378" text-anchor="end">now →</text></g>
+
+  <!-- root -->
+  <!-- Trunk to first split. Thickness ~ population. Colours = body-plan tint -->
+  <path d="M60 300 L170 300" stroke="#15DE59" stroke-width="10" fill="none"/>
+  <!-- split A up, B down at x=170 -->
+  <path d="M170 300 C 210 300, 220 210, 280 210" stroke="#15DE59" stroke-width="9" fill="none"/>
+  <path d="M170 300 C 210 300, 220 330, 280 330" stroke="#DEB14D" stroke-width="7" fill="none"/>
+
+  <!-- Branch A splits again -->
+  <path d="M280 210 C 330 210, 330 150, 400 150" stroke="#60D4FF" stroke-width="6" fill="none"/>
+  <path d="M280 210 C 330 210, 330 250, 380 250" stroke="#15DE59" stroke-width="8" fill="none"/>
+
+  <!-- A-top: seers, thriving to now (glowing leaf) -->
+  <path d="M400 150 C 500 150, 580 142, 690 134" stroke="#60D4FF" stroke-width="7" fill="none"/>
+  <circle cx="690" cy="134" r="9" fill="#60D4FF"/>
+  <circle cx="690" cy="134" r="15" fill="#60D4FF" opacity="0.2"/>
+
+  <!-- A-top sub-branch that goes extinct -->
+  <path d="M500 148 C 540 148, 545 108, 590 104" stroke="#B6C1EA" stroke-width="4" fill="none"/>
+  <g shape-rendering="auto" stroke="#F82380" stroke-width="2.5"><line x1="584" y1="98" x2="596" y2="110"/><line x1="596" y1="98" x2="584" y2="110"/></g>
+  <g shape-rendering="auto"><text x="606" y="103" fill="#c96189" font-size="11">Palecrawler ✝</text></g>
+
+  <!-- A-bottom (green) keeps going, dominant -->
+  <path d="M380 250 C 500 250, 590 250, 690 248" stroke="#15DE59" stroke-width="11" fill="none"/>
+  <circle cx="690" cy="248" r="11" fill="#15DE59"/>
+  <circle cx="690" cy="248" r="18" fill="#15DE59" opacity="0.2"/>
+
+  <!-- Branch B (mover/hunter) splits: one dies, one survives thin -->
+  <path d="M280 330 C 350 330, 350 300, 430 300" stroke="#F82380" stroke-width="5" fill="none"/>
+  <path d="M280 330 C 350 330, 360 350, 440 350" stroke="#DEB14D" stroke-width="4" fill="none"/>
+  <!-- B-top hunter goes extinct mid-run -->
+  <path d="M430 300 C 490 300, 500 300, 540 300" stroke="#F82380" stroke-width="4" fill="none"/>
+  <g shape-rendering="auto" stroke="#F82380" stroke-width="2.5"><line x1="534" y1="294" x2="546" y2="306"/><line x1="546" y1="294" x2="534" y2="306"/></g>
+  <g shape-rendering="auto"><text x="556" y="304" fill="#c96189" font-size="11">Redfang ✝</text></g>
+  <!-- B-bottom survives thin to now -->
+  <path d="M440 350 C 560 350, 620 348, 690 346" stroke="#DEB14D" stroke-width="4" fill="none"/>
+  <circle cx="690" cy="346" r="6" fill="#DEB14D"/>
+
+  <!-- leaf labels (extant) -->
+  <g shape-rendering="auto" font-family="'Courier New',monospace" font-size="12">
+    <text x="708" y="130" fill="#60D4FF">Watcher · 18%</text>
+    <text x="708" y="252" fill="#15DE59" font-weight="bold">Glowgrazer · 41%</text>
+    <text x="708" y="350" fill="#DEB14D">Driftmouth · 9%</text>
+  </g>
+  <g shape-rendering="auto" font-family="'Courier New',monospace" font-size="10" fill="#4a5865">
+    <text x="120" y="316">branch width = population</text>
+    <text x="708" y="150" fill="#c96189">✝ = extinct lineage</text>
+  </g>
+
+  <line x1="28" y1="398" x2="852" y2="398" stroke="#1c2630" stroke-width="2"/>
+
+  <!-- DOMINANT-LINEAGE BAND (stacked area) -->
+  <g shape-rendering="auto"><text x="28" y="424" fill="#8fa0b0" font-size="13" font-weight="bold" letter-spacing="2">DOMINANT-LINEAGE BAND · succession over time</text></g>
+  <!-- stacked area chart 60..820 x, 440..500 y -->
+  <!-- other (bottom) -->
+  <path d="M60 500 L60 486 C 200 484, 360 482, 500 480 C 640 478, 740 478, 820 478 L820 500 Z" fill="#2a3540"/>
+  <!-- driftmouth -->
+  <path d="M60 486 L60 472 C 200 474, 360 470, 500 466 C 640 464, 740 466, 820 466 L820 478 C 740 478, 640 478, 500 480 C 360 482, 200 484, 60 486 Z" fill="#DEB14D" opacity="0.85"/>
+  <!-- watcher -->
+  <path d="M60 472 L60 458 C 200 460, 360 452, 500 448 C 640 446, 740 448, 820 448 L820 466 C 740 466, 640 464, 500 466 C 360 470, 200 474, 60 472 Z" fill="#60D4FF" opacity="0.85"/>
+  <!-- glowgrazer (top, growing) -->
+  <path d="M60 458 L60 448 C 200 446, 360 436, 500 428 C 640 420, 740 420, 820 418 L820 448 C 740 448, 640 446, 500 448 C 360 452, 200 460, 60 458 Z" fill="#15DE59" opacity="0.9"/>
+  <rect x="60" y="418" width="760" height="82" fill="none" stroke="#243441" shape-rendering="auto"/>
+
+  <g shape-rendering="auto" font-family="'Courier New',monospace" font-size="10">
+    <text x="828" y="432" fill="#15DE59">Glow</text>
+    <text x="828" y="456" fill="#60D4FF">Watch</text>
+    <text x="828" y="472" fill="#DEB14D">Drift</text>
+    <text x="828" y="492" fill="#5f7183">other</text>
+  </g>
+  <g shape-rendering="auto"><text x="28" y="528" fill="#5f7183" font-size="11">no new sim data · relayout only on the fossil-record window · collapse extinct sub-trees, label what's hidden</text></g>
+</svg>
