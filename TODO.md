@@ -18,6 +18,23 @@ Notifier / FossilRecord / Floaties infrastructure.
       `tests/narrator.spec.js` covers every event type, the coalescing/threshold
       boundaries, silent re-seed on reset/load, the live `update()`→DOM path, and
       that registry changes without a sample stay silent (the preview-gating proof).
+- [ ] **Finish the world-event library.** Meteor, Bloom and Predator ship; Ice
+      Age and Rad Storm are still scaffolded `soon` buttons in the Events tab.
+      Ice Age is a bloom with the multiplier inverted (the framework already
+      restores on expiry and on reset). Rad Storm is the one genuinely new
+      piece — a radiation front that moves, so it needs per-tick state rather
+      than a single spike plus a restore. Neither is auto-scheduled yet: the
+      proposal's "random events" toggle and frequency slider are unbuilt, and
+      `concepts/proposals/07-world-events.md` argues for defaulting them off so
+      `npm run bench` stays reproducible.
+- [ ] **Predator bestiary: what the trials showed.** Six species in
+      `src/Organism/Predators.ts`, each tuned against a 2400-tick trial in
+      several grown worlds. Three lessons, if more are added: a functional cell
+      walled in by its own body never fires (an enclosed killer or parasite is
+      pure upkeep); every predator needs a rank of mouths on its perimeter or it
+      starves beside its own kills; and only `has_shooter` matters, so extra
+      shooter cells buy nothing. Outcomes stay world-dependent by design — a
+      pack dropped into a food-starved world dies, and so does that world.
 - [ ] **First-run legibility, not a tutorial.** A curated "start here" demo
       world chosen to do something interesting within ~1 minute, plus 2–3
       contextual one-line hints that fire on the world itself ("← just evolved

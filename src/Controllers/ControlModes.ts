@@ -11,6 +11,7 @@ const Modes = {
     RadiationDrop: 10,
     SeedLife: 12,
     MeteorStrike: 13,
+    ReleasePredator: 14,
 }
 
 export default Modes;

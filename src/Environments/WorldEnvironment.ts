@@ -8,6 +8,7 @@ import Organism from '../Organism/Organism';
 import CellStates from '../Organism/Cell/CellStates';
 import EnvironmentController from '../Controllers/EnvironmentController';
 import Neighbors from '../Grid/Neighbors';
+import Directions from '../Organism/Directions';
 import Notifier from '../Utils/Notifier';
 import Hyperparams from '../Hyperparameters.js';
 import FossilRecord from '../Stats/FossilRecord';
@@ -20,6 +21,7 @@ import Species from '../Stats/Species';
 import type { CellState, RenderCellOwnerLike } from '../Organism/Cell/CellStates';
 import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
 import type { OrganismEnv, OrganismProjectile, SerializedOrganism } from '../Organism/Organism';
+import type { PredatorSpecies } from '../Organism/Predators';
 import type { SerializedGridMap } from '../Grid/GridMap';
 import type { SerializedFossilRecord } from '../Stats/FossilRecord';
 import type { HyperparamsSingleton } from '../Hyperparameters';
@@ -117,6 +119,11 @@ interface WorldEvent {
 // Bloom: producers grow food this many times faster, for this many ticks.
 const BLOOM_MULTIPLIER = 3;
 const BLOOM_TICKS = 600;
+
+/* Smallest radius a predator pack scatters over, in cells. The brush sets the
+   spread, but a brush of 0-4 cannot hold six organisms several cells wide, and
+   silently dropping half the pack reads as a bug. */
+const PREDATOR_MIN_SPREAD = 6;
 
 /* Meteor timeline, in wall-clock ms. The whole animation is driven from the
    render loop rather than sim ticks so it plays at the same speed whatever
@@ -888,6 +895,118 @@ class WorldEnvironment extends Environment{
         }
         Notifier.notify('✿ Bloom — food is flourishing');
         if (this.engine) this.engine.emitChange(true);
+    }
+
+    /* Invasive predator (Events tab): release a founding pack of one bestiary
+       species (src/Organism/Predators.ts) scattered around (col, row).
+
+       The founders are ordinary organisms from the moment they land -- they
+       age, starve, mutate and can be wiped out by what they invaded. What the
+       event provides is the introduction: a hand-built genome the world could
+       not plausibly have reached on its own, dropped where the player points.
+
+       Returns how many actually found room, which is fewer than def.pack in a
+       crowded world and zero in a full one. */
+    releasePredator(def: PredatorSpecies, col: number, row: number, radius: number): number {
+        /* Candidate anchors around the click, shuffled so the pack scatters
+           instead of packing into the first ring the scan reaches. Walked
+           monotonically across founders (`next`), so placing a whole pack costs
+           one pass over the neighbourhood rather than one per founder. */
+        const spots = Neighbors.inRange(Math.max(radius, PREDATOR_MIN_SPREAD)).slice();
+        for (let i = spots.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [spots[i], spots[j]] = [spots[j], spots[i]];
+        }
+        let next = 0;
+
+        /* Does this organism's whole rotated footprint fit at (col, row)?
+           Deliberately not Organism.isClear(), which also refuses to overlap
+           food while foodBlocksReproduction is on (the default). That rule
+           exists to stop organisms breeding into their own food supply, and
+           applying it here would make a release fail in exactly the worlds
+           worth invading: a settled producer mat is carpeted in food, and the
+           first trial of this event placed zero of a six-strong pack into one.
+           A founder lands on top of the food instead -- updateGrid overwrites
+           those cells, so the pack eats its landing site. */
+        const footprintFits = (org: Organism, col: number, row: number): boolean => {
+            for (const body_cell of org.anatomy.cells) {
+                const idx = this.grid_map.indexAt(
+                    col + body_cell.rotatedCol(org.rotation),
+                    row + body_cell.rotatedRow(org.rotation));
+                if (idx < 0)
+                    return false;
+                const state = this.grid_map.stateOf(idx);
+                // Walls and the dish glass are states of their own, so this
+                // rejects them; an owner means another organism (living or a
+                // founder already published by this release) is standing there.
+                if (state !== CellStates.empty && state !== CellStates.food)
+                    return false;
+                if (this.grid_map.ownerOf(idx) != null)
+                    return false;
+            }
+            return true;
+        };
+
+        // Build a founder and walk the remaining anchors for somewhere it fits.
+        const placeFounder = (): Organism | null => {
+            const org = new Organism(col, row, this as unknown as OrganismEnv);
+            org.loadRaw(def.genome);
+            // Each founder lands facing its own way, so a pack reads as
+            // individuals rather than a formation.
+            org.rotation = Directions.getRandomDirection();
+            org.direction = Directions.getRandomDirection();
+            while (next < spots.length) {
+                const loc = spots[next++];
+                org.c = col + loc[0];
+                org.r = row + loc[1];
+                if (footprintFits(org, org.c, org.r))
+                    return org;
+            }
+            return null;
+        };
+
+        /* The first founder is placed before the species is registered: a
+           species with no members would sit in the extant registry forever,
+           since only a death can fossilize one. */
+        const first = placeFounder();
+        if (!first) {
+            Notifier.notify(`No room to release ${def.name} here`);
+            return 0;
+        }
+
+        const species = new Species(first.anatomy, null, this.total_ticks);
+        species.name = FossilRecord.uniqueSpeciesName(def.name);
+        // Both counters, not just population: the constructor seeds each at 1
+        // for the organism it was built from, and publish() below counts every
+        // founder including that one.
+        species.population = 0;
+        species.cumulative_pop = 0;
+        FossilRecord.addSpeciesObj(species);
+
+        // Species first, then publish -- update(), reproduce() and die() all
+        // dereference org.species unguarded. Same order as OriginOfLife().
+        const publish = (org: Organism) => {
+            org.species = species;
+            this.addOrganism(org);
+            species.addPop();
+        };
+        publish(first);
+        while (species.population < def.pack) {
+            const org = placeFounder();
+            if (!org) break;
+            publish(org);
+        }
+
+        /* The Narrator would otherwise report this as "a new lifeform emerged"
+           on its next sample -- a duplicate of the toast below, and a false
+           account of where the lineage came from. */
+        Narrator.acknowledge(species);
+        Notifier.notify(
+            `☣ ${species.name} released — ${species.population} founder${species.population === 1 ? '' : 's'}`,
+            { organism: first.anatomy.cells },
+        );
+        if (this.engine) this.engine.emitChange(true);
+        return species.population;
     }
 
     /* Meteor (Events tab): launch a strike at (col, row). The click only sets

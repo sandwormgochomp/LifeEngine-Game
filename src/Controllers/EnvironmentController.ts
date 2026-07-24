@@ -13,6 +13,7 @@ import RandomOrganismGenerator from "../Organism/RandomOrganismGenerator";
 import type { GeneratorEnv } from "../Organism/RandomOrganismGenerator";
 import Species from "../Stats/Species";
 import type BodyCell from "../Organism/Cell/BodyCells/BodyCell";
+import type { PredatorSpecies } from "../Organism/Predators";
 
 /* The renderer, as this controller and its base class between them reach
    through it. The last three members mirror CanvasController's own (unexported)
@@ -75,12 +76,16 @@ interface EnvControllerEnvLike {
     changeCell(c: number, r: number, state: CellState, owner: BodyCell | null): void;
     addOrganism(organism: Organism): void;
     meteorStrike(col: number, row: number, radius: number): void;
+    releasePredator(def: PredatorSpecies, col: number, row: number, radius: number): number;
 }
 
-// Modes where the cursor overlay draws a brush_size-radius footprint. Meteor
-// only strikes once per click (see performModeAction), but shares the reticle
-// so its blast radius is previewed like any other brush.
-const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill, Modes.SeedLife, Modes.MeteorStrike];
+/* Modes where the cursor overlay draws a brush_size-radius footprint. Meteor
+   and predator release only fire once per click (see performModeAction), but
+   share the reticle so their footprint -- blast radius, pack scatter -- is
+   previewed like any other brush. The predator reticle is a lower bound: the
+   release floors the scatter at PREDATOR_MIN_SPREAD so a tiny brush still has
+   room for a whole pack. */
+const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill, Modes.SeedLife, Modes.MeteorStrike, Modes.ReleasePredator];
 
 // Seed Life paints sparsely: each brush cell has this chance of spawning a
 // random organism per paint tick, so a drag lays down scattered life rather
@@ -106,6 +111,10 @@ class EnvironmentController extends CanvasController{
        HUD (App.tsx, EditorDock). */
     mode: number;
     org_to_clone: Organism | null;
+    /* Which bestiary species a ReleasePredator click drops. Set by the React
+       HUD when the player picks one out of the predator modal, and cleared
+       alongside the mode when the tool is put away. */
+    pending_predator: PredatorSpecies | null;
     /* Set when a canvas click loads an organism into the editor; consumed
        (and cleared) by the React layer (App.tsx) to open the lab dock.
        Distinguishes canvas sampling from the dock's own Reset/Random/preset
@@ -125,6 +134,7 @@ class EnvironmentController extends CanvasController{
         super(env, canvas);
         this.mode = Modes.None;
         this.org_to_clone = null;
+        this.pending_predator = null;
         this.pending_editor_open = false;
         this.scale = 1;
         this.pan_x = 0;
@@ -349,6 +359,22 @@ class EnvironmentController extends CanvasController{
                     // mousedown so a held drag doesn't carpet-bomb the world.
                     if (left_click && from_mouse_down) {
                         this.env.meteorStrike(this.mouse_c, this.mouse_r, WorldConfig.brush_size);
+                    }
+                    break;
+
+                case Modes.ReleasePredator:
+                    /* One pack per click, like the meteor. The tool stays
+                       armed afterwards so several packs (or several species)
+                       can be seeded into one world; right-click puts it away,
+                       matching Clone. */
+                    if (right_click) {
+                        this.mode = Modes.None;
+                        this.pending_predator = null;
+                        if (this.env && this.env.engine) {
+                            this.env.engine.emitChange(true);
+                        }
+                    } else if (left_click && from_mouse_down && this.pending_predator) {
+                        this.env.releasePredator(this.pending_predator, this.mouse_c, this.mouse_r, WorldConfig.brush_size);
                     }
                     break;
 

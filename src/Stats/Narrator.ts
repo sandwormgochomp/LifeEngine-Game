@@ -127,6 +127,17 @@ class Narrator {
         this.extinctGen = 0;
     }
 
+    /* Record a species as already known, so the next sample does not report it
+       as newly emerged. For lineages the world introduces deliberately and
+       announces itself -- an invasive predator release -- where "a new lifeform
+       emerged" would be both a duplicate toast and a false account of where the
+       lineage came from. Before the first sample there is nothing to suppress:
+       seeding is silent, and it will pick the species up then. */
+    acknowledge(species: NarratableSpecies): void {
+        if (!this.seeded) return;
+        this.species.set(species.name, { start: species.start_tick, cells: previewOf(species) });
+    }
+
     sample(env: NarratableWorld): void {
         const tick = env.total_ticks;
         const pop = env.organisms.length;

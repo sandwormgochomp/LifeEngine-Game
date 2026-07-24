@@ -6,6 +6,8 @@ import Modes from '../Controllers/ControlModes';
 import WorldConfig from '../WorldConfig';
 import Notifier from '../Utils/Notifier';
 import PixelSlider from './PixelSlider';
+import PredatorModal from './PredatorModal';
+import type { PredatorSpecies } from '../Organism/Predators';
 
 interface HudToolPaletteProps {
   engine: Engine | null;
@@ -22,13 +24,20 @@ interface Tool {
   title: string;
 }
 
-// A one-shot action: fires immediately rather than arming a mode. `soon` marks
-// a scaffolded event whose logic isn't wired yet — rendered disabled.
+/* A one-shot action: fires immediately rather than arming a mode. `soon` marks
+   a scaffolded event whose logic isn't wired yet — rendered disabled.
+
+   `opens` is the exception to "fires immediately": the action opens a picker
+   and what the player chooses there arms a world tool. `armsMode` names the
+   mode that ends up armed, so the button and its tab can show as active for
+   the same reason a Tool does. */
 interface Action {
   id: string;
   label: string;
   title: string;
   run?: (engine: Engine) => void;
+  opens?: 'predators';
+  armsMode?: number;
   soon?: boolean;
 }
 
@@ -93,13 +102,14 @@ const TABS: Tab[] = [
       { id: 'event-bloom', label: 'Bloom', title: 'A burst of fertility: food production spikes worldwide for a while, then fades.', run: e => e.env.triggerBloom() },
       { id: 'event-iceage', label: 'Ice Age', title: 'Coming soon: a long food crash that culls all but the most efficient forms.', soon: true },
       { id: 'event-radstorm', label: 'Rad Storm', title: 'Coming soon: a moving radiation front that makes evolution run hot along its edge.', soon: true },
-      { id: 'event-predator', label: 'Predator', title: 'Coming soon: drop a pre-evolved hunter into a settled world and watch the arms race.', soon: true },
+      { id: 'event-predator', label: 'Predator', title: 'Release an invasive hunter: pick one from the bestiary, then click the world to drop its founding pack.', opens: 'predators', armsMode: Modes.ReleasePredator },
     ],
   },
 ];
 
 const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
   const [activeTabId, setActiveTabId] = useState<string>('terrain');
+  const [predatorsOpen, setPredatorsOpen] = useState(false);
   const activeMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // slider stays in sync with the hotkeys and the click-hint bar
@@ -121,15 +131,36 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
   };
 
   const runAction = (action: Action) => {
-    if (!engine || !action.run) return;
+    if (!engine) return;
+    if (action.opens === 'predators') {
+      setPredatorsOpen(true);
+      return;
+    }
+    if (!action.run) return;
     action.run(engine);
     engine.emitChange(true);
+  };
+
+  /* Picking from the bestiary doesn't release anything: it arms the release
+     tool with that species, so the player still chooses where the pack lands.
+     Mirrors how Clone arms with an organism (App.tsx's C hotkey). */
+  const choosePredator = (predator: PredatorSpecies) => {
+    setPredatorsOpen(false);
+    if (!engine) return;
+    const controller = engine.env.controller;
+    controller.pending_predator = predator;
+    controller.mode = Modes.ReleasePredator;
+    engine.emitChange(true);
+    Notifier.notify(`Click in the world to release ${predator.name} · ESC to cancel`);
   };
 
   // A tab whose tool is currently armed gets a marker, so an armed tool stays
   // discoverable even while a different tab is open.
   const tabHoldsActiveTool = (tab: Tab) =>
-    activeMode !== Modes.None && tab.tools.some(t => t.mode === activeMode);
+    activeMode !== Modes.None && (
+      tab.tools.some(t => t.mode === activeMode) ||
+      tab.actions.some(a => a.armsMode === activeMode)
+    );
 
   return (
     <div className={styles.toolPalette} data-testid="tool-palette">
@@ -184,7 +215,7 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
               id={action.id}
               title={action.title}
               disabled={action.soon}
-              className={`${styles.toolPaletteAction} ${action.soon ? styles.toolPaletteActionSoon : ''}`}
+              className={`${styles.toolPaletteAction} ${action.soon ? styles.toolPaletteActionSoon : ''} ${action.armsMode !== undefined && action.armsMode === activeMode ? styles.toolPaletteActionArmed : ''}`}
               onClick={() => runAction(action)}
             >
               {action.label}
@@ -192,6 +223,10 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
             </button>
           ))}
         </div>
+      )}
+
+      {predatorsOpen && (
+        <PredatorModal onClose={() => setPredatorsOpen(false)} onChoose={choosePredator} />
       )}
     </div>
   );

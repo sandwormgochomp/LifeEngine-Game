@@ -132,9 +132,10 @@ const App: React.FC = () => {
         setRulesOpen(false);
       } else if (lifeformsOpen) {
         setLifeformsOpen(false);
-      } else if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select)) {
+      } else if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select || envController.mode === Modes.ReleasePredator)) {
         envController.mode = Modes.None;
         envController.org_to_clone = null;
+        envController.pending_predator = null;
         engine.emitChange(true);
       } else if (perfOpen) {
         setPerfOpen(false);

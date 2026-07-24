@@ -26,7 +26,8 @@ test.describe('Tool palette tabs', () => {
   test('Scaffolded events are present but disabled', async ({ page }) => {
     await page.locator('#tool-tab-events').click();
     await expect(page.locator('#event-bloom')).toBeEnabled();
-    for (const id of ['#event-iceage', '#event-radstorm', '#event-predator']) {
+    await expect(page.locator('#event-predator')).toBeEnabled();
+    for (const id of ['#event-iceage', '#event-radstorm']) {
       await expect(page.locator(id)).toBeDisabled();
     }
   });
@@ -130,5 +131,143 @@ test.describe('World events', () => {
     });
     expect(after.prob).toBe(base);
     expect(after.events).toBe(0);
+  });
+});
+
+/* The Predator event is a two-step: the bestiary arms the release tool with a
+   species, and a click in the world drops that species' founding pack there. */
+test.describe('Invasive predators', () => {
+  test.beforeEach(async ({ page }) => {
+    await pauseEngine(page);
+    await page.locator('#tool-tab-events').click();
+  });
+
+  // Somewhere with room for a pack: the middle of the dish.
+  const dishCenter = page => page.evaluate(() => {
+    const map = window.engine.env.grid_map;
+    const [c, r] = map.getCenter();
+    const cs = map.cell_size;
+    return { x: c * cs + cs / 2, y: r * cs + cs / 2 };
+  });
+
+  test('The bestiary arms the release tool rather than releasing anything', async ({ page }) => {
+    const before = await page.evaluate(() => window.engine.env.organisms.length);
+
+    await page.locator('#event-predator').click();
+    await expect(page.locator('[data-testid="predator-modal"]')).toBeVisible();
+    await page.locator('#predator-ironjaw').click();
+
+    // Picking closes the picker, arms the tool and lights the button — but the
+    // world is untouched until a click lands in it.
+    await expect(page.locator('[data-testid="predator-modal"]')).toBeHidden();
+    await expect(page.locator('#event-predator')).toHaveClass(/toolPaletteActionArmed/);
+    const armed = await page.evaluate(() => ({
+      mode: window.engine.env.controller.mode,
+      pending: window.engine.env.controller.pending_predator?.id,
+      organisms: window.engine.env.organisms.length,
+    }));
+    expect(armed.pending).toBe('ironjaw');
+    expect(armed.organisms).toBe(before);
+    expect(armed.mode).not.toBe(0);
+  });
+
+  test('Clicking the world drops a founding pack that is registered as its own species', async ({ page }) => {
+    const before = await page.evaluate(() => window.engine.env.organisms.length);
+
+    await page.locator('#event-predator').click();
+    await page.locator('#predator-whisperfang').click();
+    await page.locator('#env-canvas').click({ position: await dishCenter(page) });
+
+    const after = await page.evaluate(() => {
+      const env = window.engine.env;
+      const species = Object.values(window.fossilRecord.extant_species)
+        .find(s => s.name.startsWith('Whisperfang'));
+      return {
+        organisms: env.organisms.length,
+        population: species?.population,
+        // Every founder shares the one species object, and it carries the
+        // hand-built body plan (2 killers, 2 mouths, eye, mover, pheromone).
+        cells: species?.anatomy?.cells.length,
+        killers: species?.cell_counts?.killer,
+        pheromone: species?.cell_counts?.pheromone,
+      };
+    });
+    expect(after.organisms).toBe(before + 6);
+    expect(after.population).toBe(6);
+    expect(after.cells).toBe(7);
+    expect(after.killers).toBe(2);
+    expect(after.pheromone).toBe(1);
+  });
+
+  test('The release announces itself once, not twice', async ({ page }) => {
+    await page.locator('#event-predator').click();
+    await page.locator('#predator-cinderpod').click();
+
+    // Seed the Narrator against the world as it stands: only a seeded Narrator
+    // diffs successive samples, and only a diff can duplicate the announcement.
+    await page.evaluate(() => {
+      window.narrator.sample(window.engine.env);
+      window.__toasts = [];
+      window.__unsub = window.notifier.subscribe(m => window.__toasts.push(m));
+    });
+
+    await page.locator('#env-canvas').click({ position: await dishCenter(page) });
+
+    const toasts = await page.evaluate(() => {
+      window.narrator.sample(window.engine.env); // the sample that would double-announce
+      window.__unsub();
+      return window.__toasts;
+    });
+    expect(toasts.filter(t => t.includes('Cinderpod'))).toHaveLength(1);
+    expect(toasts.some(t => t.includes('new lifeform'))).toBe(false);
+  });
+
+  test('Escape puts the release tool away without releasing', async ({ page }) => {
+    const before = await page.evaluate(() => window.engine.env.organisms.length);
+
+    await page.locator('#event-predator').click();
+    await page.locator('#predator-hollow-thief').click();
+    await page.keyboard.press('Escape');
+
+    const after = await page.evaluate(() => ({
+      mode: window.engine.env.controller.mode,
+      pending: window.engine.env.controller.pending_predator,
+      organisms: window.engine.env.organisms.length,
+    }));
+    expect(after.mode).toBe(0); // Modes.None
+    expect(after.pending).toBe(null);
+    expect(after.organisms).toBe(before);
+    await expect(page.locator('#event-predator')).not.toHaveClass(/toolPaletteActionArmed/);
+  });
+
+  test('A pack with nowhere to land reports it instead of registering an empty species', async ({ page }) => {
+    const position = await dishCenter(page);
+    const before = await page.evaluate(() => ({
+      organisms: window.engine.env.organisms.length,
+      species: Object.keys(window.fossilRecord.extant_species).length,
+    }));
+
+    // Wall over the drop site with a brush wider than the pack's scatter.
+    await page.locator('#tool-tab-terrain').click();
+    await page.locator('#brush-slider').fill('15');
+    await page.locator('#wall').click();
+    await page.locator('#env-canvas').click({ position });
+
+    await page.locator('#tool-tab-events').click();
+    await page.locator('#event-predator').click();
+    await page.locator('#predator-ironjaw').click();
+    await page.locator('#env-canvas').click({ position });
+
+    await expect(page.getByTestId('hud-notifications')).toContainText('No room to release Ironjaw');
+    const after = await page.evaluate(() => ({
+      species: Object.keys(window.fossilRecord.extant_species).length,
+      ironjaws: Object.keys(window.fossilRecord.extant_species).filter(n => n.startsWith('Ironjaw')).length,
+    }));
+    // A species with no members would sit in the extant registry forever: only
+    // a death fossilizes one, and there is nothing here to die.
+    expect(after.ironjaws).toBe(0);
+    // The wall brush kills what it paints over, so the species count can only
+    // have fallen — never risen on a failed release.
+    expect(after.species).toBeLessThanOrEqual(before.species);
   });
 });
