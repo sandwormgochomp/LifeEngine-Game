@@ -4,10 +4,20 @@ Better sandbox (make the sim more legible & rewarding to watch, 2026-07-24)
 Direction chosen over "game with goals": keep it open-ended, raise the payoff
 of observing. Ordered by fun-per-effort; #1 is the anchor and reuses existing
 Notifier / FossilRecord / Floaties infrastructure.
-- [ ] **Self-narrating events (anchor).** Surface the drama already happening
-      through Notifier/Floaties: new species emerged, a lineage went extinct
-      (with name + age in ticks), new largest-organism-ever record, mass
-      extinction / population crash. FossilRecord already tracks the data.
+- [x] ~~**Self-narrating events (anchor).**~~ — done. `src/Stats/Narrator.ts`
+      poll-and-diffs the extant-species set, population, and largest-cell record
+      once per data-update window (piggybacking `FossilRecord.updateData`'s
+      cadence) and fires `Notifier` toasts: new lifeform (coalesced past one),
+      lineage extinct with name + derived age, new largest-organism record, mass
+      extinction (≥40% pop drop, guarded above 10). Detection lives in
+      `WorldEnvironment.update` on purpose — the Lab preview's mini-sim has its
+      own `update()`, so its births/deaths never narrate, and nothing in
+      `Species`/`Organism`/`FossilRecord` was touched. `Floaties` turned out to
+      be decorative dust with no text API, so world-anchored labels were dropped
+      in favour of toasts (revisit under "First-run legibility" hints).
+      `tests/narrator.spec.js` covers every event type, the coalescing/threshold
+      boundaries, silent re-seed on reset/load, the live `update()`→DOM path, and
+      that registry changes without a sample stay silent (the preview-gating proof).
 - [ ] **First-run legibility, not a tutorial.** A curated "start here" demo
       world chosen to do something interesting within ~1 minute, plus 2–3
       contextual one-line hints that fire on the world itself ("← just evolved

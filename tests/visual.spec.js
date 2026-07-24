@@ -45,8 +45,9 @@ test.describe('Visual Regression Tests', () => {
     await openPanel(page, 'save');
     await page.locator('.world-card[data-world="SurvivalOfFittest"]').click();
     await expect(page.getByTestId('worlds-modal')).toBeHidden();
-    // Let the "Loaded ..." toast expire so the shot holds only the world
-    await expect(page.getByTestId('hud-notifications')).toBeHidden({ timeout: 5000 });
+    // Let the event log clear so the shot holds only the world. The log persists
+    // until it goes idle (IDLE_CLEAR_MS = 6s in HudNotifications), then unmounts.
+    await expect(page.getByTestId('hud-notifications')).toBeHidden({ timeout: 9000 });
 
     // The saved layout fills the frame edge to edge -- no dish glass ring.
     // Same tolerance as the dashboard shot for canvas anti-aliasing noise.

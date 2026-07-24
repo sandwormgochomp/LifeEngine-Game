@@ -9,9 +9,11 @@ import CellStates from '../Organism/Cell/CellStates';
 import EnvironmentController from '../Controllers/EnvironmentController';
 import Hyperparams from '../Hyperparameters.js';
 import FossilRecord from '../Stats/FossilRecord';
+import Narrator from '../Stats/Narrator';
 import Perf from '../Stats/Perf';
 import WorldConfig from '../WorldConfig';
 import SerializeHelper from '../Utils/SerializeHelper';
+import type { NotificationCell } from '../Utils/Notifier';
 import Species from '../Stats/Species';
 import type { CellState, RenderCellOwnerLike } from '../Organism/Cell/CellStates';
 import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
@@ -132,6 +134,10 @@ class WorldEnvironment extends Environment{
     walls: number[];
     total_mutability: number;
     largest_cell_count: number;
+    // Body plan of the current largest-cell-count holder, captured when the
+    // record is beaten so the Narrator can preview it. Runtime-only (not
+    // serialized); repopulated the next time the record is broken.
+    largest_cells: NotificationCell[];
     reset_count: number;
     total_ticks: number;
     data_update_rate: number;
@@ -231,6 +237,7 @@ class WorldEnvironment extends Environment{
         this.walls = [];
         this.total_mutability = 0;
         this.largest_cell_count = 0;
+        this.largest_cells = [];
         this.reset_count = 0;
         this.total_ticks = 0;
         this.data_update_rate = 100;
@@ -318,6 +325,11 @@ class WorldEnvironment extends Environment{
         if (this.total_ticks % this.data_update_rate == 0) {
             t = Perf.begin();
             FossilRecord.updateData();
+            // Narrate the drama this window produced (new species, extinctions,
+            // size records, crashes). Piggybacks the fossil sample's cadence, and
+            // only the real world reaches this method -- the Lab's preview mini-sim
+            // has its own update(), so its births/deaths never announce.
+            Narrator.sample(this);
             Perf.end('fossil', t);
         }
     }
@@ -606,8 +618,17 @@ class WorldEnvironment extends Environment{
         organism.updateGrid();
         this.total_mutability += organism.mutability;
         this.organisms.push(organism);
-        if (organism.anatomy.cells.length > this.largest_cell_count)
+        if (organism.anatomy.cells.length > this.largest_cell_count) {
             this.largest_cell_count = organism.anatomy.cells.length;
+            // Snapshot the record holder's body plan (plain cells, not live
+            // references) so the Narrator's toast can preview it.
+            this.largest_cells = organism.anatomy.cells.map(c => ({
+                loc_col: c.loc_col,
+                loc_row: c.loc_row,
+                direction: (c as { direction?: number }).direction,
+                state: { name: c.state.name },
+            }));
+        }
     }
 
     canAddOrganism(): boolean {
@@ -774,6 +795,9 @@ class WorldEnvironment extends Environment{
         this.glow_dirty = true;
         this.radiation_map.clear();
         FossilRecord.clear_record();
+        // Drop the narration baseline so the reseeded world isn't announced as
+        // brand-new drama on the next sample.
+        Narrator.reset();
         if (reset_life)
             this.OriginOfLife();
         return true;
@@ -907,6 +931,9 @@ class WorldEnvironment extends Environment{
         for (let name in species)
             FossilRecord.addSpeciesObj(species[name]);
         FossilRecord.loadRaw(raw.fossil_record);
+        // Re-seed narration silently against the loaded world, so a load doesn't
+        // announce every species it just restored.
+        Narrator.reset();
         SerializeHelper.overwriteNonObjects(raw, this as unknown as Record<string, unknown>);
         /* The camera belongs to the world that was on screen, not to this one:
            pan is in screen px and the canvas is re-sized to the incoming grid,

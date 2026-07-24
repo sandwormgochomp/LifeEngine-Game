@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/App.module.css';
 import Engine from '../Engine';
 import FossilRecord, { type FossilRecordType } from '../Stats/FossilRecord';
+import Narrator from '../Stats/Narrator';
 import Perf from '../Stats/Perf';
 import { generateOrganismName } from '../Utils/NameGenerator';
 import type { CellCountMap } from '../Stats/Species';
@@ -60,6 +61,10 @@ declare global {
        world's controls -- and the food-adjacency suite has to be able to
        put them somewhere the fast path must refuse. */
     hyperparams?: typeof Hyperparams;
+    // The self-narrating-events singleton and the toast bus it emits on, exposed
+    // so the narration suite can drive sample()/reset() and spy on the toasts.
+    narrator?: typeof Narrator;
+    notifier?: typeof Notifier;
   }
 }
 
@@ -102,6 +107,8 @@ const App: React.FC = () => {
     window.generateOrganismName = generateOrganismName;
     window.perf = Perf;
     window.hyperparams = Hyperparams;
+    window.narrator = Narrator;
+    window.notifier = Notifier;
     newEngine.start();
     setEngine(newEngine);
 
