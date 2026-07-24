@@ -5,132 +5,26 @@
    47MB in total, and drawing twenty of them on open would mean downloading and
    parsing every world just to list them. A thumbnail is ~5KB.
 
-   No canvas dependency -- the raster is a byte array and the PNG is written
-   with the zlib that ships with Node (see encodePng). The cell colours come
-   from src/Rendering/palette.json, shared with the renderer so a recoloured
-   cell state can't leave these thumbnails behind in the old scheme. */
+   The painting itself is src/Rendering/WorldMinimap.ts, shared with the Worlds
+   picker so that a world the user saves in their browser goes through the same
+   arithmetic as these do -- Node strips the types and imports it directly. All
+   that lives here is the PNG encoder, written against the zlib Node already
+   ships rather than a canvas dependency. */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { deflateSync, crc32 } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { renderWorldMinimap } from '../src/Rendering/WorldMinimap.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const WORLDS_DIR = join(ROOT, 'public/assets/worlds');
 const OUT_DIR = join(WORLDS_DIR, 'thumbs');
 
-// The tile the picker draws these into, at 2x for crisp downscaling
-const BOX_W = 352;
-const BOX_H = 224;
-
+// Read rather than imported: an ESM JSON import needs an import attribute that
+// Node and the bundler spell differently, and WorldMinimap takes the palette
+// as an argument precisely so neither side has to.
 const palette = JSON.parse(readFileSync(join(ROOT, 'src/Rendering/palette.json'), 'utf8'));
-
-/* What wins when many cells collapse into one thumbnail pixel. Life outranks
-   terrain outranks food outranks empty: a picking rule that averaged, or took
-   the majority, would erase the organisms from a world like Scarcity, where
-   1666 of them are scattered across 854x400 cells and no output pixel has them
-   in the majority. Within a tier, the more numerous state wins. */
-const TIER = { empty: 0, food: 1, wall: 2, invincible_wall: 2 };
-const LIFE_TIER = 3;
-const tierOf = name => TIER[name] ?? LIFE_TIER;
-
-const NAMED_COLORS = { gray: [128, 128, 128] };
-
-function parseColor(value) {
-  if (NAMED_COLORS[value]) return NAMED_COLORS[value];
-  const hex = value.replace('#', '');
-  return [
-    parseInt(hex.slice(0, 2), 16),
-    parseInt(hex.slice(2, 4), 16),
-    parseInt(hex.slice(4, 6), 16),
-  ];
-}
-
-/* Mirrors BodyCell.rotatedCol/rotatedRow. Duplicated rather than imported
-   because the source is TypeScript reaching into the live Organism, and this
-   is eight lines of arithmetic that the save format pins in place: the
-   rotation values are persisted, so they cannot change without breaking every
-   existing save. Directions are up=0, right=1, down=2, left=3. */
-function rotate(loc_col, loc_row, rotation) {
-  switch (rotation) {
-    case 1: return [-loc_row, loc_col];
-    case 2: return [-loc_col, -loc_row];
-    case 3: return [loc_row, -loc_col];
-    default: return [loc_col, loc_row];
-  }
-}
-
-/* The world as one cell-state name per grid square, built the way loadRaw
-   builds the live grid: terrain first, then organisms painted over it. */
-function rasterize(world) {
-  const cols = Number(world.grid.cols);
-  const rows = Number(world.grid.rows);
-  const cells = new Array(cols * rows).fill('empty');
-  const at = (c, r) => (c >= 0 && c < cols && r >= 0 && r < rows ? c * rows + r : -1);
-
-  for (const { c, r } of world.grid.food ?? []) {
-    const i = at(c, r);
-    if (i >= 0) cells[i] = 'food';
-  }
-  for (const { c, r } of world.grid.walls ?? []) {
-    const i = at(c, r);
-    if (i >= 0) cells[i] = 'wall';
-  }
-  for (const org of world.organisms ?? []) {
-    if (org.living === false) continue;
-    for (const cell of org.anatomy?.cells ?? []) {
-      const [dc, dr] = rotate(cell.loc_col, cell.loc_row, org.rotation ?? 0);
-      const i = at(org.c + dc, org.r + dr);
-      if (i >= 0) cells[i] = cell.state?.name ?? 'common';
-    }
-  }
-  return { cols, rows, cells };
-}
-
-/* Box-filter down to the tile, picking each output pixel by TIER rather than
-   averaging -- see the comment there. Never upscales past one pixel per cell:
-   a 140x140 world blown up to fill the box would only add blur. */
-function downscale({ cols, rows, cells }) {
-  const scale = Math.min(BOX_W / cols, BOX_H / rows, 1);
-  const out_w = Math.max(1, Math.round(cols * scale));
-  const out_h = Math.max(1, Math.round(rows * scale));
-  const rgba = Buffer.alloc(out_w * out_h * 4);
-  const colors = new Map();
-  const colorOf = name => {
-    let c = colors.get(name);
-    if (!c) colors.set(name, (c = parseColor(palette[name] ?? palette.common)));
-    return c;
-  };
-
-  const counts = new Map();
-  for (let y = 0; y < out_h; y++) {
-    const r0 = Math.floor((y * rows) / out_h);
-    const r1 = Math.max(r0 + 1, Math.floor(((y + 1) * rows) / out_h));
-    for (let x = 0; x < out_w; x++) {
-      const c0 = Math.floor((x * cols) / out_w);
-      const c1 = Math.max(c0 + 1, Math.floor(((x + 1) * cols) / out_w));
-
-      counts.clear();
-      let best = 'empty', best_tier = -1, best_count = 0;
-      for (let c = c0; c < c1; c++) {
-        for (let r = r0; r < r1; r++) {
-          const name = cells[c * rows + r];
-          const n = (counts.get(name) ?? 0) + 1;
-          counts.set(name, n);
-          const tier = tierOf(name);
-          if (tier > best_tier || (tier === best_tier && n > best_count)) {
-            best = name; best_tier = tier; best_count = n;
-          }
-        }
-      }
-
-      const [red, green, blue] = colorOf(best);
-      const o = (y * out_w + x) * 4;
-      rgba[o] = red; rgba[o + 1] = green; rgba[o + 2] = blue; rgba[o + 3] = 255;
-    }
-  }
-  return { width: out_w, height: out_h, rgba };
-}
 
 function chunk(type, data) {
   const head = Buffer.alloc(8);
@@ -143,10 +37,12 @@ function chunk(type, data) {
 
 // Minimal 8-bit RGBA PNG: every scanline uses filter 0, and zlib does the rest.
 function encodePng({ width, height, rgba }) {
-  const raw = Buffer.alloc(height * (width * 4 + 1));
+  const pixels = Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+  const stride = width * 4;
+  const raw = Buffer.alloc(height * (stride + 1));
   for (let y = 0; y < height; y++) {
-    raw[y * (width * 4 + 1)] = 0;
-    rgba.copy(raw, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
+    raw[y * (stride + 1)] = 0;
+    pixels.copy(raw, y * (stride + 1) + 1, y * stride, (y + 1) * stride);
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
@@ -166,7 +62,7 @@ if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
 
 for (const { name, value } of list) {
   const world = JSON.parse(readFileSync(join(WORLDS_DIR, `${value}.json`), 'utf8'));
-  const image = downscale(rasterize(world));
+  const image = renderWorldMinimap(world, palette);
   const png = encodePng(image);
   writeFileSync(join(OUT_DIR, `${value}.png`), png);
   console.log(`${name}: ${image.width}x${image.height}, ${(png.length / 1024).toFixed(1)}KB`);

@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import type Engine from '../Engine';
-import type Organism from '../Organism/Organism';
 import Hyperparams from '../Hyperparameters';
 import Notifier from '../Utils/Notifier';
-import OrganismThumb from './OrganismThumb';
-import type { ThumbCell } from './OrganismThumb';
+import { minimapDataUrl } from '../Rendering/WorldMinimap';
+import palette from '../Rendering/palette.json';
 import * as SavedWorlds from '../Utils/SavedWorlds';
 import type { SavedWorldMeta } from '../Utils/SavedWorlds';
 
@@ -22,26 +21,6 @@ interface WorldsModalProps {
 }
 
 const worldUrl = (value: string) => `assets/worlds/${value}.json`;
-
-/* The saved world's thumbnail: the body plan of its biggest living organism,
-   the one a world is most recognisable by. Copied down to the fields
-   OrganismThumb reads, since this goes to storage alongside every other save
-   and a live BodyCell drags its owner (and the whole grid) behind it. */
-function largestOrganismThumb(organisms: Organism[]): ThumbCell[] | null {
-  let largest: Organism | null = null;
-  for (const org of organisms) {
-    if (!org.living) continue;
-    if (!largest || org.anatomy.cells.length > largest.anatomy.cells.length) largest = org;
-  }
-  if (!largest) return null;
-  return largest.anatomy.cells.map(cell => ({
-    loc_col: cell.loc_col,
-    loc_row: cell.loc_row,
-    custom_color: cell.custom_color,
-    direction: (cell as { direction?: number }).direction,
-    state: { name: cell.state.name },
-  }));
-}
 
 // Bundled worlds are large (hundreds of KB each), so unlike the organism
 // presets they are fetched on demand rather than all upfront.
@@ -125,7 +104,9 @@ const WorldsModal: React.FC<WorldsModalProps> = ({ engine, onClose }) => {
         cols: engine.env.grid_map.cols,
         rows: engine.env.grid_map.rows,
         organisms: engine.env.organisms.filter(org => org.living).length,
-        thumb: largestOrganismThumb(engine.env.organisms),
+        // Painted from the same serialized world that goes to storage, so a
+        // save's tile is the same picture the build makes of a bundled world
+        thumb: minimapDataUrl(raw, palette),
       }, raw);
       setSaved(prev => [entry, ...prev]);
       setNaming(null);
@@ -213,8 +194,10 @@ const WorldsModal: React.FC<WorldsModalProps> = ({ engine, onClose }) => {
                 onClick={() => loadSaved(entry)}
               >
                 <span className={styles.worldThumbSlot}>
-                  {entry.thumb?.length
-                    ? <OrganismThumb cells={entry.thumb} size={80} decorated />
+                  {/* A save from before the minimap carried a body plan here
+                      instead of a data URL; it gets the globe. */}
+                  {typeof entry.thumb === 'string'
+                    ? <img className={styles.worldThumb} src={entry.thumb} alt="" />
                     : <i className={`fa-solid fa-earth-americas ${styles.worldThumbFallback}`}></i>}
                 </span>
               </button>

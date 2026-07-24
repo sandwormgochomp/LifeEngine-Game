@@ -1,5 +1,3 @@
-import type { ThumbCell } from '../components/OrganismThumb';
-
 /* Worlds the user saved into this browser.
 
    Two-tier on purpose. The index is small and read every time the picker
@@ -21,9 +19,11 @@ export interface SavedWorldMeta {
   rows: number;
   organisms: number;
   saved_at: number;
-  // The largest organism's body plan, kept in the index so the picker can
-  // draw a thumbnail without reading the world itself.
-  thumb: ThumbCell[] | null;
+  /* A minimap PNG as a data URL, painted by WorldMinimap the same way the
+     build paints the bundled worlds. It lives in the index rather than beside
+     the world so that the picker can draw every tile without reading a single
+     multi-MB world back. */
+  thumb: string | null;
 }
 
 const worldKey = (id: string) => WORLD_PREFIX + id;

@@ -169,8 +169,8 @@ test.describe('Worlds saved in the browser', () => {
   test('Saving names the world and lists it with a thumbnail', async ({ page }) => {
     await pauseEngine(page);
     await openWorldsModal(page);
-    // The default world holds one small organism; colony has a real creature
-    // to draw, and a grid size distinct from the default
+    // Colony has a grid size distinct from the default, and enough life in it
+    // to tell its minimap apart from an empty one
     await loadWorld(page, 'colony');
     await openWorldsModal(page);
     await saveWorld(page, 'Colony Fork');
@@ -178,10 +178,15 @@ test.describe('Worlds saved in the browser', () => {
     const card = savedCard(page, 'Colony Fork');
     await expect(card).toContainText('Colony Fork');
     await expect(card).toContainText('140×140');
-    // The thumbnail is the largest organism's body plan, drawn to a canvas
-    await expect(card.locator('canvas')).toBeVisible();
     // Bundled worlds are untouched and still counted alongside it
     expect(await page.locator('.world-card').count()).toBe(worldList.length);
+
+    /* The tile is a minimap, painted by the same WorldMinimap the build runs
+       over the bundled worlds -- so it must come out at colony's own size,
+       one pixel per cell at 140x140 (under the 352x224 box, never upscaled). */
+    const img = card.locator('img');
+    await expect(img).toHaveJSProperty('complete', true);
+    expect(await img.evaluate(el => [el.naturalWidth, el.naturalHeight])).toEqual([140, 140]);
 
     // The thumb rides in the index, not the world blob: listing must not
     // depend on reading the (multi-hundred-KB) world back
@@ -189,7 +194,42 @@ test.describe('Worlds saved in the browser', () => {
       JSON.parse(localStorage.getItem('life_engine.worlds.index')));
     expect(index).toHaveLength(1);
     expect(index[0].name).toBe('Colony Fork');
-    expect(index[0].thumb.length).toBeGreaterThan(1);
+    expect(index[0].thumb).toMatch(/^data:image\/png;base64,/);
+  });
+
+  /* The generator and the picker paint from the same serialized world through
+     the same module, so a bundled world saved straight back must come out
+     pixel-identical to the PNG the build wrote for it. This is the check that
+     fails if the two halves ever drift apart.
+
+     Pixels, not bytes: the two encoders are different (Node's zlib against the
+     browser's canvas), so the files never match even when the images do. */
+  test('A saved world paints the same minimap the build does', async ({ page }) => {
+    await pauseEngine(page);
+    await openWorldsModal(page);
+    await loadWorld(page, 'colony');
+    await openWorldsModal(page);
+    await saveWorld(page, 'Colony Copy');
+
+    const result = await page.evaluate(async () => {
+      const pixels = async src => {
+        const bitmap = await createImageBitmap(await (await fetch(src)).blob());
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        return { w: bitmap.width, h: bitmap.height, data: ctx.getImageData(0, 0, bitmap.width, bitmap.height).data };
+      };
+      const saved = await pixels(JSON.parse(localStorage.getItem('life_engine.worlds.index'))[0].thumb);
+      const built = await pixels('assets/worlds/thumbs/colony.png');
+      if (saved.w !== built.w || saved.h !== built.h) {
+        return { size: `${saved.w}x${saved.h} vs ${built.w}x${built.h}`, differing: -1 };
+      }
+      let differing = 0;
+      for (let i = 0; i < saved.data.length; i++) if (saved.data[i] !== built.data[i]) differing++;
+      return { size: `${saved.w}x${saved.h}`, differing };
+    });
+
+    expect(result).toEqual({ size: '140x140', differing: 0 });
   });
 
   test('A saved world reloads its grid, and survives a page reload', async ({ page }) => {

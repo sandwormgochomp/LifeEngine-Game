@@ -1374,12 +1374,6 @@
   cursor: pointer;
 }
 
-/* Its thumbnail is the largest organism, not a minimap: a save is the user's
-   own world, which they recognise by what lives in it. */
-.savedCardMain canvas {
-  background: none;
-  border: none;
-}
 
 .savedIconBtn {
   background: transparent;
