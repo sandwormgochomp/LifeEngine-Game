@@ -1,5 +1,27 @@
 # Repo Tidy-Up TODO
 
+Better sandbox (make the sim more legible & rewarding to watch, 2026-07-24)
+Direction chosen over "game with goals": keep it open-ended, raise the payoff
+of observing. Ordered by fun-per-effort; #1 is the anchor and reuses existing
+Notifier / FossilRecord / Floaties infrastructure.
+- [ ] **Self-narrating events (anchor).** Surface the drama already happening
+      through Notifier/Floaties: new species emerged, a lineage went extinct
+      (with name + age in ticks), new largest-organism-ever record, mass
+      extinction / population crash. FossilRecord already tracks the data.
+- [ ] **First-run legibility, not a tutorial.** A curated "start here" demo
+      world chosen to do something interesting within ~1 minute, plus 2–3
+      contextual one-line hints that fire on the world itself ("← just evolved
+      a mover"). Get to the first "wow" without reading the About wall.
+- [ ] **Follow-a-lineage.** Clicking an organism tracks it and its descendants:
+      highlight the line, keep a small card on it, notify on reproduce/death.
+      Reuses the Select/sample plumbing, which currently doesn't persist focus.
+- [ ] **Close trust papercuts** (see also the interface-review section below):
+      GEN→TICKS, collapse duplicated LIFEFORMS/Species labels, fix the
+      magnifier that resets zoom, add +/− zoom controls.
+- [ ] **Tighten action→reaction.** Make food/radiation/wall drops show their
+      consequence — briefly glow affected cells, reveal what a radiation burst
+      actually mutated. Powerful systems that currently feel disconnected.
+
 Organism Lab
 - [ ] Move name input to top-center
 - [ ] For each cell type, have a hover live preview that demonstrates how it excels (killer cell killing, armor cell protecting, poison cell poisoning, etc)
