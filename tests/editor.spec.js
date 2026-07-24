@@ -394,24 +394,47 @@ test.describe('Select from world', () => {
     ).toBeGreaterThan(0);
   });
 
+  /* The list re-renders from the world while it is open -- nothing here
+     reopens the modal or touches the page.
+
+     Read the population rather than the species name. A die-off runs
+     env.reset(), which clears the fossil record and then calls OriginOfLife()
+     to rebuild the same mouth-plus-two-producers body plan; generateOrganismName
+     is deterministic on cell counts, so the name that comes back is the name
+     that went away. Watching for the name to *change* only ever caught the
+     sub-frame gap between the last death and the reseed, which is what made
+     this test flaky. */
   test('Lifeforms list updates live as species appear and die', async ({ page }) => {
     await page.locator('#lifeforms-stat').click();
     await expect(page.getByTestId('lifeforms-modal')).toBeVisible();
 
-    const cards = page.locator('.lifeform-card');
-    const original = await cards.first().locator('.lifeform-name').textContent();
-    expect(await cards.count()).toBeGreaterThan(0);
+    const card = page.locator('.lifeform-card').first();
+    await expect(card).toBeVisible();
+    const population = async () => {
+      const meta = await card.locator('span').last().textContent();
+      const match = /pop (\d+)/.exec(meta ?? '');
+      return match ? Number(match[1]) : null;
+    };
+    expect(await population()).toBe(1);
 
-    // Wipe out all life. Auto-reset seeds a brand new species, so the list
-    // should swap over on its own with the modal still open.
+    // Let it breed: the card's population must climb with the modal untouched
+    await page.evaluate(() => window.engine.start());
+    await expect.poll(population, { timeout: 10000 }).toBeGreaterThan(1);
+
+    /* And follow the world back down. Driven a tick at a time with the engine
+       stopped: a running world reseeds and immediately starts breeding again,
+       so any assertion about the population after a die-off is racing the
+       next generation. One update runs the removal pass, which auto-resets
+       and seeds a single organism, and nothing moves after that. */
+    const resets = await page.evaluate(() => window.engine.env.reset_count);
     await page.evaluate(() => {
-      window.engine.start();
+      window.engine.stop();
       window.engine.env.organisms.forEach(o => o.die());
+      window.engine.environmentUpdate();
+      window.engine.emitChange(true); // the list refreshes off engine changes
     });
-
-    await expect
-      .poll(async () => cards.first().isVisible().then(v => (v ? cards.first().locator('.lifeform-name').textContent() : null)))
-      .not.toBe(original);
+    expect(await page.evaluate(() => window.engine.env.reset_count)).toBe(resets + 1);
+    await expect.poll(population).toBe(1);
   });
 
   test('A species that dies under the cursor is held in place, then pruned', async ({ page }) => {
