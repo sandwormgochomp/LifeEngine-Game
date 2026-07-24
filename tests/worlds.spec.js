@@ -204,6 +204,64 @@ test.describe('Worlds saved in the browser', () => {
 
      Pixels, not bytes: the two encoders are different (Node's zlib against the
      browser's canvas), so the files never match even when the images do. */
+  /* The dish is never in the save's wall list -- its glass is invincible_wall,
+     which GridMap.serialize() skips -- so the minimap has to rebuild the
+     circle from the petri_dish flag alone. Without that, every world saved
+     from a dish session was pictured as the bare rectangle underneath it. */
+  test.describe('The petri dish in a saved minimap', () => {
+    // Counts of the two colours that tell a dish apart: the glass rim, and the
+    // empty/page colour the void outside it takes.
+    async function dishPixels(page) {
+      return await page.evaluate(async () => {
+        const url = JSON.parse(localStorage.getItem('life_engine.worlds.index'))[0].thumb;
+        const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+        const at = (x, y) => {
+          const o = (y * bitmap.width + x) * 4;
+          return `${data[o]},${data[o + 1]},${data[o + 2]}`;
+        };
+        let glass = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] === 94 && data[i + 1] === 147 && data[i + 2] === 163) glass++;
+        }
+        return {
+          glass,
+          corner: at(0, 0),
+          centre: at(bitmap.width >> 1, bitmap.height >> 1),
+        };
+      });
+    }
+
+    test('A dish world is pictured with its dish', async ({ page }) => {
+      await pauseEngine(page);
+      await openWorldsModal(page);
+      // The default world starts inside the dish
+      await saveWorld(page, 'Dish World');
+
+      const px = await dishPixels(page);
+      // #5E93A3 is invincible_wall: the rim is drawn, and drawn as a ring
+      expect(px.glass).toBeGreaterThan(0);
+      // The void outside takes the empty colour the page behind it has, and
+      // the middle of the dish is world rather than glass
+      expect(px.corner).toBe('14,19,24');
+      expect(px.centre).not.toBe('94,147,163');
+    });
+
+    test('A rectangular world is not', async ({ page }) => {
+      await pauseEngine(page);
+      await openWorldsModal(page);
+      // colony predates the dish and carries no flag
+      await loadWorld(page, 'colony');
+      await openWorldsModal(page);
+      await saveWorld(page, 'Colony Rect');
+
+      expect((await dishPixels(page)).glass).toBe(0);
+    });
+  });
+
   test('A saved world paints the same minimap the build does', async ({ page }) => {
     await pauseEngine(page);
     await openWorldsModal(page);

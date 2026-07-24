@@ -34,6 +34,12 @@ export interface MinimapWorld {
     food?: { c: number; r: number }[];
     walls?: { c: number; r: number }[];
   };
+  /* Whether the world lives in the petri dish. The dish is never in
+     grid.walls -- its glass is invincible_wall, which GridMap.serialize()
+     skips -- so this flag is all a save carries of it, and the raster has to
+     rebuild the circle from scratch. Absent on the bundled worlds, which
+     predate the dish. */
+  petri_dish?: boolean;
   organisms?: {
     c: number;
     r: number;
@@ -84,9 +90,36 @@ function rotate(loc_col: number, loc_row: number, rotation: number): [number, nu
   }
 }
 
+/* Redraws the circle WorldEnvironment.buildPetriDish stamps, from the same
+   centre and radius, so a dish world's thumbnail is the dish and not the bare
+   rectangle its save happens to store.
+
+   Only the rim is painted as glass. In the world itself every cell outside the
+   circle is invincible_wall, but the renderer draws that as page background
+   with a lit ring at the edge -- so a minimap that filled the whole outside
+   with the glass colour would show something the player has never seen. The
+   void gets the empty colour, which is what the page behind it is. */
+function stampPetriDish(cols: number, rows: number, cells: string[]): void {
+  const cx = (cols - 1) / 2;
+  const cy = (rows - 1) / 2;
+  const radius = Math.min(cols, rows) / 2 - 4;
+  // buildPetriDish's own tier bounds: inner lip, main rim, outer shadow, void
+  const RIM_OUTER = radius + 2.8;
+
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const dist = Math.hypot(c - cx, r - cy);
+      if (dist < radius - 0.5) continue; // inside the dish, world as loaded
+      cells[c * rows + r] = dist < RIM_OUTER ? 'invincible_wall' : 'empty';
+    }
+  }
+}
+
 /* The world as one cell-state name per grid square, built in the order
-   WorldEnvironment.loadRaw builds the live grid: terrain first, organisms
-   painted over it. */
+   WorldEnvironment.loadRaw builds the live grid: terrain, then the dish over
+   it, then organisms. The order matters -- the dish overwrites whatever the
+   save stored outside the circle, exactly as buildPetriDish does to the live
+   grid, and organisms land on top because they live inside it. */
 export function rasterizeWorld(world: MinimapWorld): MinimapRaster {
   const cols = Number(world.grid.cols);
   const rows = Number(world.grid.rows);
@@ -101,6 +134,7 @@ export function rasterizeWorld(world: MinimapWorld): MinimapRaster {
     const i = at(c, r);
     if (i >= 0) cells[i] = 'wall';
   }
+  if (world.petri_dish) stampPetriDish(cols, rows, cells);
   for (const org of world.organisms ?? []) {
     if (org.living === false) continue;
     for (const cell of org.anatomy?.cells ?? []) {
