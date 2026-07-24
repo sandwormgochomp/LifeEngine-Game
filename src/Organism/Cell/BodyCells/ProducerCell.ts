@@ -1,7 +1,6 @@
 import CellStates from "../CellStates";
 import BodyCell from "./BodyCell";
 import type { BodyCellOrganism } from "./BodyCell";
-import Hyperparams from "../../../Hyperparameters";
 
 class ProducerCell extends BodyCell{
     constructor(org: BodyCellOrganism, loc_col: number, loc_row: number){
@@ -10,7 +9,8 @@ class ProducerCell extends BodyCell{
     }
 
     performFunction(): void {
-        if (this.org.anatomy.is_mover && !Hyperparams.moversCanProduce)
+        var hyperparams = this.org.hyperparams;
+        if (this.org.anatomy.is_mover && !hyperparams.moversCanProduce)
             return;
         /* The roll comes first: at the default 5% production chance this
            returns for 19 of every 20 producer cells, where the coordinate
@@ -22,12 +22,12 @@ class ProducerCell extends BodyCell{
            of 120 ticks). It is kept for being strictly less work and for
            reading in the order it happens, not for a measured win -- the
            per-cell loop's cost is grid-lookup volume, not this arithmetic. */
-        if (Math.random() * 100 > Hyperparams.foodProdProb)
+        if (Math.random() * 100 > hyperparams.foodProdProb)
             return;
         var env = this.org.env;
         var real_c = this.getRealCol();
         var real_r = this.getRealRow();
-        var loc = Hyperparams.growableNeighbors[Math.floor(Math.random() * Hyperparams.growableNeighbors.length)]
+        var loc = hyperparams.growableNeighbors[Math.floor(Math.random() * hyperparams.growableNeighbors.length)]
         var loc_c=loc[0];
         var loc_r=loc[1];
         if (env.grid_map.stateAt(real_c+loc_c, real_r+loc_r) == CellStates.empty){

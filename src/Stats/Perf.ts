@@ -40,6 +40,22 @@ export interface PerfStats {
     last: number;
 }
 
+/* The slice of Perf that Organism.update() probes with. Injectable through the
+   environment so a ticking organism can be handed a sink that records nothing
+   -- see NO_OP_PERF and PreviewEnvironment -- instead of the shared singleton,
+   whose buckets belong to the real world's tick. */
+export interface PerfLike {
+    begin(): number;
+    end(name: string, t0: number): void;
+}
+
+/* A Perf that measures nothing: the preview environment injects this so its
+   organisms never touch the real perf panel's buckets. */
+export const NO_OP_PERF: PerfLike = {
+    begin: () => -1,
+    end: () => {},
+};
+
 /* A ring of committed samples plus a per-tick/frame accumulator. Sections that
    run many times per tick (the per-organism probes) accumulate into `acc` and
    only enter the ring as one combined sample when commit() flushes them. */

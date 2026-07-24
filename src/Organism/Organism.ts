@@ -2,6 +2,7 @@ import CellStates from "./Cell/CellStates";
 import type { CellState } from "./Cell/CellStates";
 import Neighbors from "../Grid/Neighbors";
 import Hyperparams from "../Hyperparameters";
+import type { HyperparamsData } from "../Hyperparameters";
 import Directions from "./Directions";
 import type { Direction } from "./Directions";
 import Anatomy from "./Anatomy";
@@ -10,6 +11,7 @@ import Brain from "./Perception/Brain";
 import type { BrainState } from "./Perception/Brain";
 import FossilRecord from "../Stats/FossilRecord";
 import Perf from "../Stats/Perf";
+import type { PerfLike } from "../Stats/Perf";
 import SerializeHelper from "../Utils/SerializeHelper";
 import Observation from "./Perception/Observation";
 import type BodyCell from "./Cell/BodyCells/BodyCell";
@@ -94,6 +96,17 @@ export interface OrganismEnv {
        emitPheromoneSignal's fallback to the flat list is for the checker, not
        a path that runs. */
     getOrganismsNear?(c: number, r: number, radius: number): Organism[][];
+    /* The tunable parameters an organism reads while ticking. Optional: the
+       world and editor leave it unset, so their organisms fall back to the
+       global Hyperparams singleton (see the constructor). PreviewEnvironment
+       supplies a private defaults object instead, so a hover preview shows
+       canonical behaviour regardless of the player's Evolution Controls. */
+    hyperparams?: HyperparamsData;
+    /* The profiler an organism records into while ticking. Optional: the world
+       and editor leave it unset, so their organisms use the global Perf
+       singleton. PreviewEnvironment injects a no-op sink so preview ticks never
+       land in the real world's perf-panel buckets. */
+    perf?: PerfLike;
 }
 
 export interface SerializedBrain {
@@ -139,6 +152,15 @@ class Organism {
     c: number;
     r: number;
     env: OrganismEnv;
+    /* Resolved once in the constructor: the env's injected params, or the global
+       Hyperparams singleton when it supplies none. Every per-tick parameter read
+       below goes through this so an injected copy (PreviewEnvironment's defaults)
+       stays fully local to that organism. */
+    hyperparams: HyperparamsData;
+    /* Resolved once in the constructor: the env's injected profiler, or the
+       global Perf singleton when it supplies none. update()'s probes go through
+       this so a preview organism records into a no-op sink instead. */
+    perf: PerfLike;
     lifetime: number;
     food_collected: number;
     living: boolean;
@@ -181,13 +203,15 @@ class Organism {
         this.c = col;
         this.r = row;
         this.env = env;
+        this.hyperparams = env.hyperparams ?? Hyperparams;
+        this.perf = env.perf ?? Perf;
         this.lifetime = 0;
         this.food_collected = 0;
         this.living = true;
         this.anatomy = new Anatomy(this)
         this.direction = Directions.down; // direction of movement
         this.rotation = Directions.up; // direction of rotation
-        this.can_rotate = Hyperparams.rotationEnabled;
+        this.can_rotate = this.hyperparams.rotationEnabled;
         this.move_count = 0;
         this.move_range = 4;
         this.ignore_brain_for = 0;
@@ -195,7 +219,7 @@ class Organism {
         this.damage = 0;
         this.poison_ticks = 0;
         this.poison_duration = 10;
-        this.healer_food_cost = Hyperparams.healerFoodCost;
+        this.healer_food_cost = this.hyperparams.healerFoodCost;
         this.brain = new Brain(this);
         this.brain_triggered_heal = false;
         this.hibernating = false;
@@ -230,11 +254,11 @@ class Organism {
 
     // amount of food required before it can reproduce
     foodNeeded(): number {
-        return this.anatomy.is_mover ? this.anatomy.cells.length + Hyperparams.extraMoverFoodCost : this.anatomy.cells.length;
+        return this.anatomy.is_mover ? this.anatomy.cells.length + this.hyperparams.extraMoverFoodCost : this.anatomy.cells.length;
     }
 
     lifespan(): number {
-        return this.anatomy.cells.length * Hyperparams.lifespanMultiplier;
+        return this.anatomy.cells.length * this.hyperparams.lifespanMultiplier;
     }
 
     maxHealth(): number {
@@ -245,12 +269,12 @@ class Organism {
         //produce mutated child
         //check nearby locations (is there room and a direct path)
         var org = new Organism(0, 0, this.env, this);
-        if(Hyperparams.rotationEnabled){
+        if(this.hyperparams.rotationEnabled){
             org.rotation = Directions.getRandomDirection();
         }
         var prob = this.mutability;
-        if (Hyperparams.useGlobalMutability){
-            prob = Hyperparams.globalMutability;
+        if (this.hyperparams.useGlobalMutability){
+            prob = this.hyperparams.globalMutability;
         }
         else {
             //mutate the mutability
@@ -325,7 +349,7 @@ class Organism {
         let added = false;
         let changed = false;
         let removed = false;
-        if (this.calcRandomChance(Hyperparams.addProb)) {
+        if (this.calcRandomChance(this.hyperparams.addProb)) {
             let branch = this.anatomy.getRandomCell();
             let state = CellStates.getRandomLivingType();//branch.state;
             let growth_direction = Neighbors.all[Math.floor(Math.random() * Neighbors.all.length)]
@@ -336,13 +360,13 @@ class Organism {
                 this.anatomy.addRandomizedCell(state, c, r);
             }
         }
-        if (this.calcRandomChance(Hyperparams.changeProb)){
+        if (this.calcRandomChance(this.hyperparams.changeProb)){
             let cell = this.anatomy.getRandomCell();
             let state = CellStates.getRandomLivingType();
             this.anatomy.replaceCell(state, cell.loc_col, cell.loc_row);
             changed = true;
         }
-        if (this.calcRandomChance(Hyperparams.removeProb)){
+        if (this.calcRandomChance(this.hyperparams.removeProb)){
             if(this.anatomy.cells.length > 1) {
                 let cell = this.anatomy.getRandomCell();
                 removed = this.anatomy.removeCell(cell.loc_col, cell.loc_row);
@@ -450,7 +474,7 @@ class Organism {
                 return false;
             }
             var state = grid.stateOf(idx);
-            if (grid.ownerOf(idx)==this || state==CellStates.empty || (!Hyperparams.foodBlocksReproduction && state==CellStates.food)){
+            if (grid.ownerOf(idx)==this || state==CellStates.empty || (!this.hyperparams.foodBlocksReproduction && state==CellStates.food)){
                 continue;
             }
             return false;
@@ -464,7 +488,7 @@ class Organism {
 
     takeDamage(amount: number): void {
         this.damage += amount;
-        if (this.damage >= this.maxHealth() || Hyperparams.instaKill) {
+        if (this.damage >= this.maxHealth() || this.hyperparams.instaKill) {
             this.die();
         }
     }
@@ -553,7 +577,7 @@ class Organism {
     }
 
     emitPheromoneSignal(state_to_emit: CellState): void {
-        var max_dist = Hyperparams.lookRange * 2;
+        var max_dist = this.hyperparams.lookRange * 2;
         /* Only the 3x3 block of index buckets around this organism can hold
            anything within max_dist; the flat all-organisms scan this replaces
            made a busy world's damage ticks scale with population squared. */
@@ -608,9 +632,9 @@ class Organism {
                organism per tick, so it is the one section whose cost can grow
                with population squared -- it has to be separable from the rest
                of the organism loop to justify (or acquit) a spatial index. */
-            var t = Perf.begin();
+            var t = this.perf.begin();
             this.emitPheromoneSignal(CellStates.pheromone);
-            Perf.end('pheromone', t);
+            this.perf.end('pheromone', t);
         }
 
         // Brain acts first to allow hibernation
@@ -633,18 +657,18 @@ class Organism {
 
         /* These spans accumulate across every organism this tick; Perf.commit()
            at the end of the engine tick folds them into one sample each. */
-        var t_cells = Perf.begin();
+        var t_cells = this.perf.begin();
         for (var cell of this.anatomy.cells) {
             cell.performFunction();
             if (!this.living) {
-                Perf.end('org_cells', t_cells);
+                this.perf.end('org_cells', t_cells);
                 return this.living;
             }
         }
-        Perf.end('org_cells', t_cells);
+        this.perf.end('org_cells', t_cells);
 
         if (this.anatomy.is_mover) {
-            var t_move = Perf.begin();
+            var t_move = this.perf.begin();
             this.move_count++;
             if (this.ignore_brain_for > 0) {
                 this.ignore_brain_for --;
@@ -658,7 +682,7 @@ class Organism {
                         this.ignore_brain_for = this.move_range + 1;
                 }
             }
-            Perf.end('org_move', t_move);
+            this.perf.end('org_move', t_move);
         }
         return this.living;
     }

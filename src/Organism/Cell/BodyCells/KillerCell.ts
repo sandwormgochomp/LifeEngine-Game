@@ -1,7 +1,6 @@
 import CellStates from "../CellStates";
 import BodyCell from "./BodyCell";
 import type { BodyCellOrganism } from "./BodyCell";
-import Hyperparams from "../../../Hyperparameters";
 
 class KillerCell extends BodyCell{
     constructor(org: BodyCellOrganism, loc_col: number, loc_row: number){
@@ -11,7 +10,7 @@ class KillerCell extends BodyCell{
     performFunction(): void {
         var c = this.getRealCol();
         var r = this.getRealRow();
-        for (var loc of Hyperparams.killableNeighbors) {
+        for (var loc of this.org.hyperparams.killableNeighbors) {
             this.killNeighbor(c+loc[0], r+loc[1]);
         }
     }
@@ -43,7 +42,7 @@ class KillerCell extends BodyCell{
             this.org.poison_ticks = 10; // Apply poison for 10 ticks
         }
         owner.harm();
-        if (Hyperparams.instaKill && is_hit) {
+        if (this.org.hyperparams.instaKill && is_hit) {
             this.org.harm();
         }
     }

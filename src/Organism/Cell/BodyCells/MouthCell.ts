@@ -1,7 +1,6 @@
 import CellStates from "../CellStates";
 import BodyCell from "./BodyCell";
 import type { BodyCellOrganism } from "./BodyCell";
-import Hyperparams from "../../../Hyperparameters";
 
 /* Taken straight off BodyCellOrganism so there is only ever one description. */
 type EnvLike = BodyCellOrganism['env'];
@@ -11,13 +10,13 @@ type EnvLike = BodyCellOrganism['env'];
    That set is configurable and arrives from a saved world's controls as a
    fresh plain array, so it is checked by value rather than by identity
    against Neighbors.adjacent -- and memoised on the array's identity, which
-   changes only when controls are loaded. Any other set (Neighbors.all, a
-   custom range) simply falls back to the full scan. */
+   changes only when controls are loaded (or when a preview organism reads its
+   own injected set). Any other set (Neighbors.all, a custom range) simply
+   falls back to the full scan. */
 let cached_edible: number[][] | null = null;
 let cached_is_orthogonal = false;
 
-function edibleIsOrthogonal(): boolean {
-    var set = Hyperparams.edibleNeighbors;
+function edibleIsOrthogonal(set: number[][]): boolean {
     if (set === cached_edible)
         return cached_is_orthogonal;
     cached_edible = set;
@@ -42,6 +41,7 @@ class MouthCell extends BodyCell{
 
     performFunction(): void {
         var env = this.org.env;
+        var edible = this.org.hyperparams.edibleNeighbors;
         var real_c = this.getRealCol();
         var real_r = this.getRealRow();
         /* Rule the whole neighbourhood out with one read. The mouth's own
@@ -49,9 +49,9 @@ class MouthCell extends BodyCell{
            the scan below could not find anything -- which is the case for
            99%+ of mouth cells on every world measured. A mouth standing off
            the grid gets -1 rather than 0, and so falls through to the scan. */
-        if (edibleIsOrthogonal() && env.grid_map.foodAdjAt(real_c, real_r) === 0)
+        if (edibleIsOrthogonal(edible) && env.grid_map.foodAdjAt(real_c, real_r) === 0)
             return;
-        for (var loc of Hyperparams.edibleNeighbors){
+        for (var loc of edible){
             this.eatNeighbor(real_c+loc[0], real_r+loc[1], env);
         }
     }

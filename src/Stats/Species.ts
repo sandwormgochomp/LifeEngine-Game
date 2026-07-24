@@ -12,6 +12,14 @@ import type Anatomy from "../Organism/Anatomy";
    indexing, which yields plain `string` keys, so the index type is `string`. */
 export type CellCountMap = Record<string, number>;
 
+/* The one FossilRecord method a Species calls (on extinction). Injectable so
+   the PreviewEnvironment can hand its throwaway species a no-op instead of the
+   global record -- a preview organism's death then costs nothing and warns
+   about nothing. Defaults to the real singleton for every other caller. */
+export interface Fossilizer {
+    fossilize(species: Species): boolean;
+}
+
 class Species {
     /* Nullable for real, not for want of a type: WorldEnvironment.loadRaw mints
        every saved species as `new Species(null, null, 0)` and only attaches the
@@ -29,9 +37,13 @@ class Species {
        only by calcAnatomyDetails(), which early-returns when this.anatomy is
        falsy. Hence `| undefined` rather than a definite-assignment `!`. */
     cell_counts: CellCountMap | undefined;
+    /* Where extinction is reported. The global FossilRecord for every real
+       species; a no-op for the ones PreviewEnvironment seeds. */
+    fossil_record: Fossilizer;
 
-    constructor(anatomy: Anatomy | null, ancestor: Species | null | undefined, start_tick: number) {
+    constructor(anatomy: Anatomy | null, ancestor: Species | null | undefined, start_tick: number, fossil_record: Fossilizer = FossilRecord) {
         this.anatomy = anatomy;
+        this.fossil_record = fossil_record;
         this.ancestor = ancestor; // eventually need to garbage collect ancestors to avoid memory problems
         this.population = 1;
         this.cumulative_pop = 1;
@@ -70,7 +82,7 @@ class Species {
         this.population--;
         if (this.population <= 0) {
             this.extinct = true;
-            FossilRecord.fossilize(this);
+            this.fossil_record.fossilize(this);
         }
     }
 

@@ -1,7 +1,6 @@
 import CellStates from "../CellStates";
 import BodyCell from "./BodyCell";
 import type { BodyCellOrganism } from "./BodyCell";
-import Hyperparams from "../../../Hyperparameters";
 
 class ExplosiveCell extends BodyCell {
     constructor(org: BodyCellOrganism, loc_col: number, loc_row: number) {
@@ -16,7 +15,7 @@ class ExplosiveCell extends BodyCell {
            loadJsonObj/the settings UI can write a string into it, which is why
            this parses. The cast reflects that wider runtime reality rather than
            the narrower type inferred from the untyped Hyperparameters.js. */
-        var radius = parseInt(Hyperparams.explosionRadius as unknown as string);
+        var radius = parseInt(this.org.hyperparams.explosionRadius as unknown as string);
         if (isNaN(radius)) {
             radius = 2;
         }

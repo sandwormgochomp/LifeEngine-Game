@@ -1,5 +1,6 @@
 import Environment from './Environment';
 import Renderer from '../Rendering/Renderer';
+import { stepExplosions, stepProjectiles } from './EnvironmentEffects';
 import drawOrganismDecorations from '../Rendering/DecorationRenderer';
 import { GLOW_DOWNSCALE, glowMargin, glowSpread, compositeGlow } from '../Rendering/Glow';
 import GridMap from '../Grid/GridMap';
@@ -300,63 +301,10 @@ class WorldEnvironment extends Environment{
         }
 
         t = Perf.begin();
-        // Update active explosions
-        var remaining_explosions: { col: number; row: number; ticks: number }[] = [];
-        for (var exp of this.active_explosions) {
-            exp.ticks--;
-            if (exp.ticks <= 0) {
-                if (this.grid_map.stateAt(exp.col, exp.row) === CellStates.explosion) {
-                    this.changeCell(exp.col, exp.row, CellStates.empty, null);
-                }
-            } else {
-                remaining_explosions.push(exp);
-            }
-        }
-        this.active_explosions = remaining_explosions;
-
-        // Update active projectiles
-        var remaining_projectiles: OrganismProjectile[] = [];
-        for (var proj of this.active_projectiles) {
-            // Move projectile
-            proj.col += proj.dir_col;
-            proj.row += proj.dir_row;
-            proj.ticks++;
-
-            var target = this.grid_map.indexAt(proj.col, proj.row);
-            var hit = false;
-
-            if (target >= 0) {
-                var target_state = this.grid_map.stateOf(target);
-                if (target_state === CellStates.wall || target_state === CellStates.invincible_wall) {
-                    hit = true;
-                    if (target_state === CellStates.wall) {
-                        /* Every cell carries a durability now (0 off a wall),
-                           so the undefined-durability branch this used to
-                           carry is gone -- see KillerCell.killNeighbor. */
-                        if (this.grid_map.damageWall(target, 5)) {
-                            this.changeCell(proj.col, proj.row, CellStates.empty, null);
-                        }
-                    }
-                } else {
-                    var target_owner = this.grid_map.ownerOf(target);
-                    if (target_owner && target_owner !== proj.owner) {
-                        hit = true;
-                        target_owner.takeDamage(5); // Projectile deals 5 damage
-                    }
-                }
-            } else {
-                hit = true; // Off screen
-            }
-
-            if (!hit && proj.ticks < 50) { // Max range 50
-                remaining_projectiles.push(proj);
-                if (this.renderer.ctx) {
-                    this.renderer.ctx.fillStyle = '#d2691e';
-                    this.renderer.ctx.fillRect(proj.col * this.renderer.cell_size + this.renderer.cell_size/4, proj.row * this.renderer.cell_size + this.renderer.cell_size/4, this.renderer.cell_size/2, this.renderer.cell_size/2);
-                }
-            }
-        }
-        this.active_projectiles = remaining_projectiles;
+        // Explosions and projectiles step through the same logic the preview
+        // environment reuses; see EnvironmentEffects.
+        stepExplosions(this);
+        stepProjectiles(this);
         Perf.end('fx', t);
 
         // Day/Night Cycle

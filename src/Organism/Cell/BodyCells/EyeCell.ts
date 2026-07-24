@@ -2,7 +2,6 @@ import CellStates from "../CellStates";
 import type { CellState } from "../CellStates";
 import BodyCell from "./BodyCell";
 import type { BodyCellOrganism } from "./BodyCell";
-import Hyperparams from "../../../Hyperparameters";
 import Directions from "../../Directions";
 import Observation from "../../Perception/Observation";
 
@@ -85,7 +84,7 @@ class EyeCell extends BodyCell{
         var state: CellState | null = null;
         var owner: OrganismLike | null = null;
 
-        var maxRange = Hyperparams.lookRange;
+        var maxRange = this.org.hyperparams.lookRange;
         if (env.is_night) {
             maxRange = Math.min(5, maxRange);
         }
@@ -101,7 +100,7 @@ class EyeCell extends BodyCell{
             }
             state = grid_map.stateOf(idx);
             owner = grid_map.ownerOf(idx);
-            if (owner === this.org && Hyperparams.seeThroughSelf) {
+            if (owner === this.org && this.org.hyperparams.seeThroughSelf) {
                 continue;
             }
             if (owner && owner !== this.org && owner.anatomy.has_chameleon) {

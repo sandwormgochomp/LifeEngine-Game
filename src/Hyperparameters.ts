@@ -47,41 +47,58 @@ export interface HyperparamsSingleton extends HyperparamsData {
 /* The data fields are absent from the literal and installed by the
    setDefaults() call below, so the literal is asserted into the full shape
    rather than annotated with it. */
+/* The canonical defaults, applied to any target. Shared by the singleton's
+   setDefaults() and by makeDefaultHyperparams() below so the two can never
+   drift apart. */
+function applyDefaults(h: HyperparamsData): void {
+    h.lifespanMultiplier = 100;
+    h.foodProdProb = 5;
+    h.killableNeighbors = Neighbors.adjacent;
+    h.edibleNeighbors = Neighbors.adjacent;
+    h.growableNeighbors = Neighbors.adjacent;
+
+    h.useGlobalMutability = false;
+    h.globalMutability = 5;
+    h.addProb = 33;
+    h.changeProb = 33;
+    h.removeProb = 33;
+
+    h.rotationEnabled = true;
+
+    h.foodBlocksReproduction = true;
+    h.moversCanProduce = false;
+
+    h.instaKill = false;
+
+    h.lookRange = 20;
+    h.seeThroughSelf = false;
+
+    h.foodDropProb = 0;
+
+    h.extraMoverFoodCost = 0;
+
+    h.healerFoodCost = 1;
+
+    h.explosionRadius = 2;
+
+    h.wallDurability = 15;
+
+    h.maxOrganisms = -1;
+}
+
+/* A fresh, standalone defaults object -- NOT the shared singleton. The
+   PreviewEnvironment injects one of these into the organisms it simulates so a
+   hover preview always shows a cell's canonical behaviour, independent of the
+   player's live Evolution Controls, without mutating the global. */
+export function makeDefaultHyperparams(): HyperparamsData {
+    const h = {} as HyperparamsData;
+    applyDefaults(h);
+    return h;
+}
+
 const Hyperparams = {
     setDefaults: function(this: HyperparamsSingleton): void {
-        this.lifespanMultiplier = 100;
-        this.foodProdProb = 5;
-        this.killableNeighbors = Neighbors.adjacent;
-        this.edibleNeighbors = Neighbors.adjacent;
-        this.growableNeighbors = Neighbors.adjacent;
-
-        this.useGlobalMutability = false;
-        this.globalMutability = 5;
-        this.addProb = 33;
-        this.changeProb = 33;
-        this.removeProb = 33;
-
-        this.rotationEnabled = true;
-
-        this.foodBlocksReproduction = true;
-        this.moversCanProduce = false;
-
-        this.instaKill = false;
-
-        this.lookRange = 20;
-        this.seeThroughSelf = false;
-
-        this.foodDropProb = 0;
-
-        this.extraMoverFoodCost = 0;
-
-        this.healerFoodCost = 1;
-
-        this.explosionRadius = 2;
-
-        this.wallDurability = 15;
-
-        this.maxOrganisms = -1;
+        applyDefaults(this);
     },
 
     loadJsonObj(this: HyperparamsSingleton, obj: Record<string, unknown>): void {
