@@ -1,6 +1,7 @@
 import Environment from './Environment';
 import Renderer from '../Rendering/Renderer';
 import drawOrganismDecorations from '../Rendering/DecorationRenderer';
+import { GLOW_DOWNSCALE, glowMargin, glowSpread, compositeGlow } from '../Rendering/Glow';
 import GridMap from '../Grid/GridMap';
 import Organism from '../Organism/Organism';
 import CellStates from '../Organism/Cell/CellStates';
@@ -76,13 +77,6 @@ export interface SerializedWorld {
    signature, so that their absence is visible in the type. See the comment at
    the constructor call in loadRaw(). */
 type SavedOrganism = SerializedOrganism & { col?: number; row?: number };
-
-// Glow overlay tuning. The scratch canvas renders at 1/DOWNSCALE resolution
-// and is upscaled with smoothing, so a bigger divisor diffuses the halo more.
-// SPREAD widens each cell before that blur; ALPHA sets peak intensity.
-const GLOW_DOWNSCALE = 6;
-const GLOW_SPREAD = 1.5;
-const GLOW_ALPHA = 0.1;
 
 /* Overlay scheduling. Both overlay passes (decorations, glow) are cosmetic
    full repaints whose cost scales with population, so they run under three
@@ -574,8 +568,8 @@ class WorldEnvironment extends Environment{
         var w = this.glow_canvas.width;
         var h = this.glow_canvas.height;
         var cs = this.renderer.cell_size;
-        var spread = cs * GLOW_SPREAD;
-        var margin = cs * (GLOW_SPREAD - 1) / 2;
+        var spread = glowSpread(cs);
+        var margin = glowMargin(cs);
         // Visible world rect, padded by the halo spread; cells outside it
         // can't reach the viewport, so they cost neither fill nor upscale
         var x0 = (0 - cam.ox) / cam.s - spread;
@@ -605,10 +599,7 @@ class WorldEnvironment extends Environment{
 
         var gctx = this.glow_ctx;
         gctx.clearRect(0, 0, w, h);
-        gctx.globalAlpha = GLOW_ALPHA;
-        gctx.imageSmoothingEnabled = true;
-        gctx.drawImage(this.glow_scratch, 0, 0, this.glow_scratch.width, this.glow_scratch.height, 0, 0, w, h);
-        gctx.globalAlpha = 1;
+        compositeGlow(gctx, this.glow_scratch, w, h);
         this.glow_cam = cam;
         this.applyOverlayCss(this.glow_canvas, cam, cam);
     }

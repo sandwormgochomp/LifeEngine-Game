@@ -12,6 +12,7 @@ import type { GeneratorEnv } from '../Organism/RandomOrganismGenerator';
 import Directions from '../Organism/Directions';
 import Notifier from '../Utils/Notifier';
 import drawOrganismDecorations from '../Rendering/DecorationRenderer';
+import { GLOW_DOWNSCALE, glowMargin, glowSpread, compositeGlow } from '../Rendering/Glow';
 import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
 import type { SerializedBodyCell } from '../Organism/Anatomy';
 /* Type-only, so it adds no runtime edge between the two environments. */
@@ -71,6 +72,10 @@ class OrganismEditor extends Environment{
     /* Watches the canvas container so the grid follows layout changes; null
        whenever no canvas is bound, and on platforms without ResizeObserver. */
     resize_observer: ResizeObserver | null;
+    /* Reused across repaints, as the world's is: renderGlow re-sizes it each
+       pass, which is also how it clears it. */
+    glow_scratch: HTMLCanvasElement;
+    glow_scratch_ctx: CanvasRenderingContext2D;
 
     constructor() {
         super();
@@ -97,6 +102,8 @@ class OrganismEditor extends Environment{
         this.redo_stack = [];
         this.pending_snapshot = null;
         this.resize_observer = null;
+        this.glow_scratch = document.createElement('canvas');
+        this.glow_scratch_ctx = this.glow_scratch.getContext('2d')!;
         this.setDefaultOrg();
     }
 
@@ -260,6 +267,45 @@ class OrganismEditor extends Environment{
         /* verify_anatomy: the editor organism is the one whose cells change in
            place, so its sprite cache must be re-checked against the anatomy. */
         drawOrganismDecorations(this.renderer.ctx, this as unknown as Parameters<typeof drawOrganismDecorations>[1], false, true);
+        this.renderGlow();
+    }
+
+    /* The same halo the world casts, so an organism in the lab looks like the
+       one that gets deployed. Last, and therefore on top of the sprites, which
+       is where the world's glow canvas sits in the overlay stack.
+
+       Far simpler than WorldEnvironment.renderGlow: one organism, no camera to
+       bake in, nothing off screen to cull, and no repaint schedule to obey --
+       the editor redraws only when the user changes something. What it shares
+       is the tuning, so neither view can drift from the other. */
+    renderGlow(): void {
+        var ctx = this.renderer.ctx;
+        if (!ctx || !this.organism) return;
+        var w = this.renderer.width;
+        var h = this.renderer.height;
+        if (!w || !h) return;
+
+        var cs = this.cell_size;
+        var spread = glowSpread(cs);
+        var margin = glowMargin(cs);
+
+        var scratch = this.glow_scratch;
+        // Assigning either dimension also clears the scratch and resets its
+        // context state, which is the only clearing this pass needs.
+        scratch.width = Math.max(1, Math.ceil(w / GLOW_DOWNSCALE));
+        scratch.height = Math.max(1, Math.ceil(h / GLOW_DOWNSCALE));
+        var sctx = this.glow_scratch_ctx;
+        sctx.setTransform(1 / GLOW_DOWNSCALE, 0, 0, 1 / GLOW_DOWNSCALE, 0, 0);
+
+        for (var cell of this.organism.anatomy.cells) {
+            var idx = this.organism.getRealCellIndex(cell);
+            if (idx < 0) continue;
+            sctx.fillStyle = cell.custom_color || cell.state.color;
+            sctx.fillRect(this.grid_map.xOf(idx) - margin, this.grid_map.yOf(idx) - margin, spread, spread);
+        }
+        sctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        compositeGlow(ctx, scratch, w, h);
     }
 
     // Faint grid lines plus a marker on the (immovable) center cell, so empty

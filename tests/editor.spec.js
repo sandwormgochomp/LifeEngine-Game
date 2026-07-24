@@ -470,3 +470,50 @@ test.describe('Select from world', () => {
     await expect(page.getByTestId('editor-dock')).toBeHidden();
   });
 });
+
+/* Living cells cast a halo in the world, drawn by WorldEnvironment.renderGlow
+   onto its own overlay canvas. The editor drew the sprites but not the glow,
+   so an organism in the lab looked flatter than the one that got deployed.
+   Both now go through src/Rendering/Glow.ts. */
+test.describe('Organism glow in the editor', () => {
+  /* Samples the editor canvas at the centre of a grid cell, which is where
+     the faint grid lines are not. */
+  async function cellLuma(page, dc, dr) {
+    return await page.evaluate(([dc, dr]) => {
+      const editor = window.engine.organism_editor;
+      const cs = editor.cell_size;
+      const [cc, cr] = editor.grid_map.getCenter();
+      const x = Math.floor((cc + dc) * cs + cs / 2);
+      const y = Math.floor((cr + dr) * cs + cs / 2);
+      const ctx = document.getElementById('editor-canvas').getContext('2d', { willReadFrequently: true });
+      const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
+      return r + g + b;
+    }, [dc, dr]);
+  }
+
+  test('An empty cell beside the organism is lit by it', async ({ page }) => {
+    await pauseEngine(page);
+    await openEditor(page);
+    // A single producer at the centre: bright, and with nothing around it, so
+    // any light on its neighbours came from the halo
+    await page.locator('#clear-editor').click();
+    await page.locator('#producer').click();
+    await clickEditorCell(page, 0, 0);
+    await page.waitForTimeout(200);
+
+    const beside = await cellLuma(page, 0, -1); // directly above the cell
+    const away = await cellLuma(page, 0, -7);   // background, out of reach
+    expect(beside).toBeGreaterThan(away);
+  });
+
+  // The halo is a local effect, not a wash over the whole canvas -- a wrong
+  // alpha or scratch scale would light the background everywhere
+  test('The glow stays local to the organism', async ({ page }) => {
+    await pauseEngine(page);
+    await openEditor(page);
+    await page.locator('#clear-editor').click();
+    await page.waitForTimeout(200);
+
+    expect(await cellLuma(page, 0, -5)).toBe(await cellLuma(page, 0, -8));
+  });
+});
