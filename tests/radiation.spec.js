@@ -19,15 +19,21 @@ test.describe('Radiation Tool', () => {
     expect(newRadCount).toBe(0);
   });
 
-  test('Erasing radiation with right click', async ({ page }) => {
+  test('Eraser removes radiation; right-click cancels the tool', async ({ page }) => {
     const envCanvas = page.locator('#env-canvas');
     await envCanvas.click({ position: { x: 300, y: 200 } });
 
     const radCount = await page.evaluate(() => window.engine.env.radiation_map.size);
     expect(radCount).toBeGreaterThan(0);
 
-    // Erase with right click over the same brush area
+    // Right-click no longer erases -- it puts the tool away
     await envCanvas.click({ button: 'right', position: { x: 300, y: 200 } });
+    expect(await page.evaluate(() => window.engine.env.radiation_map.size)).toBe(radCount);
+    expect(await page.evaluate(() => window.engine.env.controller.mode)).toBe(0);
+
+    // The Eraser tool clears it
+    await page.locator('#eraser').click();
+    await envCanvas.click({ position: { x: 300, y: 200 } });
 
     const newRadCount = await page.evaluate(() => window.engine.env.radiation_map.size);
     expect(newRadCount).toBe(0);

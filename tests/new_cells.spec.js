@@ -17,8 +17,9 @@ test.describe('Cell type palette', () => {
       expect(await localCellState(page, 1, 0), `placing ${type}`).toBe(type);
       await expectCellCount(page, 2);
 
-      // Right-click erase resets the slot for the next type
-      await clickEditorCell(page, 1, 0, 'right');
+      // The eraser tool resets the slot; the loop re-arms the next cell type
+      await page.locator('#eraser-tool').click();
+      await clickEditorCell(page, 1, 0);
       await expectCellCount(page, 1);
     }
   });

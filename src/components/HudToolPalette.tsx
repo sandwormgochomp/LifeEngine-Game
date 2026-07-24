@@ -71,6 +71,7 @@ const TABS: Tab[] = [
       { id: 'wall', label: 'Wall', iconClass: 'fa-cube', mode: Modes.WallDrop, title: 'Paint walls that block movement (killers and explosions can destroy them). Hotkey: D' },
       { id: 'invincible-wall', label: 'Glass', iconClass: 'fa-gem', mode: Modes.InvincibleWallDrop, title: 'Paint permanent walls that nothing can destroy' },
       { id: 'radiation-drop', label: 'Rad', iconClass: 'fa-radiation', mode: Modes.RadiationDrop, title: 'Paint radiation zones that raise mutation rates for organisms inside. Hotkey: R' },
+      { id: 'eraser', label: 'Erase', iconClass: 'fa-eraser', mode: Modes.Eraser, title: 'Erase food, walls, glass and radiation under the brush. Hotkey: E' },
     ],
     actions: [
       { id: 'randomize-walls-btn', label: 'Random Walls', title: 'Generate organic wall shapes using Perlin noise', run: e => { e.env.controller.randomizeWalls(); Notifier.notify('Random walls generated'); } },
@@ -84,7 +85,7 @@ const TABS: Tab[] = [
     title: 'Work with organisms: sample, seed and kill',
     tools: [
       { id: 'tool-select', label: 'Sample', iconClass: 'fa-eye-dropper', mode: Modes.Select, title: 'Take a sample — pick an organism from the world to examine it in the Organism Lab. Hotkey: Z' },
-      { id: 'seed-life', label: 'Seed', iconClass: 'fa-seedling', mode: Modes.SeedLife, title: 'Paint scattered random organisms within the brush (right-click clears them). Hotkey: L' },
+      { id: 'seed-life', label: 'Seed', iconClass: 'fa-seedling', mode: Modes.SeedLife, title: 'Paint scattered random organisms within the brush. Hotkey: L' },
       { id: 'kill', label: 'Kill', iconClass: 'fa-skull', mode: Modes.ClickKill, title: 'Kill organisms under the brush. Hotkey: G' },
     ],
     actions: [

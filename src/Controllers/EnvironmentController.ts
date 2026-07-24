@@ -85,7 +85,7 @@ interface EnvControllerEnvLike {
    previewed like any other brush. The predator reticle is a lower bound: the
    release floors the scatter at PREDATOR_MIN_SPREAD so a tiny brush still has
    room for a whole pack. */
-const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill, Modes.SeedLife, Modes.MeteorStrike, Modes.ReleasePredator];
+const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleWallDrop, Modes.RadiationDrop, Modes.ClickKill, Modes.SeedLife, Modes.MeteorStrike, Modes.ReleasePredator, Modes.Eraser];
 
 // Seed Life paints sparsely: each brush cell has this chance of spawning a
 // random organism per paint tick, so a drag lays down scattered life rather
@@ -283,6 +283,18 @@ class EnvironmentController extends CanvasController{
         }
     }
 
+    /* Puts the active tool away, whichever it is, and clears any state armed
+       alongside it. Shared by the universal right-click cancel and the Escape
+       chain in App.tsx. */
+    cancelMode(): void {
+        this.mode = Modes.None;
+        this.org_to_clone = null;
+        this.pending_predator = null;
+        if (this.env && this.env.engine) {
+            this.env.engine.emitChange(true);
+        }
+    }
+
     performModeAction(from_mouse_down: boolean = false): void {
         // Headless disables the world tools, but middle-click pan still works.
         if (WorldConfig.headless && !this.middle_click)
@@ -297,14 +309,23 @@ class EnvironmentController extends CanvasController{
             if (this.cur_idx < 0){
                 return;
             }
+            /* Right-click is the universal cancel: it puts whatever tool is
+               armed away and never performs a mode action. Gated to the
+               mousedown so a right-drag doesn't re-fire it every mousemove;
+               the return also swallows those drag frames. */
+            if (right_click) {
+                if (from_mouse_down && mode !== Modes.None) {
+                    this.cancelMode();
+                }
+                return;
+            }
             var cell_c = this.mouse_c;
             var cell_r = this.mouse_r;
             switch(mode) {
                 case Modes.None:
                     /* Unarmed: a deliberate left-click samples the organism
                        under the cursor. Gated to the mousedown event so a
-                       left-drag doesn't re-sample everything it crosses;
-                       right-click stays a no-op. */
+                       left-drag doesn't re-sample everything it crosses. */
                     if (left_click && from_mouse_down) {
                         this.sampleOrganism();
                     }
@@ -313,33 +334,31 @@ class EnvironmentController extends CanvasController{
                     if (left_click){
                         this.dropCellType(cell_c, cell_r, CellStates.food, false, CellStates.wall);
                     }
-                    else if (right_click){
-                        this.dropCellType(cell_c, cell_r, CellStates.empty, false, CellStates.wall);
-                    }
                     break;
                 case Modes.WallDrop:
                         if (left_click){
                             this.dropCellType(cell_c, cell_r, CellStates.wall, true);
-                        }
-                        else if (right_click){
-                            this.dropCellType(cell_c, cell_r, CellStates.empty, false, CellStates.food);
                         }
                         break;
                 case Modes.InvincibleWallDrop:
                         if (left_click){
                             this.dropCellType(cell_c, cell_r, CellStates.invincible_wall, true);
                         }
-                        else if (right_click){
-                            this.dropCellType(cell_c, cell_r, CellStates.empty, false, CellStates.food);
-                        }
                         break;
                 case Modes.RadiationDrop:
                         if (left_click) {
                             this.dropRadiation(cell_c, cell_r, true);
-                        } else if (right_click) {
-                            this.dropRadiation(cell_c, cell_r, false);
                         }
                         break;
+                case Modes.Eraser:
+                    // One stroke clears every terrain layer -- food, walls,
+                    // glass, radiation -- but never organisms; that stays the
+                    // Kill tool's job.
+                    if (left_click) {
+                        this.dropCellType(cell_c, cell_r, CellStates.empty, false);
+                        this.dropRadiation(cell_c, cell_r, false);
+                    }
+                    break;
                 case Modes.ClickKill:
                     if (left_click) {
                         this.killNearOrganisms();
@@ -349,8 +368,6 @@ class EnvironmentController extends CanvasController{
                 case Modes.SeedLife:
                     if (left_click) {
                         this.seedRandomLife();
-                    } else if (right_click) {
-                        this.killNearOrganisms();
                     }
                     break;
 
@@ -365,41 +382,21 @@ class EnvironmentController extends CanvasController{
                 case Modes.ReleasePredator:
                     /* One pack per click, like the meteor. The tool stays
                        armed afterwards so several packs (or several species)
-                       can be seeded into one world; right-click puts it away,
-                       matching Clone. */
-                    if (right_click) {
-                        this.mode = Modes.None;
-                        this.pending_predator = null;
-                        if (this.env && this.env.engine) {
-                            this.env.engine.emitChange(true);
-                        }
-                    } else if (left_click && from_mouse_down && this.pending_predator) {
+                       can be seeded into one world. */
+                    if (left_click && from_mouse_down && this.pending_predator) {
                         this.env.releasePredator(this.pending_predator, this.mouse_c, this.mouse_r, WorldConfig.brush_size);
                     }
                     break;
 
                 case Modes.Select:
-                    if (right_click) {
-                        this.mode = Modes.None;
-                        if (this.env && this.env.engine) {
-                            this.env.engine.emitChange(true);
-                        }
-                    } else if (left_click) {
+                    if (left_click) {
                         this.sampleOrganism();
                     }
                     break;
 
                 case Modes.Clone:
-                    if (right_click) {
-                        this.mode = Modes.None;
-                        this.org_to_clone = null;
-                        if (this.env && this.env.engine) {
-                            this.env.engine.emitChange(true);
-                        }
-                    } else if (left_click) {
-                        if (this.org_to_clone != null){
-                            this.dropOrganism(this.org_to_clone, this.mouse_c, this.mouse_r);
-                        }
+                    if (left_click && this.org_to_clone != null) {
+                        this.dropOrganism(this.org_to_clone, this.mouse_c, this.mouse_r);
                     }
                     break;
             }
@@ -448,7 +445,7 @@ class EnvironmentController extends CanvasController{
 
         if (BRUSH_MODES.includes(this.mode)) {
             // Destructive brushes ring in red; Meteor reads as a blast reticle.
-            var is_kill = this.mode === Modes.ClickKill || this.mode === Modes.MeteorStrike;
+            var is_kill = this.mode === Modes.ClickKill || this.mode === Modes.MeteorStrike || this.mode === Modes.Eraser;
             var b = WorldConfig.brush_size;
             // Fill the disc (matches Neighbors.inRange), but sweep one cell wider
             // for the clear set: the ring outline's line width and anti-aliasing

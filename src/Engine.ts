@@ -120,6 +120,7 @@ class Engine {
         this.env = new WorldEnvironment(5, env_canvas, env_container, glow_canvas, deco_canvas);
         this.env.engine = this;
         this.organism_editor = new OrganismEditor();
+        this.organism_editor.engine = this;
         this.controlpanel = new ControlPanel(this);
         this.colorscheme = new ColorScheme(this.env, this.organism_editor);
         this.colorscheme.loadColorScheme();

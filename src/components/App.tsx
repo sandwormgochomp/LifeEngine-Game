@@ -132,11 +132,8 @@ const App: React.FC = () => {
         setRulesOpen(false);
       } else if (lifeformsOpen) {
         setLifeformsOpen(false);
-      } else if (envController && (envController.mode === Modes.Clone || envController.mode === Modes.Select || envController.mode === Modes.ReleasePredator)) {
-        envController.mode = Modes.None;
-        envController.org_to_clone = null;
-        envController.pending_predator = null;
-        engine.emitChange(true);
+      } else if (envController && envController.mode !== Modes.None) {
+        envController.cancelMode();
       } else if (perfOpen) {
         setPerfOpen(false);
       } else if (activePanel) {
@@ -185,6 +182,7 @@ const App: React.FC = () => {
         case 'f': setMode(Modes.FoodDrop); break;
         case 'g': setMode(Modes.ClickKill); break;
         case 'r': setMode(Modes.RadiationDrop); break;
+        case 'e': setMode(Modes.Eraser); break;
         case 'l': setMode(Modes.SeedLife); break;
         case 'h': toggleHeadless(); break;
         case 'b':

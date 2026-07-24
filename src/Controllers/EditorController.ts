@@ -54,6 +54,9 @@ interface EditorEnvLike {
     paintCell(c: number, r: number, color: string): void;
     removeCellFromOrg(c: number, r: number): void;
     loadRawOrg(raw: unknown, record?: boolean): void;
+    /* Set by Engine after construction, so absent for the window between
+       construction and that assignment -- cancelTool() guards on it. */
+    engine?: { emitChange(force?: boolean): void };
 }
 
 class EditorController extends CanvasController{
@@ -86,13 +89,28 @@ class EditorController extends CanvasController{
         }
     }
 
+    /* Puts the active tool away; the dock un-highlights and canvas clicks
+       become no-ops until a tool is picked again. edit_cell_type is kept so
+       re-clicking a cell button re-arms cleanly. */
+    cancelTool(): void {
+        this.mode = Modes.None;
+        if (this.env.engine) {
+            this.env.engine.emitChange(true);
+        }
+    }
+
     mouseDown(): void {
+        // right-click is the universal cancel, matching the world canvas
+        if (this.right_click) {
+            this.cancelTool();
+            return;
+        }
         this.env.beginStroke();
         this.editOrganism(true);
     }
 
     mouseMove(): void {
-        if (this.left_click || this.right_click)
+        if (this.left_click)
             this.editOrganism(false);
         else
             this.renderGhost();
@@ -124,15 +142,13 @@ class EditorController extends CanvasController{
     editOrganism(is_click: boolean): void {
         var loc_cell = this.getCurLocalCell();
 
-        // right-click always erases, whatever the active tool
-        if (this.right_click) {
-            this.env.removeCellFromOrg(this.mouse_c, this.mouse_r);
-            return;
-        }
         if (!this.left_click)
             return;
 
         switch (this.mode) {
+            case Modes.Eraser:
+                this.env.removeCellFromOrg(this.mouse_c, this.mouse_r);
+                break;
             case Modes.Paint:
                 if (loc_cell != null)
                     this.env.paintCell(this.mouse_c, this.mouse_r, this.custom_color);
@@ -168,6 +184,8 @@ class EditorController extends CanvasController{
             color = this.edit_cell_type.color;
         else if (this.mode === Modes.Paint && loc_cell != null)
             color = this.custom_color;
+        else if (this.mode === Modes.Eraser && loc_cell != null)
+            color = '#ff3c3c';
         if (color == null)
             return;
         ctx.globalAlpha = 0.45;

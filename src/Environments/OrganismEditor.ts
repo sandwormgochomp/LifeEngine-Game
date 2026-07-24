@@ -76,6 +76,10 @@ class OrganismEditor extends Environment{
        pass, which is also how it clears it. */
     glow_scratch: HTMLCanvasElement;
     glow_scratch_ctx: CanvasRenderingContext2D;
+    /* Set by Engine after it builds the editor, so absent for the window
+       between construction and that assignment -- EditorController.cancelTool()
+       guards on it. Mirrors WorldEnvironment's back-reference. */
+    engine?: { emitChange(force?: boolean): void };
 
     constructor() {
         super();

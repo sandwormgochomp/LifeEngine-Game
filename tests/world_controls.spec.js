@@ -89,4 +89,71 @@ test.describe('World tools palette', () => {
     const after = await page.evaluate(() => window.engine.env.organisms.length);
     expect(after).toBeGreaterThan(before);
   });
+
+  test('Eraser clears placed food and walls', async ({ page }) => {
+    const canvas = page.locator('#env-canvas');
+    // The clicked cells only (5px cells): food elsewhere in the world -- laid
+    // down by producers before the pause -- must not affect the assertions.
+    const clicked = () => page.evaluate(() => ({
+      food: window.engine.env.grid_map.cellAt(100, 80).state.name,
+      wall: window.engine.env.grid_map.cellAt(120, 60).state.name,
+    }));
+
+    await page.locator('#food').click();
+    await canvas.click({ position: { x: 500, y: 400 } });
+    await page.locator('#wall').click();
+    await canvas.click({ position: { x: 600, y: 300 } });
+
+    const before = await clicked();
+    expect(before.food).toBe('food');
+    expect(before.wall).toBe('wall');
+
+    await page.locator('#eraser').click();
+    await canvas.click({ position: { x: 500, y: 400 } });
+    await canvas.click({ position: { x: 600, y: 300 } });
+
+    const after = await clicked();
+    expect(after.food).toBe('empty');
+    expect(after.wall).toBe('empty');
+  });
+
+  test('Right-click cancels every world tool', async ({ page }) => {
+    const canvas = page.locator('#env-canvas');
+    const tools = [
+      { tab: null, id: 'food' },
+      { tab: null, id: 'wall' },
+      { tab: null, id: 'invincible-wall' },
+      { tab: null, id: 'radiation-drop' },
+      { tab: null, id: 'eraser' },
+      { tab: '#tool-tab-life', id: 'tool-select' },
+      { tab: '#tool-tab-life', id: 'seed-life' },
+      { tab: '#tool-tab-life', id: 'kill' },
+    ];
+    for (const tool of tools) {
+      if (tool.tab) await page.locator(tool.tab).click();
+      await page.locator(`#${tool.id}`).click();
+      await expect(page.locator(`#${tool.id}`)).toHaveClass(/toolPaletteBtnActive/);
+
+      await canvas.click({ button: 'right', position: { x: 400, y: 300 } });
+      expect(await page.evaluate(() => window.engine.env.controller.mode), tool.id).toBe(0);
+      await expect(page.locator(`#${tool.id}`)).not.toHaveClass(/toolPaletteBtnActive/);
+    }
+  });
+
+  test('Right-click no longer erases while a tool is armed', async ({ page }) => {
+    const canvas = page.locator('#env-canvas');
+    await page.locator('#food').click();
+    await canvas.click({ position: { x: 500, y: 400 } });
+
+    const before = await page.evaluate(() =>
+      window.engine.env.grid_map.grid.flat().filter(c => c.state.name === 'food').length);
+    expect(before).toBeGreaterThan(0);
+
+    await canvas.click({ button: 'right', position: { x: 500, y: 400 } });
+
+    const after = await page.evaluate(() =>
+      window.engine.env.grid_map.grid.flat().filter(c => c.state.name === 'food').length);
+    expect(after).toBe(before);
+    expect(await page.evaluate(() => window.engine.env.controller.mode)).toBe(0);
+  });
 });

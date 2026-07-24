@@ -305,6 +305,16 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
           />
           <span className={styles.dockCellName}>paint</span>
         </div>
+        <button
+          id="eraser-tool"
+          className={`${styles.dockRailBtn} ${tool === Modes.Eraser ? styles.dockCellBtnActive : ''}`}
+          title="Erase cells (the center cell is protected)"
+          onClick={() => setTool(Modes.Eraser)}
+        >
+          {/* sized to line up with the 18px cell/paint swatches above it */}
+          <i className="fa-solid fa-eraser" style={{ color: 'rgba(0, 255, 65, 0.85)', fontSize: '14px', lineHeight: '18px' }} />
+          <span className={styles.dockCellName}>erase</span>
+        </button>
       </div>
 
       <div className={styles.dock}>
@@ -384,7 +394,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
 
         <div className={styles.dockCanvasBar}>
           <span className={styles.dockHint}>
-            <MouseLeftIcon /> apply · <MouseRightIcon /> erase · ctrl+z undo · ctrl+y redo
+            <MouseLeftIcon /> apply · <MouseRightIcon /> put tool away · ctrl+z undo · ctrl+y redo
           </span>
         </div>
       </div>

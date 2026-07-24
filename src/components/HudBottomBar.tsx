@@ -67,37 +67,43 @@ function renderClickHint(mode: number, brushSize: number) {
     case Modes.FoodDrop:
       return (
         <span>
-          <MouseLeftIcon /> place food · <MouseRightIcon /> erase food · <MouseMiddleIcon /> pan · brush {brush}
+          <MouseLeftIcon /> place food · <MouseRightIcon /> cancel tool · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.WallDrop:
       return (
         <span>
-          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan · brush {brush}
+          <MouseLeftIcon /> place wall · <MouseRightIcon /> cancel tool · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.InvincibleWallDrop:
       return (
         <span>
-          <MouseLeftIcon /> place wall · <MouseRightIcon /> erase wall · <MouseMiddleIcon /> pan · brush {brush}
+          <MouseLeftIcon /> place wall · <MouseRightIcon /> cancel tool · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.RadiationDrop:
       return (
         <span>
-          <MouseLeftIcon /> add radiation · <MouseRightIcon /> remove radiation · <MouseMiddleIcon /> pan · brush {brush}
+          <MouseLeftIcon /> add radiation · <MouseRightIcon /> cancel tool · <MouseMiddleIcon /> pan · brush {brush}
+        </span>
+      );
+    case Modes.Eraser:
+      return (
+        <span>
+          <MouseLeftIcon /> erase terrain & radiation · <MouseRightIcon /> cancel tool · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.ClickKill:
       return (
         <span>
-          <MouseLeftIcon /> kill organism · <MouseMiddleIcon /> pan · brush {brush}
+          <MouseLeftIcon /> kill organism · <MouseRightIcon /> cancel tool · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     case Modes.SeedLife:
       return (
         <span>
-          <MouseLeftIcon /> paint random life · <MouseRightIcon /> clear life · <MouseMiddleIcon /> pan · brush {brush}
+          <MouseLeftIcon /> paint random life · <MouseRightIcon /> cancel tool · <MouseMiddleIcon /> pan · brush {brush}
         </span>
       );
     default:

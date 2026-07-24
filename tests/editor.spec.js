@@ -43,22 +43,48 @@ test.describe('Organism Lab dock', () => {
     await expect(page.locator('.cell-type#producer')).toHaveClass(/dockCellBtnActive/);
   });
 
-  test('Right-click erases, and the center cell is protected', async ({ page }) => {
+  test('Eraser tool erases, and the center cell is protected', async ({ page }) => {
     await clickEditorCell(page, 1, 0);
     await clickEditorCell(page, 2, 0);
     await expectCellCount(page, 3);
 
-    // Right-click erases without disturbing the armed cell type
-    await clickEditorCell(page, 1, 0, 'right');
+    await page.locator('#eraser-tool').click();
+    await expect(page.locator('#eraser-tool')).toHaveClass(/dockCellBtnActive/);
+    await clickEditorCell(page, 1, 0);
     await expectCellCount(page, 2);
-    await clickEditorCell(page, 2, 0, 'right');
+    await clickEditorCell(page, 2, 0);
     await expectCellCount(page, 1);
-    await expect(page.locator('.cell-type#common')).toHaveClass(/dockCellBtnActive/);
 
     // The center cell refuses removal with a toast
-    await clickEditorCell(page, 0, 0, 'right');
+    await clickEditorCell(page, 0, 0);
     await expect(page.getByTestId('hud-notifications')).toContainText('Cannot remove center cell');
     await expectCellCount(page, 1);
+
+    // Re-arming a cell type puts the eraser away and drawing works again
+    await page.locator('.cell-type#common').click();
+    await expect(page.locator('#eraser-tool')).not.toHaveClass(/dockCellBtnActive/);
+    await expect(page.locator('.cell-type#common')).toHaveClass(/dockCellBtnActive/);
+    await clickEditorCell(page, 1, 0);
+    await expectCellCount(page, 2);
+  });
+
+  test('Right-click cancels the armed editor tool without erasing', async ({ page }) => {
+    await clickEditorCell(page, 1, 0);
+    await expectCellCount(page, 2);
+
+    await clickEditorCell(page, 1, 0, 'right');
+    await expectCellCount(page, 2);
+    expect(await page.evaluate(() => window.engine.organism_editor.controller.mode)).toBe(0);
+    await expect(page.locator('.cell-type#common')).not.toHaveClass(/dockCellBtnActive/);
+
+    // With no tool armed, clicks are no-ops
+    await clickEditorCell(page, 2, 0);
+    await expectCellCount(page, 2);
+
+    // Picking a cell type re-arms drawing
+    await page.locator('.cell-type#common').click();
+    await clickEditorCell(page, 2, 0);
+    await expectCellCount(page, 3);
   });
 
   test('Paint tool recolors a cell', async ({ page }) => {

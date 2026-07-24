@@ -12,6 +12,7 @@ const Modes = {
     SeedLife: 12,
     MeteorStrike: 13,
     ReleasePredator: 14,
+    Eraser: 15,
 }
 
 export default Modes;

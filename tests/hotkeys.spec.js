@@ -10,6 +10,8 @@ test.describe('Hotkeys and global controls', () => {
     expect(await mode(page)).toBe(1); // FoodDrop
     await page.keyboard.press('g');
     expect(await mode(page)).toBe(3); // ClickKill
+    await page.keyboard.press('e');
+    expect(await mode(page)).toBe(15); // Eraser
     await page.keyboard.press('z');
     expect(await mode(page)).toBe(4); // Select
   });
