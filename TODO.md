@@ -26,6 +26,33 @@ Organism Lab
 - [ ] Move name input to top-center
 - [ ] For each cell type, have a hover live preview that demonstrates how it excels (killer cell killing, armor cell protecting, poison cell poisoning, etc)
 
+Preview environment — singleton workarounds (2026-07-24)
+The hover previews run a real mini-sim (`PreviewEnvironment`) beside the real
+world. Hyperparams is now injected cleanly (per-organism `hyperparams`, defaults
+via `makeDefaultHyperparams`). Three other module singletons the preview can't
+own are still worked around by mutation / sentinels / a semantic lie instead of
+being injected or stubbed the same way. Same root cause; fix them together.
+- [ ] **`Perf.enabled` global toggle.** `PreviewEnvironment.runIsolated` flips
+      the shared `Perf.enabled` off around a synchronous tick and restores it in
+      a `finally`, so preview work doesn't pollute the world's perf-panel
+      buckets. Same swap-a-global anti-pattern we removed for Hyperparams: it
+      only stays safe while the tick body is synchronous. Inject/stub a Perf
+      sink instead (or make the preview's `Organism.update` path not probe Perf).
+- [ ] **`species.population = 1e9` sentinel.** `PreviewEnvironment.spawn` parks
+      population at a billion purely so `Species.decreasePop()` never reaches
+      `<= 0` and calls `FossilRecord.fossilize()` (which would `console.warn`
+      about an unregistered species). Suppresses a side effect with a magic
+      number and depends on the exact `population <= 0` check in `Species.ts`.
+- [ ] **`canAddOrganism() { return false }` as a reproduction kill-switch.**
+      Its real meaning is "the world is full"; the preview returns false to mean
+      "never reproduce" — which also happens to close the only path to
+      `FossilRecord.addSpecies`. The method is made to lie about world state to
+      suppress a whole code path as a side effect.
+      Root: `FossilRecord` / `Species` population / `Perf` are module singletons
+      the preview world can't own. The consistent fix is to inject them (or hand
+      `PreviewEnvironment` a no-op stub of each), matching the Hyperparams work,
+      rather than trick the globals.
+
 Performance (bundled-world evaluation, 2026-07-23)
 - [x] ~~Producer-path early-out~~ — done, and it does not move the needle.
       Recorded here because the *diagnosis* was wrong in a way worth not
