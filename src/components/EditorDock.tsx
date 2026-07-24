@@ -8,6 +8,7 @@ import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
 import { CELL_INFO } from './cellInfo';
 import CellSwatch from './CellSwatch';
+import CellHoverPreview from './CellHoverPreview';
 import PixelSlider from './PixelSlider';
 
 interface EditorDockProps {
@@ -63,6 +64,10 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
 
   const editor = engine?.organism_editor;
   const controller = editor?.controller;
+
+  // The cell type whose live preview is showing, plus its button's rect so the
+  // floating popover can anchor to it. Cleared on mouseleave.
+  const [hoveredCell, setHoveredCell] = useState<{ name: LivingCellName; anchor: DOMRect } | null>(null);
 
   // Attach the editor canvas to the engine while the dock is mounted
   useEffect(() => {
@@ -255,6 +260,14 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
 
   return (
     <div className={styles.dockWrap} data-testid="editor-dock">
+      {/* Live behaviour preview floating beside the hovered palette cell */}
+      {hoveredCell && (
+        <CellHoverPreview
+          name={hoveredCell.name}
+          description={CELL_INFO[hoveredCell.name] || hoveredCell.name}
+          anchor={hoveredCell.anchor}
+        />
+      )}
       {/* Cell palette rail: every type visible at once, no scrolling */}
       <div className={styles.dockRail}>
         {CellStates.living.map((cellState: CellState<LivingCellName>) => (
@@ -264,6 +277,8 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
             className={`cell-type ${styles.dockRailBtn} ${tool === Modes.Edit && cellTypeName === cellState.name ? styles.dockCellBtnActive : ''}`}
             title={CELL_INFO[cellState.name] || cellState.name}
             onClick={() => selectCellType(cellState)}
+            onMouseEnter={e => setHoveredCell({ name: cellState.name, anchor: e.currentTarget.getBoundingClientRect() })}
+            onMouseLeave={() => setHoveredCell(prev => (prev?.name === cellState.name ? null : prev))}
           >
             <CellSwatch cellState={cellState} />
             <span className={styles.dockCellName}>{cellState.name}</span>

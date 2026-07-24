@@ -1,0 +1,256 @@
+import CellStates from '../Organism/Cell/CellStates';
+import Directions from '../Organism/Directions';
+import type { LivingCellName } from '../Organism/Cell/CellStates';
+import type PreviewEnvironment from '../Environments/PreviewEnvironment';
+
+/* Scenarios for the Organism Lab's live hover previews. Each one seeds a small
+   scene into a real PreviewEnvironment and lets the actual simulation play it
+   out -- a killer really harms its neighbour, a poison cell really sets
+   poison_ticks, a shooter really fires a projectile through the real stepper.
+   Nothing here scripts an animation; it only arranges the starting cells and,
+   for a couple of cells whose trigger is brain-gated, nudges them each tick.
+   The driver (CellHoverPreview) ticks the environment and re-runs setup() every
+   `loopTicks` so each demo loops. */
+
+// Grid the previews run on. Small and a touch wider than tall; the display
+// canvas is CSS-scaled from this backing size (see CellHoverPreview).
+export const PREVIEW_COLS = 17;
+export const PREVIEW_ROWS = 13;
+export const PREVIEW_CELL = 12;
+
+// Scene centre.
+const CX = Math.floor(PREVIEW_COLS / 2);
+const CY = Math.floor(PREVIEW_ROWS / 2);
+
+export interface PreviewScenario {
+    // Ticks before the scene resets and replays.
+    loopTicks: number;
+    setup(env: PreviewEnvironment): void;
+    // Optional per-tick nudge, for behaviours the brain would normally trigger.
+    onTick?(env: PreviewEnvironment, tick: number): void;
+}
+
+// Scatter n food pellets over the interior, skipping occupied cells.
+function scatterFood(env: PreviewEnvironment, n: number): void {
+    for (let i = 0; i < n; i++) {
+        const c = 1 + Math.floor(Math.random() * (PREVIEW_COLS - 2));
+        const r = 1 + Math.floor(Math.random() * (PREVIEW_ROWS - 2));
+        if (env.grid_map.stateAt(c, r) === CellStates.empty) {
+            env.place(CellStates.food, c, r);
+        }
+    }
+}
+
+// Scatter n single-cell prey organisms over the interior, keeping the centre
+// (where a roaming hunter starts) clear.
+function scatterPrey(env: PreviewEnvironment, name: LivingCellName, n: number): void {
+    let placed = 0;
+    for (let tries = 0; placed < n && tries < 200; tries++) {
+        const c = 1 + Math.floor(Math.random() * (PREVIEW_COLS - 2));
+        const r = 1 + Math.floor(Math.random() * (PREVIEW_ROWS - 2));
+        if (Math.abs(c - CX) <= 1 && Math.abs(r - CY) <= 1) continue;
+        if (env.grid_map.stateAt(c, r) === CellStates.empty && env.grid_map.ownerAt(c, r) == null) {
+            env.spawn([{ name, dc: 0, dr: 0 }], c, r);
+            placed++;
+        }
+    }
+}
+
+export const PREVIEW_SCENARIOS: Record<LivingCellName, PreviewScenario> = {
+    // Eats adjacent food: a mouthed grazer roams a food field, clearing it.
+    mouth: {
+        loopTicks: 150,
+        setup(env) {
+            scatterFood(env, 28);
+            env.spawn([{ name: 'mouth', dc: 0, dr: 0 }, { name: 'mover', dc: 0, dr: 1 }], CX, CY);
+        },
+    },
+
+    // Grows food: a little producer plant sprouts food into the empty cells
+    // around it (real ~5%/tick production per producer cell).
+    producer: {
+        loopTicks: 150,
+        setup(env) {
+            env.spawn([
+                { name: 'producer', dc: 0, dr: 0 },
+                { name: 'producer', dc: 1, dr: 0 },
+                { name: 'producer', dc: 0, dr: 1 },
+            ], CX, CY);
+        },
+    },
+
+    // Moves and turns: an eyeless critter random-walks the arena, turning at the
+    // edges -- the real movement/rotation logic.
+    mover: {
+        loopTicks: 260,
+        setup(env) {
+            env.spawn([{ name: 'mover', dc: 0, dr: 0 }, { name: 'common', dc: 0, dr: 1 }], CX, CY);
+        },
+    },
+
+    // Harms what it touches: a roaming killer mows through a field of bodies,
+    // each dying to its touch and dropping to food.
+    killer: {
+        loopTicks: 150,
+        setup(env) {
+            env.spawn([{ name: 'killer', dc: 0, dr: 0 }, { name: 'mover', dc: 0, dr: 1 }], CX, CY);
+            scatterPrey(env, 'common', 11);
+        },
+    },
+
+    // Blocks killers: a roaming killer passes through a mix of bare bodies (which
+    // die) and armoured ones (which shrug the strike off and remain).
+    armor: {
+        loopTicks: 160,
+        setup(env) {
+            env.spawn([{ name: 'killer', dc: 0, dr: 0 }, { name: 'mover', dc: 0, dr: 1 }], CX, CY);
+            scatterPrey(env, 'common', 7);
+            scatterPrey(env, 'armor', 7);
+        },
+    },
+
+    // Sees ahead to steer: a mover with an eye hunts scattered food, its brain
+    // (which chases food by default) steering it in.
+    eye: {
+        loopTicks: 160,
+        setup(env) {
+            scatterFood(env, 22);
+            env.spawn([
+                { name: 'mouth', dc: 0, dr: 0 },
+                { name: 'mover', dc: 0, dr: 1 },
+                { name: 'eye', dc: 0, dr: -1, dir: Directions.up },
+            ], CX, CY);
+        },
+    },
+
+    // Repairs damage: a central killer, a plain body (dies) beside a healer body
+    // that out-heals the same attack (spending its stored food) and survives.
+    healer: {
+        loopTicks: 90,
+        setup(env) {
+            env.spawn([{ name: 'killer', dc: 0, dr: 0 }], CX, CY);
+            env.spawn([{ name: 'common', dc: 0, dr: 0 }, { name: 'common', dc: 0, dr: 1 }], CX - 1, CY);
+            env.spawn(
+                [{ name: 'healer', dc: 0, dr: 0 }, { name: 'common', dc: 0, dr: 1 }],
+                CX + 1, CY, { food: 1e9 },
+            );
+        },
+    },
+
+    // Explodes on death: a killer pops the explosive cell, whose real explosion
+    // scatters explosion cells and harms the ring of bodies around it.
+    explosive: {
+        loopTicks: 24,
+        setup(env) {
+            env.spawn([{ name: 'explosive', dc: 0, dr: 0 }], CX, CY);
+            env.spawn([{ name: 'killer', dc: 0, dr: 0 }], CX - 1, CY);
+            for (const [dc, dr] of [[1, 0], [2, 0], [0, 2], [0, -2], [2, 1], [1, 2]]) {
+                env.spawn([{ name: 'common', dc: 0, dr: 0 }], CX + dc, CY + dr);
+            }
+        },
+    },
+
+    // Poisons on touch: a roaming poison cell brushes past bodies, which keep
+    // the lingering poison and die a few ticks later -- often after it has moved
+    // on.
+    poison: {
+        loopTicks: 150,
+        setup(env) {
+            env.spawn([{ name: 'poison', dc: 0, dr: 0 }, { name: 'mover', dc: 0, dr: 1 }], CX, CY);
+            scatterPrey(env, 'common', 11);
+        },
+    },
+
+    // Emits a signal: same-species movers at the edges sense the pheromone
+    // (their brains are drawn to it by default) and converge on the emitter.
+    pheromone: {
+        loopTicks: 170,
+        setup(env) {
+            const kin = env.createSpecies(null);
+            env.spawn([{ name: 'pheromone', dc: 0, dr: 0 }, { name: 'common', dc: 0, dr: 1 }], CX, CY, { species: kin });
+            const starts: [number, number][] = [
+                [2, 2],
+                [PREVIEW_COLS - 3, 2],
+                [2, PREVIEW_ROWS - 3],
+                [PREVIEW_COLS - 3, PREVIEW_ROWS - 3],
+            ];
+            for (const [c, r] of starts) {
+                env.spawn([
+                    { name: 'mover', dc: 0, dr: 0 },
+                    { name: 'eye', dc: 0, dr: -1, dir: Directions.up },
+                ], c, r, { species: kin });
+            }
+        },
+    },
+
+    // Plain structural cell: the scaffold. A small creature built mostly of
+    // common cells, holding a mouth and a producer together into a working body.
+    common: {
+        loopTicks: 160,
+        setup(env) {
+            env.spawn([
+                { name: 'mouth', dc: 0, dr: 0 },
+                { name: 'common', dc: 0, dr: -1 },
+                { name: 'common', dc: 0, dr: 1 },
+                { name: 'common', dc: -1, dr: 0 },
+                { name: 'producer', dc: 1, dr: 0 },
+            ], CX, CY);
+        },
+    },
+
+    // Steals food: a parasite latched onto a food-collecting host plant, draining
+    // the food the host gathers (the theft itself is internal, so watch the host
+    // work while the parasite feeds).
+    parasite: {
+        loopTicks: 130,
+        setup(env) {
+            env.spawn([
+                { name: 'mouth', dc: 0, dr: 0 },
+                { name: 'producer', dc: 0, dr: 1 },
+                { name: 'producer', dc: 0, dr: -1 },
+            ], CX + 1, CY, { food: 8 });
+            env.spawn([{ name: 'parasite', dc: 0, dr: 0 }, { name: 'common', dc: 0, dr: -1 }], CX, CY);
+        },
+    },
+
+    // Invisible to eyes: the engine renders a chameleon body faint, and eyes look
+    // straight through it. A chameleon critter (translucent) roams beside an
+    // ordinary one (opaque) as a watchful eye patrols.
+    chameleon: {
+        loopTicks: 220,
+        setup(env) {
+            env.spawn([{ name: 'chameleon', dc: 0, dr: 0 }, { name: 'mover', dc: 0, dr: 1 }], CX + 2, CY);
+            env.spawn([{ name: 'common', dc: 0, dr: 0 }, { name: 'mover', dc: 0, dr: 1 }], CX - 2, CY);
+            env.spawn([
+                { name: 'eye', dc: 0, dr: 0, dir: Directions.right },
+                { name: 'mover', dc: 0, dr: 1 },
+            ], CX, CY + 3);
+        },
+    },
+
+    // Fires at targets: a shooter looses a real projectile at a body across the
+    // arena every so often; the round travels and deals its hit. (Shooting is
+    // brain-gated in the world, so the preview triggers the same shoot() here.)
+    shooter: {
+        loopTicks: 60,
+        setup(env) {
+            const s = env.spawn([{ name: 'shooter', dc: 0, dr: 0 }], CX - 3, CY, { food: 1e9 });
+            s.direction = Directions.right;
+            env.spawn([
+                { name: 'common', dc: 0, dr: 0 },
+                { name: 'common', dc: 0, dr: 1 },
+                { name: 'common', dc: 0, dr: -1 },
+            ], CX + 3, CY);
+        },
+        onTick(env, tick) {
+            if (tick % 16 === 0) {
+                const shooter = env.organisms.find(o => o.anatomy.has_shooter);
+                if (shooter) {
+                    shooter.food_collected = 1e9;
+                    shooter.direction = Directions.right;
+                    shooter.shoot();
+                }
+            }
+        },
+    },
+};
