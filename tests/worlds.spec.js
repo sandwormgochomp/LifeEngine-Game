@@ -199,7 +199,7 @@ test.describe('World shape round-trip', () => {
     const before = await loadedWorld(page);
     expect(before.glass).toBeGreaterThan(0);
 
-    // JSON round-trip mirrors what Save/Load World State does with the file
+    // JSON round-trip mirrors what Download/Load World does with the file
     await page.evaluate(() => {
       const raw = JSON.parse(JSON.stringify(window.engine.env.serialize()));
       window.engine.env.loadRaw(raw);

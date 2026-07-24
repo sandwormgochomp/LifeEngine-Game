@@ -45,7 +45,7 @@ const SaveTab: React.FC<SaveTabProps> = ({ engine, onBrowseWorlds }) => {
 
   return (
     <div>
-      <h3>Save & Load World</h3>
+      <h3>Your Worlds</h3>
       <p style={{ marginBottom: '12px', fontSize: '14px', color: 'rgba(0, 255, 65, 0.8)' }}>
         Save a snapshot of the current world state, including grid layout, organisms, and simulation settings, or load a previously saved world.
       </p>
@@ -53,11 +53,11 @@ const SaveTab: React.FC<SaveTabProps> = ({ engine, onBrowseWorlds }) => {
       <div className={styles.buttonGroup}>
         <button id="save-world-btn" onClick={handleSaveWorld}>
           <i className="fa-solid fa-download" style={{ marginRight: '6px' }}></i>
-          Save World State
+          Download World
         </button>
         <button id="load-world-btn" onClick={() => fileInputRef.current?.click()}>
           <i className="fa-solid fa-upload" style={{ marginRight: '6px' }}></i>
-          Load World State
+          Load World
         </button>
         <input
           type="file"

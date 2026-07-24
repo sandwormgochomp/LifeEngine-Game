@@ -65,7 +65,7 @@ declare global {
 }
 
 const PANEL_TITLES: Record<string, string> = {
-  save: 'SAVE / LOAD',
+  save: 'WORLDS',
   about: 'ABOUT',
   stats: 'STATS',
 };
