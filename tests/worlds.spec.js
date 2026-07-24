@@ -141,6 +141,139 @@ test.describe('Worlds picker', () => {
   });
 });
 
+/* Worlds the user saves into localStorage. The index (names, sizes and
+   thumbnails) is stored apart from the worlds themselves, so the picker can
+   list them without parsing megabytes of grid on every open. */
+test.describe('Worlds saved in the browser', () => {
+  const savedCard = (page, name) => page.locator(`.saved-world-card[data-saved-world="${name}"]`);
+
+  async function saveWorld(page, name) {
+    await page.locator('#save-browser-btn').click();
+    await page.locator('#save-world-name').fill(name);
+    await page.locator('#save-world-confirm-btn').click();
+    await expect(savedCard(page, name)).toBeVisible();
+  }
+
+  test('Saving names the world and lists it with a thumbnail', async ({ page }) => {
+    await pauseEngine(page);
+    await openWorldsModal(page);
+    // The default world holds one small organism; colony has a real creature
+    // to draw, and a grid size distinct from the default
+    await loadWorld(page, 'colony');
+    await openWorldsModal(page);
+    await saveWorld(page, 'Colony Fork');
+
+    const card = savedCard(page, 'Colony Fork');
+    await expect(card).toContainText('Colony Fork');
+    await expect(card).toContainText('140×140');
+    // The thumbnail is the largest organism's body plan, drawn to a canvas
+    await expect(card.locator('canvas')).toBeVisible();
+    // Bundled worlds are untouched and still counted alongside it
+    expect(await page.locator('.world-card').count()).toBe(worldList.length);
+
+    // The thumb rides in the index, not the world blob: listing must not
+    // depend on reading the (multi-hundred-KB) world back
+    const index = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('life_engine.worlds.index')));
+    expect(index).toHaveLength(1);
+    expect(index[0].name).toBe('Colony Fork');
+    expect(index[0].thumb.length).toBeGreaterThan(1);
+  });
+
+  test('A saved world reloads its grid, and survives a page reload', async ({ page }) => {
+    await pauseEngine(page);
+    await openWorldsModal(page);
+    await loadWorld(page, 'colony');
+    await openWorldsModal(page);
+    await saveWorld(page, 'Colony Fork');
+
+    // Move the world somewhere else entirely
+    await page.keyboard.press('Escape');
+    await openWorldsModal(page);
+    await loadWorld(page, 'SurvivalOfFittest');
+    expect(await page.evaluate(() => window.engine.env.grid_map.cols)).toBe(385);
+
+    // A fresh page proves the save outlived the session
+    await page.reload();
+    await pauseEngine(page);
+    await openWorldsModal(page);
+    await savedCard(page, 'Colony Fork').locator('.saved-world-load').click();
+    await expect(page.getByTestId('worlds-modal')).toBeHidden();
+
+    const grid = await page.evaluate(() => ({
+      cols: window.engine.env.grid_map.cols,
+      rows: window.engine.env.grid_map.rows,
+      organisms: window.engine.env.organisms.filter(o => o.living).length,
+    }));
+    expect(grid.cols).toBe(140);
+    expect(grid.rows).toBe(140);
+    expect(grid.organisms).toBeGreaterThan(0);
+  });
+
+  // Escape has to back out one layer, as it does everywhere else in the HUD
+  test('Escape in the name field cancels the save, not the picker', async ({ page }) => {
+    await openWorldsModal(page);
+    await page.locator('#save-browser-btn').click();
+    await page.locator('#save-world-name').press('Escape');
+
+    await expect(page.getByTestId('worlds-modal')).toBeVisible();
+    await expect(page.locator('#save-world-name')).toBeHidden();
+    await expect(page.locator('#save-browser-btn')).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('life_engine.worlds.index'))).toBeNull();
+
+    // And a second Escape does close the picker
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('worlds-modal')).toBeHidden();
+  });
+
+  test('Deleting asks first, then drops the world and its data', async ({ page }) => {
+    await openWorldsModal(page);
+    await saveWorld(page, 'Doomed');
+
+    // Arming the trash asks rather than acting
+    await savedCard(page, 'Doomed').locator('.saved-world-delete').click();
+    await expect(savedCard(page, 'Doomed')).toContainText('Delete Doomed?');
+    expect(await page.evaluate(() => localStorage.length)).toBeGreaterThan(1);
+
+    await savedCard(page, 'Doomed').locator('.saved-world-delete-confirm').click();
+    await expect(savedCard(page, 'Doomed')).toBeHidden();
+
+    // Gone from the index and from storage, not merely from this render
+    await page.keyboard.press('Escape');
+    await openWorldsModal(page);
+    await expect(savedCard(page, 'Doomed')).toBeHidden();
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('life_engine.world.')));
+    expect(keys).toEqual([]);
+  });
+
+  /* localStorage tops out near 5MB, which is less than several of the bundled
+     worlds serialize to, so a full quota is a normal outcome here. */
+  test('A world too big for storage says so and leaves nothing behind', async ({ page }) => {
+    await openWorldsModal(page);
+    // Eat the quota down to scraps. The chunk sizes step down so the slack
+    // left over is smaller than even the default world's save.
+    await page.evaluate(() => {
+      let i = 0;
+      for (const size of [256 * 1024, 8 * 1024, 256, 16]) {
+        const chunk = 'x'.repeat(size);
+        for (;;) {
+          try { localStorage.setItem(`filler.${i++}`, chunk); } catch { break; }
+        }
+      }
+    });
+
+    await page.locator('#save-browser-btn').click();
+    await page.locator('#save-world-name').fill('Too Big');
+    await page.locator('#save-world-confirm-btn').click();
+
+    await expect(page.getByTestId('hud-notifications')).toContainText('Too big for browser storage');
+    await expect(savedCard(page, 'Too Big')).toBeHidden();
+    // No half-written world left orphaned by the failed save
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('life_engine.')));
+    expect(keys).toEqual([]);
+  });
+});
+
 /* The bundled worlds are rectangular designs that predate the petri dish.
    Loading one used to stamp the session's dish over it -- glassing over the
    layout and killing every organism outside the circle -- so each world is

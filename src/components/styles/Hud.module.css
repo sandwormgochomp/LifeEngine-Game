@@ -1313,6 +1313,96 @@
   white-space: nowrap;
 }
 
+/* A section label spanning the grid, shown once the user's own saves give the
+   list two halves worth telling apart */
+.worldsSection {
+  grid-column: 1 / -1;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(0, 255, 65, 0.55);
+  padding: 6px 2px 2px;
+}
+
+/* A saved world carries a delete button, so its card is a container with two
+   buttons in it rather than one big button */
+.savedCard {
+  padding: 0 6px 0 0;
+  gap: 0;
+}
+
+.savedCardMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 5px 10px;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The thumbnail sits inline in the row, unlike the organism picker's tiles */
+.savedCardMain canvas {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+}
+
+.savedIconBtn {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  margin: 0;
+  padding: 6px 7px;
+  color: rgba(0, 255, 65, 0.5);
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.savedIconBtn:hover:not(:disabled) {
+  color: #00FF41;
+}
+
+.savedIconDanger {
+  color: rgba(255, 120, 120, 0.8);
+}
+
+.savedIconDanger:hover:not(:disabled) {
+  color: #FF6B6B;
+}
+
+/* Mirrors .worldCard:disabled, which can't reach a card that is a div */
+.worldCardDead {
+  opacity: 0.35;
+}
+
+.worldNameInput {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  padding: 4px 8px;
+  border-radius: 0;
+  outline: none;
+}
+
+.worldNameInput:focus {
+  border-color: #00FF41;
+}
+
 /* A species that died while the cursor was over the grid: held in place so
    nothing shifts mid-click, then pruned once the pointer leaves */
 .pickerCardExtinct {
@@ -1646,6 +1736,8 @@
 
 .worldsActions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
 
