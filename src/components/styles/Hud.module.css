@@ -1717,6 +1717,54 @@
 }
 
 /* ---- Control modals (evolution rules, world controls) ---- */
+
+/* Tab strip across the evolution window: console / fate deck / manual. The
+   active tab is drawn as a lit tab joined to the body below it, so the body
+   reads as that tab's page rather than as a separate panel. */
+.evoTabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.evoTab {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.25);
+  border-bottom: none;
+  color: rgba(0, 255, 65, 0.5);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 10px 6px;
+  cursor: pointer;
+  border-radius: 0;
+  margin: 0;
+  min-width: unset;
+  box-shadow: none;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+.evoTab:hover {
+  color: rgba(0, 255, 65, 0.85);
+  border-color: rgba(0, 255, 65, 0.5);
+}
+
+.evoTab i {
+  margin-right: 5px;
+}
+
+.evoTabActive {
+  color: #00FF41;
+  background: rgba(0, 255, 65, 0.12);
+  border-color: rgba(0, 255, 65, 0.6);
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
+  /* Sits over the strip's own bottom border so the lit tab joins the body */
+  margin-bottom: -1px;
+  padding-bottom: 11px;
+}
+
 .ctrlBody {
   padding: 14px 16px;
   overflow-y: auto;

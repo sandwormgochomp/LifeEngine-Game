@@ -34,6 +34,14 @@ async function openNewGame(page) {
   await page.locator('[data-testid="newgame-modal"]').waitFor();
 }
 
+// Open the evolution window on its Manual tab, where the one-row-per-parameter
+// controls live. The window opens on the Console tab, which only carries the
+// handful of parameters it promotes to dials.
+async function openEvolutionManual(page) {
+  await page.locator('#tool-rules').click();
+  await page.locator('#evo-tab-manual').click();
+}
+
 // Dismiss the open modal. The modal backdrop covers the toolbar, so a modal
 // is closed with Escape (or its X / a backdrop click), never by clicking a
 // toolbar button through it.
@@ -86,4 +94,4 @@ async function localCellState(page, dc, dr) {
   }, [dc, dr]);
 }
 
-module.exports = { test, expect: base.expect, openPanel, openEditor, openNewGame, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, expectCellCount, localCellState };
+module.exports = { test, expect: base.expect, openPanel, openEditor, openNewGame, openEvolutionManual, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, expectCellCount, localCellState };

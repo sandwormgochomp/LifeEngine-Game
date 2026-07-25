@@ -25,7 +25,7 @@ import type { OrganismEnv, OrganismProjectile, SerializedOrganism } from '../Org
 import type { PredatorSpecies } from '../Organism/Predators';
 import type { SerializedGridMap } from '../Grid/GridMap';
 import type { SerializedFossilRecord } from '../Stats/FossilRecord';
-import type { HyperparamsSingleton } from '../Hyperparameters';
+import type { HyperparamsData, HyperparamsSingleton } from '../Hyperparameters';
 /* Type-only, so it is erased at emit and closes no runtime cycle -- Engine
    imports this module for real. */
 import type Engine from '../Engine';
@@ -128,13 +128,48 @@ const BLOOM_TICKS = 600;
 const ICE_AGE_MULTIPLIER = 0.15;
 const ICE_AGE_TICKS = 1200;
 
-/* A live bloom or ice age. `baseline` is the foodProdProb the event will
-   restore, kept on the event (rather than only captured in the restore
-   closure) so serialize() can save the world's true food rate instead of the
-   spiked one -- see the note there. */
-interface FoodShiftEvent extends WorldEvent {
-    kind: 'bloom' | 'iceage';
-    baseline: number;
+/* The Hyperparams fields a timed shift may hold: the scalar ones. The three
+   neighbour lists are arrays with no meaningful transform, so the mapped type
+   drops them and a card naming one fails to compile rather than silently
+   stringifying a grid of coordinates. */
+export type ShiftableParamKey = {
+    [K in keyof HyperparamsData]: HyperparamsData[K] extends number | boolean ? K : never
+}[keyof HyperparamsData];
+
+/* How one field moves when a shift lands. Stored as a transform rather than a
+   destination because that is what the cards actually say: "lifespan x3" means
+   three times whatever this world runs at, not three times the default, and a
+   world already tuned to a 300-tick lifespan should feel the same card
+   differently. `set` is the escape hatch for booleans and for the cards that
+   name an absolute ("look range -> 4"); it is also the only variant that is a
+   no-op when replayed, which is why the permanent cards use nothing else. */
+type NumChange = { mul: number } | { add: number } | { set: number };
+type BoolChange = { set: boolean };
+export type ParamChanges = {
+    [K in ShiftableParamKey]?: HyperparamsData[K] extends number ? NumChange : BoolChange
+};
+
+/* The values a shift will put back, one per field it touched. */
+type ParamBaselines = { [K in ShiftableParamKey]?: HyperparamsData[K] };
+
+/* A live parameter shift: a bloom, an ice age, or a Fate Deck card. `baselines`
+   is kept on the event -- rather than only captured in the restore closure --
+   so serialize() can save the world's true parameters instead of the spiked
+   ones, and so triggerParamShift can tell which live events hold which fields.
+   See the notes on both. */
+interface ParamShiftEvent extends WorldEvent {
+    baselines: ParamBaselines;
+}
+
+/* Resolve one transform against the value the world is running at. The
+   arithmetic branches are unreachable for a boolean field -- ParamChanges pairs
+   each key with the variant its type admits, so `{ instaKill: { mul: 2 } }` is a
+   compile error at the call site -- and Number() here only keeps the union out
+   of the expression. */
+function applyParamChange(current: number | boolean, change: NumChange | BoolChange): number | boolean {
+    if ('set' in change) return change.set;
+    const n = Number(current);
+    return 'mul' in change ? n * change.mul : n + change.add;
 }
 
 /* Radiation storm: a band of irradiated columns RAD_STORM_WIDTH deep, sweeping
@@ -987,36 +1022,111 @@ class WorldEnvironment extends Environment{
         this.active_events.splice(i, 1);
     }
 
-    /* Bloom and Ice Age (Events tab): shift food production globally for a
-       while, then restore it. Idempotent -- re-triggering the active one just
-       extends its window from the current tick without stacking the multiplier,
-       so the captured pre-event value can never drift. The two are mutually
-       exclusive for the same reason: an ice age started mid-bloom would capture
-       the *spiked* value as its baseline and restore the world to a permanent
-       glut, so the other one is wound back first.
+    /* The live parameter shifts holding any of these fields. Recognised by
+       carrying `baselines` rather than by a list of kinds, so the rad storm --
+       and anything else that moves the world without spiking a global -- is
+       skipped without having to be named here. */
+    paramShiftsTouching(keys: ShiftableParamKey[]): ParamShiftEvent[] {
+        return this.active_events.filter((e): e is ParamShiftEvent =>
+            'baselines' in e && keys.some(k => k in (e as ParamShiftEvent).baselines));
+    }
+
+    /* Hold a set of Hyperparams fields at shifted values for `ticks`, then put
+       them back exactly. The mechanism behind Bloom and Ice Age (Events tab) and
+       behind every timed Fate Deck card; `kind` is the event's identity, so a
+       card's id is the kind its shift runs under.
+
+       Three properties this method exists to guarantee:
+
+       - **Idempotent on re-trigger.** Replaying a live shift only pushes
+         `ends_at` out from the current tick. Re-applying the transforms would
+         stack them -- x3 on an already-tripled value -- and, far worse, would
+         recapture the *spiked* numbers as the baselines, so the eventual
+         restore would strand the world at 3x its real food rate for good.
+       - **No two live shifts hold the same field.** Anything already holding
+         one of these fields is wound back before the baselines are captured.
+         This is the rule the bloom/ice-age pair used to state about each other,
+         generalised to the fields rather than the pair, and it is what makes a
+         Long Winter and a Fertile Crescent mutually exclusive while leaving a
+         Hair Trigger free to run alongside either. It also keeps the baselines
+         unambiguous for serialize(), which merges them all.
+       - **Nothing outlives its world.** restore() runs on expiry, on an
+         overlapping shift, on endWorldEvent(), on reset() and on loadRaw().
+
+       `ticks <= 0` applies the changes and enqueues nothing: a permanent card
+       is a rule the player has changed, not weather to sit out, and it is
+       indistinguishable from having moved the same sliders by hand on the
+       Manual tab. Such a card must express itself entirely in `set` transforms,
+       or replaying it will compound.
 
        Mutating the Hyperparams singleton is the same swap-a-global pattern
-       noted in TODO.md; kept because every producer reads foodProdProb straight
-       off it, and restore() winds it back on expiry, on re-trigger, on the
-       opposite event, and on reset(). */
-    triggerFoodShift(kind: 'bloom' | 'iceage', multiplier: number, ticks: number, message: string): void {
+       noted in TODO.md; kept because every consumer reads these fields straight
+       off it, and every path out of a shift winds them back. */
+    triggerParamShift(kind: string, changes: ParamChanges, ticks: number, message: string): void {
+        const keys = Object.keys(changes) as ShiftableParamKey[];
         const existing = this.active_events.find(e => e.kind === kind);
         if (existing) {
             existing.ends_at = this.total_ticks + ticks;
         } else {
-            this.endWorldEvent(kind === 'bloom' ? 'iceage' : 'bloom');
-            const prev = Hyperparams.foodProdProb;
-            Hyperparams.foodProdProb = prev * multiplier;
-            const ev: FoodShiftEvent = {
-                kind,
-                baseline: prev,
-                ends_at: this.total_ticks + ticks,
-                restore: () => { Hyperparams.foodProdProb = ev.baseline; },
-            };
-            this.active_events.push(ev);
+            for (const clash of this.paramShiftsTouching(keys)) this.endWorldEvent(clash.kind);
+            const baselines: ParamBaselines = {};
+            for (const key of keys) {
+                /* Both writes are through a union-typed key, which no index
+                   signature can narrow per-iteration -- the same boundary, and
+                   the same `as never`, as Hyperparams.loadJsonObj. The values
+                   really do belong to the field the key names: the baseline was
+                   just read off it, and applyParamChange returns the variant
+                   ParamChanges paired with it. */
+                baselines[key] = Hyperparams[key] as never;
+                Hyperparams[key] = applyParamChange(Hyperparams[key], changes[key]!) as never;
+            }
+            if (ticks > 0) {
+                const ev: ParamShiftEvent = {
+                    kind,
+                    baselines,
+                    ends_at: this.total_ticks + ticks,
+                    /* Iterated over the baselines rather than over `keys`,
+                       because releaseParamClaim() can take a field off this
+                       event mid-era; walking the original key list would write
+                       the deleted baseline's `undefined` straight into
+                       Hyperparams. */
+                    restore: () => {
+                        for (const key of Object.keys(ev.baselines) as ShiftableParamKey[]) {
+                            Hyperparams[key] = ev.baselines[key] as never;
+                        }
+                    },
+                };
+                this.active_events.push(ev);
+            }
         }
         Notifier.notify(message);
         if (this.engine) this.engine.emitChange(true);
+    }
+
+    /* Hand one field back to the player mid-era, so the era will not wind it
+       back when it ends. Returns whether anything was actually holding it.
+
+       This is the seam between the Fate Deck and the other two tabs of the
+       evolution window. A card holds its fields at shifted values and restores
+       the pre-card numbers on expiry -- which, without this, silently undoes any
+       edit the player made to those fields in the meantime: set lifespan by hand
+       during a Long Winter and the era's expiry throws the change away minutes
+       later, with nothing on screen having suggested it would. Taking the field
+       off the event is the honest reading of that edit: the player has taken
+       this parameter over, so the era no longer owns it. An era left holding
+       nothing is over -- there is nothing remaining for it to wind back. */
+    releaseParamClaim(key: ShiftableParamKey): boolean {
+        const holders = this.paramShiftsTouching([key]);
+        for (const ev of holders) {
+            delete ev.baselines[key];
+            if (Object.keys(ev.baselines).length === 0) this.endWorldEvent(ev.kind);
+        }
+        return holders.length > 0;
+    }
+
+    // Bloom and Ice Age (Events tab): the single-field case of the above.
+    triggerFoodShift(kind: 'bloom' | 'iceage', multiplier: number, ticks: number, message: string): void {
+        this.triggerParamShift(kind, { foodProdProb: { mul: multiplier } }, ticks, message);
     }
 
     triggerBloom(): void {
@@ -1256,6 +1366,39 @@ class WorldEnvironment extends Environment{
         );
         if (this.engine) this.engine.emitChange(true);
         return species.population;
+    }
+
+    /* The Great Cull (Fate Deck): an indiscriminate mass extinction. Every
+       living organism gets the same independent coin flip, and nothing about
+       its body, species, age or size moves the odds.
+
+       That is the whole licence for this method. A card is allowed to be a
+       pressure and never a result, and the deck otherwise obeys that by only
+       ever changing what the world rewards. A cull is the edge case, and it
+       stays on the right side of the line for exactly the reason a meteor does:
+       it is something that happens *to* the world, not a selection the player
+       makes on evolution's behalf. Weight these odds by anything an organism is
+       -- cull "the movers", cull the largest -- and the run stops being pure
+       selection and starts being the player's opinion.
+
+       The dead are left where they fall, since die() turns each cell to food:
+       the survivors inherit a world strewn with the rest, which is the
+       mass-extinction-then-boom the Narrator's crash detection reports on its
+       next window. Announced with the caller's own name for the event, the way
+       releasePredator announces with the species'. */
+    cullPopulation(fraction: number, message: string): number {
+        let killed = 0;
+        for (const org of this.organisms) {
+            if (!org.living || Math.random() >= fraction) continue;
+            org.die();
+            killed++;
+        }
+        // die() only flags the body; this is what takes them out of the world,
+        // and what trips auto-pause / auto-reset if the cull took everything.
+        this.clearDeadOrganisms();
+        Notifier.notify(`${message} — ${killed} organism${killed === 1 ? '' : 's'} taken at random`);
+        if (this.engine) this.engine.emitChange(true);
+        return killed;
     }
 
     /* Meteor (Events tab): launch a strike at (col, row). The click only sets
@@ -1586,14 +1729,20 @@ class WorldEnvironment extends Environment{
             env.organisms.push(org.serialize());
         }
         env.fossil_record = FossilRecord.serialize();
-        /* A bloom or ice age is transient weather, but it works by holding
-           Hyperparams.foodProdProb at a multiple of its real value -- and that
-           is the object the save writes. Saving mid-event would bake the spike
-           into the file for good (it has no event to expire and wind it back),
-           so the baseline is substituted in. The live world keeps its event:
-           saving shouldn't call off the weather. */
-        const shift = this.active_events.find(e => e.kind === 'bloom' || e.kind === 'iceage') as FoodShiftEvent | undefined;
-        env.controls = shift ? { ...Hyperparams, foodProdProb: shift.baseline } : Hyperparams;
+        /* A bloom, an ice age or a Fate Deck card is transient weather, but it
+           works by holding Hyperparams fields at shifted values -- and that is
+           the object the save writes. Saving mid-event would bake the spike into
+           the file for good (it has no event to expire and wind it back), so
+           every live shift's baselines are substituted back in. Merging them all
+           is unambiguous only because triggerParamShift refuses to let two live
+           shifts hold the same field; see the note there. The live world keeps
+           its events either way: saving shouldn't call off the weather. */
+        let controls: HyperparamsSingleton = Hyperparams;
+        for (const ev of this.active_events) {
+            if (!('baselines' in ev)) continue;
+            controls = { ...controls, ...(ev as ParamShiftEvent).baselines };
+        }
+        env.controls = controls;
         // See the interface comment: the glass never lands in env.grid, so the
         // dish is saved as a flag for loadRaw to rebuild from.
         env.petri_dish = WorldConfig.petri_dish;
@@ -1605,6 +1754,17 @@ class WorldEnvironment extends Environment{
            adding a guard here would change behavior on malformed saves. `raw` is
            a type-only view of the value already in hand. */
         let raw = env as SerializedWorld;
+        /* Wind back anything still in flight before the incoming world arrives,
+           the same wipe reset() does and for a sharper reason: an event holds
+           Hyperparams at a shifted value and its restore() closes over the
+           *outgoing* world's baselines, so a card that survived the load would
+           eventually stamp a dead world's food rate onto this one. active_events
+           is an array, so neither serialize() nor the overwriteNonObjects at the
+           end of this method touches it -- without this it simply persists. Both
+           load paths (WorldsModal, FirstRun) apply raw.controls after this
+           returns, so the wind-back cannot clobber what was loaded. */
+        for (const ev of this.active_events) ev.restore();
+        this.active_events = [];
         this.organisms = [];
         FossilRecord.clear_record();
         let cell_size = raw.grid.cell_size ? raw.grid.cell_size : this.grid_map.cell_size;

@@ -91,7 +91,7 @@ const App: React.FC = () => {
   // flips — not on every engine emit.
   const isNight = useEngineValue(engine, e => Boolean(e.env?.is_night), false);
   const [worldsOpen, setWorldsOpen] = useState(false);
-  // Armed once the first-run demo world has actually loaded (see mount effect)
+  // Armed on the first visit ever, for the origin world (see mount effect)
   const [firstRunHints, setFirstRunHints] = useState(false);
   const envRef = useRef<HTMLDivElement>(null);
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -117,15 +117,11 @@ const App: React.FC = () => {
     newEngine.start();
     setEngine(newEngine);
 
-    /* The very first visit swaps the blank origin world for a curated demo
-       already mid-drama, then arms the on-world hints. The engine keeps
-       running the origin world while the fetch is in flight, exactly like a
-       load from the Worlds picker. On failure it resolves false and the
-       origin world simply stays. */
+    /* The very first visit narrates the world the engine just built -- the
+       origin organism in its dish. Nothing is loaded, replaced or resized. */
     if (FirstRun.shouldRun()) {
-      FirstRun.loadDemoWorld(newEngine).then(loaded => {
-        if (loaded) setFirstRunHints(true);
-      });
+      FirstRun.markDone();
+      setFirstRunHints(true);
     }
 
     return () => newEngine.dispose();

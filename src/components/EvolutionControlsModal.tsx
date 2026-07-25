@@ -1,128 +1,68 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
-import type { HyperparamsData, HyperparamsSingleton } from '../Hyperparameters';
+import type { HyperparamsSingleton } from '../Hyperparameters';
 import Notifier from '../Utils/Notifier';
-import PixelSlider from './PixelSlider';
+import EvolutionConsole from './EvolutionConsole';
+import FateDeck from './FateDeck';
+import EvolutionManualTab from './EvolutionManualTab';
+import useEngineValue from './useEngineValue';
+import { ALL_KEYS, snapshotParams } from './evolutionParams';
+import type { ParamKey, ParamMirror } from './evolutionParams';
 
 interface EvolutionControlsModalProps {
   engine: Engine | null;
   onClose: () => void;
 }
 
-/* The Hyperparams fields this modal can edit, split by the input that edits
-   them. Deriving the two key sets from HyperparamsData means a number field
-   pointing at a boolean parameter (or at a parameter that no longer exists)
-   fails to compile. The neighbour-list fields belong to neither set and so are
-   not editable here, which matches what GROUPS already listed. */
-type NumParamKey = { [K in keyof HyperparamsData]: HyperparamsData[K] extends number ? K : never }[keyof HyperparamsData];
-type BoolParamKey = { [K in keyof HyperparamsData]: HyperparamsData[K] extends boolean ? K : never }[keyof HyperparamsData];
-type ParamKey = NumParamKey | BoolParamKey;
+/* The three faces of the same parameters: dials and hazards (Console), played
+   as bundled pressures (Fate Deck), or one row per field (Manual). Every tab
+   reads the one mirror this shell owns and writes through the one setParam, so
+   a change made on any of them is visible on the others the moment you switch. */
+type TabId = 'console' | 'fate' | 'manual';
 
-interface NumField {
-  kind: 'num';
-  key: NumParamKey;
-  label: string;
-  title: string;
-  min?: number;
-  max?: number;
-  step?: number;
-}
-
-interface BoolField {
-  kind: 'bool';
-  key: BoolParamKey;
-  label: string;
-  title: string;
-  /** Checkbox reads/writes the negation of the stored value */
-  invert?: boolean;
-}
-
-type Field = NumField | BoolField;
-
-// Local mirror of the editable slice of Hyperparams, field types included
-type ParamMirror = Pick<HyperparamsData, ParamKey>;
-
-// Every parameter here is one the engine actually reads. Tooltips are carried
-// over from the pre-React control panel.
-const GROUPS: { title: string; fields: Field[] }[] = [
-  {
-    title: 'Life',
-    fields: [
-      { kind: 'num', key: 'foodProdProb', label: 'Food production %', title: 'The probability that a producer cell will produce food each tick.', min: 0.001, max: 100, step: 1 },
-      { kind: 'num', key: 'lifespanMultiplier', label: 'Lifespan multiplier', title: 'An organism lives for this many ticks per cell in its body.', min: 1, max: 10000, step: 1 },
-      { kind: 'num', key: 'foodDropProb', label: 'Auto food drop rate', title: 'Rate at which food is automatically generated and dropped in the world.', min: 0, max: 1000, step: 0.1 },
-      { kind: 'bool', key: 'rotationEnabled', label: 'Rotation enabled', title: 'Organisms rotate when born and while moving.' },
-      { kind: 'bool', key: 'instaKill', label: 'One touch kill', title: 'When on, killer cells immediately kill organisms they touch. When off, organisms have as much health as they have cells and only take 1 damage from killer cells.' },
-    ],
-  },
-  {
-    title: 'Vision',
-    fields: [
-      { kind: 'num', key: 'lookRange', label: 'Look range', title: 'How far an eye cell can see (in number of cells).', min: 1, max: 50, step: 1 },
-      { kind: 'bool', key: 'seeThroughSelf', label: 'See through self', title: 'Allows eyes to see through an organism’s own cells.' },
-    ],
-  },
-  {
-    title: 'Mutation',
-    fields: [
-      { kind: 'bool', key: 'useGlobalMutability', label: 'Use evolved mutation rate', title: 'When on, each organism has its own mutation rate that can increase or decrease. When off, all organisms share the global mutation rate.', invert: true },
-      { kind: 'num', key: 'globalMutability', label: 'Global mutation rate', title: 'Mutation rate shared by every organism when evolved rates are off.', min: 0, max: 100, step: 1 },
-      { kind: 'num', key: 'addProb', label: 'Add cell %', title: 'A new cell will stem from an existing one.', min: 0, max: 100, step: 1 },
-      { kind: 'num', key: 'changeProb', label: 'Change cell %', title: 'A currently existing cell will change its type.', min: 0, max: 100, step: 1 },
-      { kind: 'num', key: 'removeProb', label: 'Remove cell %', title: 'An existing cell will be removed.', min: 0, max: 100, step: 1 },
-    ],
-  },
-  {
-    title: 'Cells',
-    fields: [
-      { kind: 'num', key: 'healerFoodCost', label: 'Healer food cost', title: 'Food cost consumed by healer cells to repair 1 damage.', min: 0, max: 1000, step: 1 },
-      { kind: 'num', key: 'explosionRadius', label: 'Explosion radius', title: 'Radius of the explosion (in cells) when an explosive cell detonates.', min: 1, max: 10, step: 1 },
-      { kind: 'num', key: 'wallDurability', label: 'Wall durability', title: 'Durability of walls (number of killer hits to destroy; explosions deal 10 damage).', min: 1, max: 1000, step: 1 },
-      { kind: 'bool', key: 'moversCanProduce', label: 'Movers can produce food', title: 'When on, movers can produce food from producer cells. When off, producer cells are disabled on mover organisms.' },
-    ],
-  },
-  {
-    title: 'Reproduction & limits',
-    fields: [
-      { kind: 'num', key: 'extraMoverFoodCost', label: 'Extra mover cost', title: 'Additional food cost for movers to reproduce.', min: 0, max: 1000, step: 1 },
-      { kind: 'bool', key: 'foodBlocksReproduction', label: 'Food blocks reproduction', title: 'When on, reproduction fails if offspring intersect with food. When off, offspring remove blocking food.' },
-      { kind: 'num', key: 'maxOrganisms', label: 'Maximum organisms', title: 'Maximum number of organisms (-1 is unlimited).', min: -1, max: 100000, step: 1 },
-    ],
-  },
-  {
-    title: 'World events',
-    fields: [
-      { kind: 'bool', key: 'randomEvents', label: 'Random world events', title: 'When on, the world periodically throws one of the Events tab’s cataclysms at itself: a meteor, a bloom, an ice age or a radiation storm. Off by default — the schedule is random, so leaving it off is what keeps a run repeatable.' },
-      { kind: 'num', key: 'randomEventInterval', label: 'Event interval (ticks)', title: 'Ticks between auto-scheduled events. 1800 is about half a minute at full speed.', min: 60, max: 12000, step: 60 },
-    ],
-  },
+const TABS: { id: TabId; label: string; icon: string; title: string }[] = [
+  { id: 'console', label: 'CONSOLE', icon: 'fa-gauge-high', title: 'The controls that decide a run’s character, as dials' },
+  { id: 'fate', label: 'FATE DECK', icon: 'fa-clone', title: 'Play a pressure at the world' },
+  { id: 'manual', label: 'MANUAL', icon: 'fa-sliders', title: 'Every parameter, one row each' },
 ];
-
-const ALL_KEYS = GROUPS.flatMap(g => g.fields.map(f => f.key));
 
 const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine, onClose }) => {
   // Hyperparams is a plain module object; mirror it so edits re-render.
-  // fromEntries loses the key/value pairing, so the snapshot is asserted back
-  // into the mirror shape it was built from.
-  const [params, setParams] = useState<ParamMirror>(() =>
-    Object.fromEntries(ALL_KEYS.map(k => [k, Hyperparams[k]])) as ParamMirror
-  );
+  const [params, setParams] = useState<ParamMirror>(snapshotParams);
+  const [tab, setTab] = useState<TabId>('console');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* Re-read the singleton wholesale. Used after anything that writes it behind
+     the mirror's back -- a reset, a file load, or a Fate Deck card. */
   const syncFromEngine = () => {
-    setParams(Object.fromEntries(ALL_KEYS.map(k => [k, Hyperparams[k]])) as ParamMirror);
+    setParams(snapshotParams());
     engine?.emitChange(true);
   };
 
+  /* Anything that writes Hyperparams behind the window's back has to show up
+     here, or the window becomes a set of controls displaying numbers the engine
+     is no longer running on -- the exact failure tests/evolution_controls.spec.js
+     was written against. A Fate Deck era expiring is precisely that: it winds
+     its fields back from the tick loop, with no idea a window is open. Watching
+     a signature of the mirrored fields (rather than each one) keeps this to a
+     single subscription and one re-render per actual change. */
+  const paramSignature = useEngineValue(engine, () => ALL_KEYS.map(k => String(Hyperparams[k])).join('|'), '');
+  useEffect(() => { setParams(snapshotParams()); }, [paramSignature]);
+
   // Generic in the key so the value type is the one that key actually holds,
   // which is what makes the write to Hyperparams check instead of needing a
-  // cast. Indexed off the singleton rather than HyperparamsData because that is
-  // the declared type of the assignment target; for a ParamKey the two agree.
+  // cast.
   const setParam = <K extends ParamKey>(key: K, value: HyperparamsSingleton[K]) => {
     Hyperparams[key] = value;
     setParams(prev => ({ ...prev, [key]: value }));
+    /* Editing a field a live era is holding takes it off that era, so its
+       expiry won't quietly throw this edit away. Said out loud, because an
+       era ending early is otherwise invisible from the tab you are on. */
+    if (engine?.env.releaseParamClaim(key)) {
+      Notifier.notify('The era gives up its hold on this control');
+    }
     engine?.emitChange(true);
   };
 
@@ -157,45 +97,6 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
       .catch(() => Notifier.notify('Not a valid controls file'));
   };
 
-  const renderField = (field: Field) => {
-    // The global rate only applies when evolved rates are off
-    if (field.key === 'globalMutability' && !params.useGlobalMutability) return null;
-    // ...and the schedule only means anything when the scheduler is on
-    if (field.key === 'randomEventInterval' && !params.randomEvents) return null;
-
-    if (field.kind === 'bool') {
-      const checked = field.invert ? !params[field.key] : !!params[field.key];
-      return (
-        <label key={field.key} className={styles.ctrlRow} title={field.title}>
-          <span className={styles.ctrlLabel}>{field.label}</span>
-          <input
-            type="checkbox"
-            id={field.key}
-            checked={checked}
-            onChange={e => setParam(field.key, field.invert ? !e.target.checked : e.target.checked)}
-          />
-        </label>
-      );
-    }
-    return (
-      <label key={field.key} className={styles.ctrlRow} title={field.title}>
-        <span className={styles.ctrlLabel}>{field.label}</span>
-        <PixelSlider
-          id={field.key}
-          value={params[field.key]}
-          min={field.min}
-          max={field.max}
-          step={field.step}
-          onChange={e => {
-            const value = parseFloat(e.target.value);
-            if (!Number.isNaN(value)) setParam(field.key, value);
-          }}
-        />
-        <span className={styles.ctrlValue}>{params[field.key]}</span>
-      </label>
-    );
-  };
-
   return (
     <div className={styles.modalBackdrop} onClick={onClose} data-testid="evolution-modal">
       <div className={styles.pickerModal} onClick={e => e.stopPropagation()}>
@@ -209,14 +110,25 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
           </button>
         </div>
 
-        <div className={styles.ctrlBody}>
-          {GROUPS.map(group => (
-            <section key={group.title} className={styles.ctrlGroup}>
-              <h4>{group.title}</h4>
-              {group.fields.map(renderField)}
-            </section>
+        <div className={styles.evoTabs} role="tablist">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              id={`evo-tab-${t.id}`}
+              role="tab"
+              aria-selected={tab === t.id}
+              title={t.title}
+              className={`${styles.evoTab} ${tab === t.id ? styles.evoTabActive : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              <i className={`fa-solid ${t.icon}`}></i> {t.label}
+            </button>
           ))}
         </div>
+
+        {tab === 'console' && <EvolutionConsole engine={engine} params={params} setParam={setParam} />}
+        {tab === 'fate' && <FateDeck engine={engine} onParamsChanged={syncFromEngine} />}
+        {tab === 'manual' && <EvolutionManualTab params={params} setParam={setParam} />}
 
         <div className={styles.ctrlFooter}>
           <button id="reset-rules" title="Restore every control to its default" onClick={handleReset}>
