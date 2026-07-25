@@ -124,9 +124,16 @@
   text-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
 }
 
+/* Tabs are folder tabs, not buttons. The tools below are boxed keys you press;
+   these are labels hanging on a rail, and the open one breaks the rail to join
+   the panel it opens. Zero gap so each tab's bottom border is one segment of a
+   line that runs the palette's full width. */
 .toolPaletteTabs {
   display: flex;
-  gap: 3px;
+  gap: 0;
+  /* Pulls the rail down onto the tools it opens; the palette's own 6px gap
+     would otherwise leave the open tab floating clear of its panel. */
+  margin-bottom: -4px;
 }
 
 .toolPaletteTab {
@@ -136,18 +143,23 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 4px 2px;
+  /* Extra bottom padding so the label clears the rail it sits on. */
+  padding: 3px 2px 5px;
   margin: 0;
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(0, 255, 65, 0.25);
-  color: rgba(0, 255, 65, 0.55);
+  background: transparent;
+  /* Sides and top are reserved for the open tab; every tab draws its own
+     segment of the rail, and the open one blanks it (below). */
+  border: 2px solid transparent;
+  border-bottom-color: rgba(0, 255, 65, 0.5);
+  color: rgba(0, 255, 65, 0.45);
   border-radius: 0;
   box-shadow: none;
   cursor: pointer;
   font-family: 'VT323', monospace;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
-  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   white-space: nowrap;
   overflow: hidden;
   min-width: unset;
@@ -155,14 +167,16 @@
 }
 
 .toolPaletteTab:hover {
-  background: rgba(0, 255, 65, 0.12);
-  border-color: rgba(0, 255, 65, 0.6);
-  color: rgba(0, 255, 65, 0.85);
+  color: rgba(0, 255, 65, 0.8);
+  border-bottom-color: rgba(0, 255, 65, 0.8);
 }
 
+/* The open tab: boxed on three sides and open at the bottom, so it reads as
+   continuous with the tools underneath rather than as another pressed key. */
 .toolPaletteTabActive {
-  background: rgba(0, 255, 65, 0.2);
+  background: rgba(0, 255, 65, 0.12);
   border-color: #00FF41;
+  border-bottom-color: transparent;
   color: #00FF41;
   text-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
 }
@@ -171,8 +185,8 @@
    state stays discoverable. Suppressed on the active tab, where the highlighted
    button already shows it. */
 .toolPaletteTabArmed:not(.toolPaletteTabActive) {
-  border-color: rgba(0, 255, 65, 0.7);
   color: rgba(0, 255, 65, 0.9);
+  border-bottom-color: rgba(0, 255, 65, 0.9);
 }
 
 .toolPaletteTabArmed:not(.toolPaletteTabActive)::after {
