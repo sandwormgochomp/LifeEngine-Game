@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evolution Window — Overhaul Options · The Life Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-title: 'Press Start 2P', monospace;
+  --font-mono: 'VT323', monospace;
+  --green: #00FF41;
+  --green-dim: rgba(0, 255, 65, 0.55);
+  --green-faint: rgba(0, 255, 65, 0.22);
+  --bg: #050806;
+  --panel: rgba(0, 0, 0, 0.92);
+  --amber: #ffb000;
+  --red: #ff3b3b;
+  --cyan: #43e8e0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 40px 24px 80px;
+  background: var(--bg);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 17px;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0,255,65,0.035) 0 1px, transparent 1px 3px);
+}
+
+h1 {
+  font-family: var(--font-title);
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(0,255,65,0.5);
+  margin: 0 0 6px;
+}
+
+.sub { color: var(--green-dim); max-width: 780px; margin: 0 0 10px; }
+.sub a { color: var(--cyan); }
+
+.wrap { max-width: 1180px; margin: 0 auto; }
+
+.optionHead {
+  margin: 56px 0 14px;
+  border-top: 1px solid var(--green-faint);
+  padding-top: 18px;
+}
+.optionHead h2 {
+  font-family: var(--font-title);
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin: 0 0 8px;
+}
+.optionHead .tagline { color: var(--green-dim); max-width: 780px; margin: 0; }
+.meta {
+  font-family: var(--font-title);
+  font-size: 7px;
+  color: rgba(0,255,65,0.45);
+  letter-spacing: 1px;
+  margin-top: 8px;
+}
+
+/* ---------- shared window chrome (mirrors Hud.module.css) ---------- */
+.win {
+  background: var(--panel);
+  box-shadow:
+    0 -2px 0 0 rgba(0,255,65,0.5), 0 2px 0 0 rgba(0,255,65,0.5),
+    -2px 0 0 0 rgba(0,255,65,0.5), 2px 0 0 0 rgba(0,255,65,0.5),
+    inset 0 0 10px rgba(0,255,65,0.05), 0 0 24px rgba(0,255,65,0.2);
+  display: flex;
+  flex-direction: column;
+}
+.winHead {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-bottom: 1px solid rgba(0,255,65,0.2);
+}
+.winTitle {
+  font-family: var(--font-title); font-size: 11px; color: var(--green);
+  text-shadow: 0 0 6px rgba(0,255,65,0.4); letter-spacing: 1px;
+}
+.winClose {
+  border: 1px solid rgba(0,255,65,0.3); color: rgba(0,255,65,0.6);
+  width: 26px; height: 26px; display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 16px;
+}
+.winBody { padding: 14px 16px; }
+.winFoot {
+  display: flex; gap: 6px; padding: 10px 16px;
+  border-top: 1px solid rgba(0,255,65,0.2);
+}
+.btn {
+  border: 2px solid rgba(0,255,65,0.4); background: rgba(0,0,0,0.6);
+  color: var(--green); font-family: var(--font-title); font-size: 8px;
+  padding: 8px 12px;
+}
+.btn.primary { border-color: var(--green); background: rgba(0,255,65,0.14); }
+
+/* ---------- BEFORE ---------- */
+.beforeGrid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 22px;
+}
+.row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 3px 0; color: rgba(0,255,65,0.85);
+}
+.row .lbl { flex: 1; min-width: 0; }
+.row .val { min-width: 40px; text-align: right; color: var(--green-dim); }
+.grp {
+  font-family: var(--font-title); font-size: 8px; color: rgba(0,255,65,0.7);
+  letter-spacing: 1px; margin: 10px 0 6px; padding-bottom: 5px;
+  border-bottom: 1px solid rgba(0,255,65,0.2);
+}
+.slider {
+  flex: 1; height: 10px; min-width: 70px; position: relative;
+  border: 1px solid rgba(0,255,65,0.4); background: rgba(0,0,0,0.6);
+}
+.slider::before {
+  content: ''; position: absolute; inset: 1px; width: var(--fill, 40%);
+  background: repeating-linear-gradient(90deg, var(--green) 0 2px, rgba(0,255,65,0.45) 2px 4px);
+}
+.slider::after {
+  content: ''; position: absolute; top: -3px; left: calc(var(--fill, 40%) - 3px);
+  width: 8px; height: 14px; background: var(--green); box-shadow: 0 0 6px rgba(0,255,65,0.6);
+}
+.chk {
+  width: 14px; height: 14px; border: 1px solid rgba(0,255,65,0.5);
+  display: grid; place-items: center; font-size: 13px; line-height: 1;
+}
+.verdict {
+  margin-top: 14px; padding: 10px 12px; border-left: 3px solid var(--amber);
+  background: rgba(255,176,0,0.06); color: rgba(255,176,0,0.9);
+  font-size: 16px; max-width: 900px;
+}
+
+/* ---------- 1. Console ---------- */
+.dials { display: flex; gap: 34px; justify-content: center; padding: 8px 0 18px; }
+.dial { text-align: center; width: 150px; }
+.dialFace {
+  width: 110px; height: 110px; margin: 0 auto 10px; position: relative;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 220deg, rgba(0,255,65,0.25) 0deg var(--arc, 120deg), rgba(0,255,65,0.05) var(--arc, 120deg) 260deg, transparent 260deg 360deg),
+    radial-gradient(circle at 50% 50%, rgba(0,0,0,0.9) 55%, rgba(0,255,65,0.08) 56%);
+  box-shadow: 0 0 0 2px rgba(0,255,65,0.45), inset 0 0 18px rgba(0,255,65,0.15);
+}
+.dialFace::before { /* danger arc */
+  content: ''; position: absolute; inset: -8px; border-radius: 50%;
+  background: conic-gradient(from 220deg, transparent 0deg 200deg, rgba(255,59,59,0.55) 200deg 260deg, transparent 260deg);
+  -webkit-mask: radial-gradient(circle, transparent 56%, #000 57%, #000 62%, transparent 63%);
+          mask: radial-gradient(circle, transparent 56%, #000 57%, #000 62%, transparent 63%);
+}
+.needle {
+  position: absolute; left: 50%; top: 50%; width: 3px; height: 44px;
+  background: var(--green); transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotate(var(--deg, 0deg));
+  box-shadow: 0 0 8px rgba(0,255,65,0.8);
+}
+.hub {
+  position: absolute; left: 50%; top: 50%; width: 12px; height: 12px;
+  transform: translate(-50%,-50%); background: var(--green); border-radius: 50%;
+}
+.dial .name { font-family: var(--font-title); font-size: 8px; letter-spacing: 1px; }
+.dial .num { font-size: 26px; line-height: 1.1; }
+.dial .hint { color: var(--green-dim); font-size: 15px; }
+
+.hazard {
+  border: 2px solid rgba(255,59,59,0.5); background: rgba(255,59,59,0.05);
+  padding: 4px 12px 10px; margin: 6px 0 14px; position: relative;
+}
+.hazard::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+  background: repeating-linear-gradient(45deg, var(--red) 0 5px, rgba(0,0,0,0.9) 5px 10px);
+}
+.hazardTitle {
+  font-family: var(--font-title); font-size: 8px; color: var(--red);
+  letter-spacing: 1px; margin: 8px 0 8px 10px;
+}
+.hazard .row { margin-left: 10px; }
+.sublabel { color: rgba(0,255,65,0.45); font-size: 15px; margin: -2px 0 4px; }
+.fold {
+  font-family: var(--font-title); font-size: 8px; color: rgba(0,255,65,0.6);
+  border: 1px dashed rgba(0,255,65,0.3); padding: 9px 12px; letter-spacing: 1px;
+}
+
+/* ---------- 2. Live petri ---------- */
+.dockLayout { display: grid; grid-template-columns: 1fr 320px; gap: 0; align-items: stretch; }
+.world {
+  position: relative; min-height: 420px; overflow: hidden;
+  border: 2px solid rgba(0,255,65,0.35); border-right: none;
+  background: radial-gradient(circle at 50% 45%, #0b140f 0%, #050806 70%);
+}
+.world .rim {
+  position: absolute; inset: 22px; border-radius: 50%;
+  border: 2px solid rgba(0,255,65,0.14);
+}
+.cell { position: absolute; width: 7px; height: 7px; }
+.ticker {
+  position: absolute; left: 18px; bottom: 18px; padding: 6px 10px;
+  border-left: 3px solid var(--cyan); background: rgba(0,0,0,0.75);
+  color: var(--cyan); font-size: 16px;
+}
+.ticker .sub2 { color: rgba(67,232,224,0.65); font-size: 15px; }
+.dock { border: 2px solid rgba(0,255,65,0.5); background: var(--panel); display: flex; flex-direction: column; }
+.vitals {
+  display: flex; gap: 14px; padding: 8px 14px; font-size: 16px;
+  border-bottom: 1px solid rgba(0,255,65,0.2); color: var(--green-dim);
+}
+.vitals b { color: var(--green); font-weight: normal; }
+.up { color: var(--cyan); }
+.history { display: flex; gap: 6px; align-items: center; }
+.hchip {
+  border: 1px solid rgba(0,255,65,0.3); padding: 2px 6px; font-size: 14px;
+  color: rgba(0,255,65,0.6);
+}
+
+/* ---------- 3. Four forces ---------- */
+.portrait {
+  border: 1px solid rgba(67,232,224,0.4); background: rgba(67,232,224,0.05);
+  color: var(--cyan); padding: 12px 14px; margin-bottom: 18px; font-size: 18px;
+}
+.force { margin: 0 0 16px; }
+.forceTop {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-title); font-size: 9px; letter-spacing: 1px;
+}
+.forceTop .zone { color: var(--amber); }
+.forceTrack {
+  position: relative; height: 18px; margin: 8px 0 4px;
+  border: 1px solid rgba(0,255,65,0.35); background: rgba(0,0,0,0.6);
+  display: flex;
+}
+.forceTrack span {
+  flex: 1; border-right: 1px solid rgba(0,255,65,0.15);
+  display: grid; place-items: center; font-size: 13px; color: rgba(0,255,65,0.4);
+}
+.forceTrack span:last-child { border-right: none; }
+.forceTrack span.on { background: rgba(0,255,65,0.18); color: var(--green); }
+.forceEnds { display: flex; justify-content: space-between; color: rgba(0,255,65,0.4); font-size: 15px; }
+
+/* ---------- 4. Fate deck ---------- */
+.deck { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; padding: 6px 0 4px; }
+.card {
+  width: 168px; border: 2px solid rgba(0,255,65,0.45); background: rgba(0,0,0,0.75);
+  display: flex; flex-direction: column; position: relative;
+}
+.card.cold { border-color: rgba(67,232,224,0.6); }
+.card.hot { border-color: rgba(255,176,0,0.6); }
+.card.dark { border-color: rgba(255,59,59,0.6); }
+.cardArt {
+  height: 108px; display: grid; place-items: center; font-size: 44px;
+  border-bottom: 1px solid rgba(0,255,65,0.25);
+  background: radial-gradient(circle at 50% 60%, rgba(0,255,65,0.10), transparent 70%);
+}
+.card.cold .cardArt { color: var(--cyan); background: radial-gradient(circle at 50% 60%, rgba(67,232,224,0.14), transparent 70%); }
+.card.hot .cardArt { color: var(--amber); background: radial-gradient(circle at 50% 60%, rgba(255,176,0,0.14), transparent 70%); }
+.card.dark .cardArt { color: var(--red); background: radial-gradient(circle at 50% 60%, rgba(255,59,59,0.14), transparent 70%); }
+.cardName {
+  font-family: var(--font-title); font-size: 8px; letter-spacing: 1px;
+  text-align: center; padding: 12px 8px 8px; line-height: 1.7;
+}
+.cardRules {
+  text-align: center; color: var(--green-dim); font-size: 16px; padding: 0 8px 8px;
+}
+.cardFlavor {
+  border-top: 1px solid rgba(0,255,65,0.2); padding: 7px 8px;
+  text-align: center; font-size: 15px; color: rgba(0,255,65,0.45);
+}
+.timed {
+  position: absolute; top: -1px; right: -1px; background: var(--amber); color: #000;
+  font-family: var(--font-title); font-size: 6px; padding: 4px 5px;
+}
+
+/* ---------- 5. Test chamber ---------- */
+.forecast { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.mini {
+  width: 240px; height: 160px; position: relative; overflow: hidden;
+  border: 2px solid rgba(0,255,65,0.4); background: radial-gradient(circle at 50% 45%, #0b140f, #050806 75%);
+}
+.mini .cap {
+  position: absolute; top: 0; left: 0; padding: 2px 6px; font-family: var(--font-title);
+  font-size: 7px; background: rgba(0,0,0,0.8); color: rgba(0,255,65,0.7); letter-spacing: 1px;
+}
+.mini.ifWorld { border-color: rgba(67,232,224,0.6); }
+.mini.ifWorld .cap { color: var(--cyan); }
+.arrow { font-size: 28px; color: rgba(0,255,65,0.5); }
+.ffBar {
+  width: 240px; height: 10px; border: 1px solid rgba(67,232,224,0.5); margin-top: 8px;
+  background: linear-gradient(90deg, var(--cyan) 0 72%, transparent 72%);
+}
+.delta { display: flex; gap: 26px; margin: 16px 0 6px; flex-wrap: wrap; }
+.delta div { font-size: 18px; }
+.delta b { font-weight: normal; color: var(--cyan); }
+.pending { color: var(--amber); }
+
+.footnote { color: rgba(0,255,65,0.4); margin-top: 14px; max-width: 860px; }
+.two { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>EVOLUTION WINDOW — OVERHAUL OPTIONS</h1>
+  <p class="sub">
+    Five proposed replacements for <code>EvolutionControlsModal.tsx</code>, drawn in the game's own
+    CRT-green pixel styling. Written notes, effort estimates and code touchpoints live in
+    <a href="evolution-window-overhauls.md">evolution-window-overhauls.md</a>.
+  </p>
+
+  <!-- ================= BEFORE ================= -->
+  <div class="optionHead">
+    <h2>TODAY — what we're replacing</h2>
+    <p class="tagline">21 controls, six groups, one uniform row shape. Every explanation is a hover
+    tooltip. The backdrop dims the world, so you cannot see the effect of the thing you just changed.</p>
+  </div>
+
+  <div class="win" style="width: min(680px, 100%);">
+    <div class="winHead"><span class="winTitle">🧬 EVOLUTION CONTROLS</span><span class="winClose">✕</span></div>
+    <div class="winBody">
+      <div class="beforeGrid">
+        <div>
+          <div class="grp">LIFE</div>
+          <div class="row"><span class="lbl">Food production %</span><span class="slider" style="--fill:6%"></span><span class="val">5</span></div>
+          <div class="row"><span class="lbl">Lifespan multiplier</span><span class="slider" style="--fill:12%"></span><span class="val">100</span></div>
+          <div class="row"><span class="lbl">Auto food drop rate</span><span class="slider" style="--fill:0%"></span><span class="val">0</span></div>
+          <div class="row"><span class="lbl">Rotation enabled</span><span class="chk">✕</span></div>
+          <div class="row"><span class="lbl">One touch kill</span><span class="chk"></span></div>
+          <div class="grp">VISION</div>
+          <div class="row"><span class="lbl">Look range</span><span class="slider" style="--fill:40%"></span><span class="val">20</span></div>
+          <div class="row"><span class="lbl">See through self</span><span class="chk"></span></div>
+          <div class="grp">MUTATION</div>
+          <div class="row"><span class="lbl">Use evolved mutation rate</span><span class="chk">✕</span></div>
+          <div class="row"><span class="lbl">Add cell %</span><span class="slider" style="--fill:33%"></span><span class="val">33</span></div>
+          <div class="row"><span class="lbl">Change cell %</span><span class="slider" style="--fill:33%"></span><span class="val">33</span></div>
+          <div class="row"><span class="lbl">Remove cell %</span><span class="slider" style="--fill:33%"></span><span class="val">33</span></div>
+        </div>
+        <div>
+          <div class="grp">CELLS</div>
+          <div class="row"><span class="lbl">Healer food cost</span><span class="slider" style="--fill:1%"></span><span class="val">1</span></div>
+          <div class="row"><span class="lbl">Explosion radius</span><span class="slider" style="--fill:22%"></span><span class="val">3</span></div>
+          <div class="row"><span class="lbl">Wall durability</span><span class="slider" style="--fill:5%"></span><span class="val">50</span></div>
+          <div class="row"><span class="lbl">Movers can produce food</span><span class="chk"></span></div>
+          <div class="grp">REPRODUCTION &amp; LIMITS</div>
+          <div class="row"><span class="lbl">Extra mover cost</span><span class="slider" style="--fill:2%"></span><span class="val">3</span></div>
+          <div class="row"><span class="lbl">Food blocks reproduction</span><span class="chk">✕</span></div>
+          <div class="row"><span class="lbl">Maximum organisms</span><span class="slider" style="--fill:0%"></span><span class="val">-1</span></div>
+          <div class="grp">WORLD EVENTS</div>
+          <div class="row"><span class="lbl">Random world events</span><span class="chk"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="winFoot"><span class="btn">RESET ALL</span><span class="btn">SAVE</span><span class="btn">LOAD</span></div>
+  </div>
+
+  <div class="verdict">
+    It reads as a preferences pane. These are the levers that decide whether life explodes,
+    stagnates or dies — and nothing on screen says so.
+  </div>
+
+  <!-- ================= 1. CONSOLE ================= -->
+  <div class="optionHead">
+    <h2>1 — THE CONSOLE</h2>
+    <p class="tagline">Same 21 parameters, re-presented as machinery. Three big dials for the
+    parameters that decide the run's character, a hazard block for the four that reshape a world,
+    everything else folded away. Tooltips become always-visible consequence lines.</p>
+    <div class="meta">EFFORT S · RISK LOW · NO MECHANICAL CHANGE</div>
+  </div>
+
+  <div class="win" style="width: min(680px, 100%);">
+    <div class="winHead"><span class="winTitle">🧬 EVOLUTION CONTROLS</span><span class="winClose">✕</span></div>
+    <div class="winBody">
+      <div class="dials">
+        <div class="dial">
+          <div class="dialFace" style="--arc: 40deg"><div class="needle" style="--deg: -70deg"></div><div class="hub"></div></div>
+          <div class="name">MUTATION</div><div class="num">5.0</div>
+          <div class="hint">how far copies drift</div>
+        </div>
+        <div class="dial">
+          <div class="dialFace" style="--arc: 130deg"><div class="needle" style="--deg: 20deg"></div><div class="hub"></div></div>
+          <div class="name">ABUNDANCE</div><div class="num">5.0</div>
+          <div class="hint">how fast producers feed</div>
+        </div>
+        <div class="dial">
+          <div class="dialFace" style="--arc: 200deg"><div class="needle" style="--deg: 62deg"></div><div class="hub"></div></div>
+          <div class="name">LIFESPAN</div><div class="num">100</div>
+          <div class="hint">ticks earned per cell</div>
+        </div>
+      </div>
+
+      <div class="hazard">
+        <div class="hazardTitle">⚠ HAZARD</div>
+        <div class="row"><span class="lbl">One touch kill</span><span class="chk"></span></div>
+        <div class="sublabel" style="margin-left:10px">killers end a whole body at a single touch</div>
+        <div class="row"><span class="lbl">Random world events</span><span class="chk"></span></div>
+        <div class="sublabel" style="margin-left:10px">meteors, blooms, ice ages — on a timer you don't control</div>
+        <div class="row"><span class="lbl">Maximum organisms</span><span class="slider" style="--fill:0%"></span><span class="val">∞</span></div>
+        <div class="sublabel" style="margin-left:10px">a hard ceiling on how much life the dish will hold</div>
+      </div>
+
+      <div class="fold">▸ FINE TUNING (16)</div>
+    </div>
+    <div class="winFoot"><span class="btn">RESET ALL</span><span class="btn">SAVE</span><span class="btn">LOAD</span></div>
+  </div>
+
+  <div class="verdict">
+    A dial you turn feels like an act. A slider in a list of twenty-one feels like a setting.
+    The red arc also tells you where the interesting values are — today nothing suggests that
+    mutation 50 is a different <em>kind</em> of world from mutation 5.
+  </div>
+
+  <!-- ================= 2. LIVE PETRI ================= -->
+  <div class="optionHead">
+    <h2>2 — LIVE PETRI (no backdrop)</h2>
+    <p class="tagline">Stop covering the world. The controls dock to the side, the sim keeps running
+    and stays clickable, every change announces itself over the world, and one button takes it back.</p>
+    <div class="meta">EFFORT S–M · RISK LOW · HIGHEST FUN PER LINE CHANGED</div>
+  </div>
+
+  <div class="dockLayout">
+    <div class="world" id="liveWorld">
+      <div class="rim"></div>
+      <div class="ticker">⟩ MUTATION 5 → 22<div class="sub2">expect chaos in ~200 ticks · [REVERT]</div></div>
+    </div>
+    <div class="dock">
+      <div class="winHead"><span class="winTitle">EVOLUTION</span><span class="winClose">✕</span></div>
+      <div class="vitals"><span>POP <b>812</b></span><span>SPP <b>14</b></span><span class="up">▲ +9%</span></div>
+      <div class="winBody" style="flex:1">
+        <div class="row"><span class="lbl">Mutation</span><span class="slider" style="--fill:44%"></span><span class="val">22</span></div>
+        <div class="sublabel">how far copies drift</div>
+        <div class="row"><span class="lbl">Abundance</span><span class="slider" style="--fill:60%"></span><span class="val">5.0</span></div>
+        <div class="sublabel">how fast producers feed</div>
+        <div class="row"><span class="lbl">Lifespan</span><span class="slider" style="--fill:30%"></span><span class="val">100</span></div>
+        <div class="sublabel">ticks earned per cell</div>
+        <div class="row"><span class="lbl">One touch kill</span><span class="chk"></span></div>
+        <div class="sublabel">killers end a body at a touch</div>
+        <div class="row"><span class="lbl">Look range</span><span class="slider" style="--fill:40%"></span><span class="val">20</span></div>
+        <div class="sublabel">how far an eye reaches</div>
+        <div class="fold" style="margin-top:12px">▸ FINE TUNING (16)</div>
+      </div>
+      <div class="winFoot" style="justify-content: space-between; align-items:center">
+        <span class="history"><span class="hchip">⟲ mut</span><span class="hchip">⟲ food</span><span class="hchip">⟲ kill</span></span>
+        <span class="btn">REVERT</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    The feedback loop already exists — <code>setParam</code> writes straight through to
+    <code>Hyperparams</code> and calls <code>emitChange(true)</code>. The modal backdrop is the only
+    thing hiding it. Deleting it turns configuration into play: hold the mutation dial, watch the
+    population wobble.
+  </div>
+
+  <!-- ================= 3. FOUR FORCES ================= -->
+  <div class="optionHead">
+    <h2>3 — THE FOUR FORCES</h2>
+    <p class="tagline">Twenty-one parameters collapse into four named forces with named zones. You
+    choose a <em>world</em>, not a value — and the window tells you which world you just chose.
+    Raw controls stay, one fold down.</p>
+    <div class="meta">EFFORT M · RISK MEDIUM (CURVE TUNING) · BIGGEST CHANGE TO HOW IT READS</div>
+  </div>
+
+  <div class="win" style="width: min(680px, 100%);">
+    <div class="winHead"><span class="winTitle">🧬 EVOLUTION CONTROLS</span><span class="winClose">✕</span></div>
+    <div class="winBody">
+      <div class="portrait">
+        “A lean, brutal, fast-turning world. Expect small armoured movers and short dynasties.”
+      </div>
+
+      <div class="force">
+        <div class="forceTop"><span>ABUNDANCE</span><span class="zone">LEAN</span></div>
+        <div class="forceTrack"><span>FAMINE</span><span class="on">LEAN</span><span>FED</span><span>FEAST</span><span>GLUT</span></div>
+        <div class="forceEnds"><span>producers barely keep up</span><span>food everywhere</span></div>
+      </div>
+
+      <div class="force">
+        <div class="forceTop"><span>VIOLENCE</span><span class="zone">HARSH</span></div>
+        <div class="forceTrack"><span>CALM</span><span>TENSE</span><span>ROUGH</span><span class="on">HARSH</span><span>BRUTAL</span></div>
+        <div class="forceEnds"><span>killers barely sting</span><span>one touch ends you</span></div>
+      </div>
+
+      <div class="force">
+        <div class="forceTop"><span>MUTABILITY</span><span class="zone">STEADY</span></div>
+        <div class="forceTrack"><span>FROZEN</span><span class="on">STEADY</span><span>DRIFTING</span><span>VOLATILE</span><span>CHAOS</span></div>
+        <div class="forceEnds"><span>children are copies</span><span>children are strangers</span></div>
+      </div>
+
+      <div class="force">
+        <div class="forceTop"><span>MORTALITY</span><span class="zone">FAST</span></div>
+        <div class="forceTrack"><span>ETERNAL</span><span>LONG</span><span>MID</span><span class="on">FAST</span><span>FLEETING</span></div>
+        <div class="forceEnds"><span>dynasties never end</span><span>generations blur past</span></div>
+      </div>
+
+      <div class="fold">▸ RAW PARAMETERS (21)</div>
+    </div>
+    <div class="winFoot"><span class="btn">RESET ALL</span><span class="btn">SAVE</span><span class="btn">LOAD</span></div>
+  </div>
+
+  <div class="verdict">
+    Four decisions with names and consequences beat twenty-one with neither — and it gives the
+    window a skill ceiling. You learn that <em>lean + brutal</em> breeds armour, then go looking
+    for that world deliberately.
+  </div>
+
+  <!-- ================= 4. FATE DECK ================= -->
+  <div class="optionHead">
+    <h2>4 — THE FATE DECK</h2>
+    <p class="tagline">Not settings you adjust — cards you play at the world. Each is a named,
+    illustrated bundle of parameter changes with a stated consequence. Timed cards revert
+    themselves, which makes “the era we survived” expressible for the first time.</p>
+    <div class="meta">EFFORT M · RISK MEDIUM (DESIGN PIVOT) · MOST GAME-LIKE</div>
+  </div>
+
+  <div class="win" style="width: min(760px, 100%);">
+    <div class="winHead"><span class="winTitle">🂠 THE FATE DECK</span><span class="winClose">✕</span></div>
+    <div class="winBody">
+      <div class="deck">
+        <div class="card cold">
+          <div class="cardArt">❄</div>
+          <div class="cardName">THE LONG<br>WINTER</div>
+          <div class="cardRules">lifespan ×3<br>food production ÷2</div>
+          <div class="cardFlavor">survivors get bigger</div>
+        </div>
+        <div class="card hot">
+          <div class="timed">2000 TK</div>
+          <div class="cardArt">⚡</div>
+          <div class="cardName">HAIR<br>TRIGGER</div>
+          <div class="cardRules">mutation ×5<br>reverts on expiry</div>
+          <div class="cardFlavor">everything changes at once</div>
+        </div>
+        <div class="card dark">
+          <div class="cardArt">☠</div>
+          <div class="cardName">THE GREAT<br>CULL</div>
+          <div class="cardRules">population ÷2<br>once, immediately</div>
+          <div class="cardFlavor">room to breathe</div>
+        </div>
+        <div class="card">
+          <div class="cardArt">✿</div>
+          <div class="cardName">FERTILE<br>CRESCENT</div>
+          <div class="cardRules">food drop +40<br>mover cost ÷2</div>
+          <div class="cardFlavor">a golden age, briefly</div>
+        </div>
+        <div class="card dark">
+          <div class="cardArt">🜏</div>
+          <div class="cardName">THE PREDATOR'S<br>GIFT</div>
+          <div class="cardRules">one touch kill ON<br>explosion radius +2</div>
+          <div class="cardFlavor">armour, or nothing</div>
+        </div>
+      </div>
+    </div>
+    <div class="winFoot" style="justify-content: space-between">
+      <span style="color: rgba(0,255,65,0.45)">playing a card is announced, timestamped, and joins the run's history</span>
+      <span class="btn">⚙ MANUAL</span>
+    </div>
+  </div>
+
+  <div class="verdict">
+    Authorship of <em>events</em>, not authorship of <em>settings</em>. “I played the Long Winter
+    and the movers went extinct” is a story; “I set lifespanMultiplier to 300” is not. Guardrail:
+    every card is a <em>pressure</em>, never a <em>result</em> — cards change what the world rewards,
+    they never place or remove specific organisms. Pure selection survives intact.
+  </div>
+
+  <!-- ================= 5. TEST CHAMBER ================= -->
+  <div class="optionHead">
+    <h2>5 — THE TEST CHAMBER</h2>
+    <p class="tagline">Answers the question the player actually has: <em>what will this do?</em> A
+    forked copy of the world runs the pending settings 2000 ticks ahead, three seeds deep, and
+    reports the spread. Nothing touches the live sim until you commit.</p>
+    <div class="meta">EFFORT L · RISK MED-HIGH (NEEDS A WORKER) · HIGHEST CEILING</div>
+  </div>
+
+  <div class="win" style="width: min(680px, 100%);">
+    <div class="winHead"><span class="winTitle">🧬 EVOLUTION CONTROLS — TEST CHAMBER</span><span class="winClose">✕</span></div>
+    <div class="winBody">
+      <div class="forecast">
+        <div>
+          <div class="mini" id="miniNow"><span class="cap">NOW · t=41,200</span></div>
+        </div>
+        <div class="arrow">➜</div>
+        <div>
+          <div class="mini ifWorld" id="miniIf"><span class="cap">IF · t+2000</span></div>
+          <div class="ffBar"></div>
+        </div>
+      </div>
+
+      <div class="delta">
+        <div>POP <b>812 → ~1400 ±300</b></div>
+        <div>SPECIES <b>14 → ~6 ±2</b></div>
+        <div>LARGEST <b>9 → ~21 cells</b></div>
+      </div>
+      <div style="color: var(--cyan); font-size:18px">“fewer, larger lineages”</div>
+
+      <div style="margin-top:18px">
+        <div class="row"><span class="lbl pending">Mutation <span style="font-size:14px">(pending)</span></span><span class="slider" style="--fill:44%"></span><span class="val pending">22</span></div>
+        <div class="row"><span class="lbl">Abundance</span><span class="slider" style="--fill:60%"></span><span class="val">5.0</span></div>
+        <div class="row"><span class="lbl">Lifespan</span><span class="slider" style="--fill:30%"></span><span class="val">100</span></div>
+        <div class="fold" style="margin-top:12px">▸ FINE TUNING (16)</div>
+      </div>
+    </div>
+    <div class="winFoot" style="justify-content: flex-end">
+      <span class="btn">DISCARD</span><span class="btn primary">COMMIT</span>
+    </div>
+  </div>
+
+  <div class="verdict">
+    Tuning becomes experimentation: hypothesis, forecast, commit. It also <em>teaches</em> the sim —
+    after a dozen forecasts you have an intuition for what abundance does, which is the best thing
+    this window could possibly give a player. Cost is real: fast-forwarding a detached world without
+    stuttering the live one is a Web Worker job.
+  </div>
+
+  <p class="footnote">
+    Recommended path: <b>2</b> first (nearly free, fixes the worst problem), then <b>1</b> as the
+    visual layer, then pick an identity — <b>3</b> to stay a tuning surface, <b>4</b> to become a
+    play surface, <b>5</b> to become a laboratory. Full reasoning in
+    <a href="evolution-window-overhauls.md" style="color: var(--cyan)">evolution-window-overhauls.md</a>.
+  </p>
+
+</div>
+
+<script>
+// Scatter pixel "organisms" into the mockup worlds so they read as living dishes
+// rather than empty boxes. Cell colours match the game's palette.
+const PALETTE = ['#00FF41', '#00FF41', '#43e8e0', '#ffb000', '#ff3b3b', '#b0b0b0'];
+
+function seed(el, count, clump, rimInset) {
+  const w = el.clientWidth, h = el.clientHeight;
+  const cx = w / 2, cy = h / 2;
+  const rx = (w / 2) - rimInset, ry = (h / 2) - rimInset;
+  for (let i = 0; i < count; i++) {
+    // pick a body centre inside the ellipse, then grow a few cells around it
+    const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random());
+    const bx = cx + Math.cos(a) * rx * r, by = cy + Math.sin(a) * ry * r;
+    const size = 1 + Math.floor(Math.random() * clump);
+    const colour = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+    for (let c = 0; c < size; c++) {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      d.style.left = Math.round(bx + (Math.random() * 2 - 1) * 8) + 'px';
+      d.style.top = Math.round(by + (Math.random() * 2 - 1) * 8) + 'px';
+      d.style.background = c === 0 ? colour : PALETTE[Math.floor(Math.random() * PALETTE.length)];
+      el.appendChild(d);
+    }
+  }
+}
+
+seed(document.getElementById('liveWorld'), 90, 5, 30);
+seed(document.getElementById('miniNow'), 26, 3, 12);
+seed(document.getElementById('miniIf'), 22, 9, 12);  // the forecast: fewer, larger bodies
+</script>
+</body>
+</html>

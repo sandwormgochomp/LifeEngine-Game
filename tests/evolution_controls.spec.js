@@ -4,6 +4,8 @@ test.describe('Evolution controls', () => {
   test.beforeEach(async ({ page }) => {
     await page.locator('#tool-rules').click();
     await expect(page.getByTestId('evolution-modal')).toBeVisible();
+    // The per-parameter rows these tests drive live on the Manual tab
+    await page.locator('#evo-tab-manual').click();
   });
 
   // The regression that motivated this: the old panel bound sliders to

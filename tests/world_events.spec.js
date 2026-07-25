@@ -436,6 +436,7 @@ test.describe('Random world events', () => {
 
   test('The interval slider only appears once the scheduler is on', async ({ page }) => {
     await page.locator('#tool-rules').click();
+    await page.locator('#evo-tab-manual').click();
     await expect(page.locator('#randomEvents')).toBeVisible();
     await expect(page.locator('#randomEventInterval')).toBeHidden();
 

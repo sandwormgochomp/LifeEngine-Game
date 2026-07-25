@@ -100,6 +100,7 @@ test.describe('Worlds picker', () => {
     // Set a distinctive value, then load with override off
     await page.keyboard.press('Escape');
     await page.locator('#tool-rules').click();
+    await page.locator('#evo-tab-manual').click();
     await page.locator('#lookRange').fill('11');
     await page.keyboard.press('Escape');
 
@@ -109,6 +110,7 @@ test.describe('Worlds picker', () => {
     await expect(page.getByTestId('worlds-modal')).toBeHidden();
 
     await page.locator('#tool-rules').click();
+    await page.locator('#evo-tab-manual').click();
     await expect(page.locator('#lookRange')).toHaveValue('11');
   });
 
