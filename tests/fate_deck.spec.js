@@ -273,6 +273,28 @@ test.describe('The Fate Deck', () => {
     expect(await eventKinds(page)).toEqual([]);
   });
 
+  /* The status bar is where a card's era becomes visible once the window is
+     shut: a played card is weather from then on, and reads on the same band as
+     the bloom and the ice age. */
+  test('A running era is announced on the status bar, and a permanent one is not', async ({ page }) => {
+    await page.locator('#fate-card-long-winter').click();
+    await page.locator('#fate-card-green-sun').click();
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByTestId('long-winter-countdown')).toContainText('THE LONG WINTER');
+    await expect(page.getByTestId('long-winter-countdown')).toContainText('3,000');
+    // Green Sun is a rule rather than an era: nothing is counting down, so
+    // there is nothing to put on the bar.
+    await expect(page.getByTestId('green-sun-countdown')).toBeHidden();
+
+    // Same subtraction the deck's own timer does, off the same event
+    await page.evaluate(() => { window.engine.env.total_ticks += 1200; window.engine.emitChange(true); });
+    await expect(page.getByTestId('long-winter-countdown')).toContainText('1,800');
+
+    await expire(page, 'long-winter');
+    await expect(page.getByTestId('long-winter-countdown')).toBeHidden();
+  });
+
   test('The card writes reach the sibling Manual tab, not just the engine', async ({ page }) => {
     await page.locator('#fate-card-long-night').click();
     await page.locator('#evo-tab-manual').click();

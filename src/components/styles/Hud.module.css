@@ -400,25 +400,46 @@
   user-select: none;
 }
 
-/* Active-event countdown, hanging under the stats bar. Ice blue where the bar
-   is terminal green: it reads as weather, not as another stat. */
+/* Live-event countdowns, hanging under the stats bar: the weather, plus every
+   Fate Deck era that is currently running. Several can hold at once (a card
+   during an ice age, two cards at once), so they wrap into a centred band
+   rather than sitting in one row that could push past the viewport. */
+.eventTickers {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 70vw;
+}
+
+/* One chip. Suit-coloured rather than terminal green so it reads as weather
+   rather than as another stat, and in the same four suits the Fate Deck prints
+   its cards in -- a running era looks like the card that started it. Colours
+   come from --tick, set per suit below. */
 .eventTicker {
-  margin: 6px auto 0;
-  width: fit-content;
   display: flex;
   gap: 10px;
   align-items: center;
-  padding: 5px 14px;
-  background: rgba(0, 10, 26, 0.82);
+  padding: 5px 12px;
+  background: rgba(0, 6, 16, 0.85);
   font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
+  font-size: 8px;
   letter-spacing: 1px;
-  color: #aad7ff;
-  text-shadow: 0 0 4px rgba(140, 190, 255, 0.5);
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--tick);
+  text-shadow: 0 0 4px color-mix(in srgb, var(--tick) 55%, transparent);
   box-shadow:
-    0 -2px 0 0 rgba(140, 190, 255, 0.5), 0 2px 0 0 rgba(140, 190, 255, 0.5), -2px 0 0 0 rgba(140, 190, 255, 0.5), 2px 0 0 0 rgba(140, 190, 255, 0.5),
-    inset 0 0 6px rgba(140, 190, 255, 0.1), 0 0 8px rgba(140, 190, 255, 0.15);
+    0 -2px 0 0 color-mix(in srgb, var(--tick) 55%, transparent), 0 2px 0 0 color-mix(in srgb, var(--tick) 55%, transparent),
+    -2px 0 0 0 color-mix(in srgb, var(--tick) 55%, transparent), 2px 0 0 0 color-mix(in srgb, var(--tick) 55%, transparent),
+    inset 0 0 6px color-mix(in srgb, var(--tick) 12%, transparent), 0 0 8px color-mix(in srgb, var(--tick) 18%, transparent);
 }
+
+.cold { --tick: #aad7ff; }
+.hot { --tick: #ffb000; }
+.dark { --tick: #ff3b3b; }
+.verdant { --tick: #00FF41; }
 
 .eventTickerValue {
   color: #ffffff;

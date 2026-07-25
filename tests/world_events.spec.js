@@ -177,6 +177,33 @@ test.describe('World events', () => {
     await expect(page.getByTestId('frost-overlay')).toHaveAttribute('data-frost', 'false');
   });
 
+  /* Every timed event earns a chip, not just the ice age: the band under the
+     stats bar is what tells you which pressures the world is currently under
+     when you have played several. */
+  test('Bloom and a storm each get their own chip, side by side', async ({ page }) => {
+    await expect(page.getByTestId('event-tickers')).toBeHidden();
+
+    await page.locator('#tool-tab-events').click();
+    await page.locator('#event-bloom').click();
+    await expect(page.getByTestId('bloom-countdown')).toContainText('BLOOM');
+
+    // A second, unrelated event doesn't replace the first — both are running,
+    // so both are on the bar.
+    await page.locator('#event-radstorm').click();
+    await expect(page.getByTestId('bloom-countdown')).toBeVisible();
+    await expect(page.getByTestId('radstorm-countdown')).toContainText('RAD STORM');
+
+    // The storm blows itself out; the bloom is untouched and keeps its chip.
+    await page.evaluate(() => {
+      const env = window.engine.env;
+      env.total_ticks = env.active_events.find(e => e.kind === 'radstorm').ends_at;
+      env.tickWorldEvents();
+      window.engine.emitChange(true);
+    });
+    await expect(page.getByTestId('radstorm-countdown')).toBeHidden();
+    await expect(page.getByTestId('bloom-countdown')).toBeVisible();
+  });
+
   test('An ice age cancels a running bloom instead of nesting inside it', async ({ page }) => {
     const base = await page.evaluate(() => window.hyperparams.foodProdProb);
 
