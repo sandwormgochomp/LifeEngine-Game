@@ -91,6 +91,12 @@ const App: React.FC = () => {
   // flips — not on every engine emit.
   const isNight = useEngineValue(engine, e => Boolean(e.env?.is_night), false);
   const [worldsOpen, setWorldsOpen] = useState(false);
+  /* Where a notification click aims the two windows it can open. The species
+     name survives the picker being closed and reopened by hand, which is
+     harmless -- it only decides which card is ringed, and the ring is dropped
+     once that species is gone from the list. */
+  const [rulesTab, setRulesTab] = useState<'console' | 'fate'>('console');
+  const [lifeformsHighlight, setLifeformsHighlight] = useState<string | null>(null);
   // Armed on the first visit ever, for the origin world (see mount effect)
   const [firstRunHints, setFirstRunHints] = useState(false);
   const envRef = useRef<HTMLDivElement>(null);
@@ -296,6 +302,21 @@ const App: React.FC = () => {
     }
   };
 
+  /* The three destinations a notification (or an event chip) can send you to.
+     Routed through closeModals() like every other modal opener, so a click on
+     the log obeys the same one-modal-at-a-time rule as the toolbar. */
+  const openLifeforms = (species?: string) => {
+    closeModals();
+    setLifeformsHighlight(species ?? null);
+    setLifeformsOpen(true);
+  };
+
+  const openEvolution = (tab: 'console' | 'fate') => {
+    closeModals();
+    setRulesTab(tab);
+    setRulesOpen(true);
+  };
+
   const renderPanelContent = () => {
     switch (activePanel) {
       case 'stats':
@@ -340,7 +361,12 @@ const App: React.FC = () => {
         worldsOpen={worldsOpen}
         onItemClick={handleToolbarClick}
       />
-      <HudNotifications />
+      <HudNotifications
+        engine={engine}
+        onOpenLifeforms={openLifeforms}
+        onOpenEvolution={openEvolution}
+        onOpenPanel={setActivePanel}
+      />
 
       {/* Mounting the perf panel enables the timing probes; unmounting turns
           them off and clears the buckets (see PerfPanel's mount effect). */}
@@ -382,7 +408,11 @@ const App: React.FC = () => {
       )}
 
       {rulesOpen && (
-        <EvolutionControlsModal engine={engine} onClose={() => setRulesOpen(false)} />
+        <EvolutionControlsModal
+          engine={engine}
+          initialTab={rulesTab}
+          onClose={() => setRulesOpen(false)}
+        />
       )}
 
       {newGameOpen && (
@@ -399,6 +429,7 @@ const App: React.FC = () => {
       {lifeformsOpen && (
         <LifeformsModal
           engine={engine}
+          highlight={lifeformsHighlight}
           onClose={() => setLifeformsOpen(false)}
           onOpenInLab={handleOpenInLab}
         />

@@ -1013,13 +1013,26 @@ class WorldEnvironment extends Environment{
         }
     }
 
-    // End an in-flight event of this kind early, winding back whatever it
-    // spiked. A no-op when none is running.
+    /* End an in-flight event of this kind early, winding back whatever it
+       spiked. A no-op when none is running.
+
+       The emit is forced and lives here rather than in the callers because
+       cancelling is now reachable from the status bar, which has no line to the
+       evolution window's React mirror of Hyperparams. A paused world has no
+       tick loop to carry the change to the HUD either, so without this a
+       called-off era leaves its chip counting down and the Console displaying
+       numbers the engine has already put back.
+
+       Deliberately silent otherwise: this also runs when an overlapping shift
+       displaces an earlier one and when clearRadiation() calls off a storm,
+       where a "called off" toast would be noise. Whoever cancels on the
+       player's behalf announces it -- they are the ones who know the label. */
     endWorldEvent(kind: string): void {
         const i = this.active_events.findIndex(e => e.kind === kind);
         if (i < 0) return;
         this.active_events[i].restore();
         this.active_events.splice(i, 1);
+        if (this.engine) this.engine.emitChange(true);
     }
 
     /* The live parameter shifts holding any of these fields. Recognised by
@@ -1099,7 +1112,11 @@ class WorldEnvironment extends Environment{
                 this.active_events.push(ev);
             }
         }
-        Notifier.notify(message);
+        /* One attachment covers bloom, ice age and every timed Fate card, since
+           they all announce themselves through here. A shift has no location,
+           so this resolves to the window that lists what is running -- which is
+           also where it can be called off or played again. */
+        Notifier.notify(message, { focus: { kind: 'event', id: kind } });
         if (this.engine) this.engine.emitChange(true);
     }
 
@@ -1172,7 +1189,11 @@ class WorldEnvironment extends Environment{
             },
         };
         this.active_events.push(ev);
-        Notifier.notify('☢ Radiation storm — a mutagenic front is rolling in');
+        // By `kind`, not by coordinate: the front moves every tick, so the toast
+        // has to ask where it has got to rather than remember where it started.
+        Notifier.notify('☢ Radiation storm — a mutagenic front is rolling in', {
+            focus: { kind: 'event', id: 'radstorm' },
+        });
         if (this.engine) this.engine.emitChange(true);
     }
 
@@ -1362,7 +1383,10 @@ class WorldEnvironment extends Environment{
         Narrator.acknowledge(species);
         Notifier.notify(
             `☣ ${species.name} released — ${species.population} founder${species.population === 1 ? '' : 's'}`,
-            { organism: first.anatomy.cells },
+            // Named rather than pinned to the release point: the pack scatters
+            // and then moves, so by the time anyone clicks, "where they are" is
+            // a better answer than "where they were dropped".
+            { organism: first.anatomy.cells, focus: { kind: 'species', name: species.name } },
         );
         if (this.engine) this.engine.emitChange(true);
         return species.population;
@@ -1396,7 +1420,12 @@ class WorldEnvironment extends Environment{
         // die() only flags the body; this is what takes them out of the world,
         // and what trips auto-pause / auto-reset if the cull took everything.
         this.clearDeadOrganisms();
-        Notifier.notify(`${message} — ${killed} organism${killed === 1 ? '' : 's'} taken at random`);
+        Notifier.notify(
+            `${message} — ${killed} organism${killed === 1 ? '' : 's'} taken at random`,
+            // Blind by design, so it has no place in the world -- only a shape
+            // on the population graph.
+            { focus: { kind: 'panel', panel: 'stats' } },
+        );
         if (this.engine) this.engine.emitChange(true);
         return killed;
     }
@@ -1420,7 +1449,9 @@ class WorldEnvironment extends Environment{
             resolved: false,
             embers: [],
         });
-        Notifier.notify('☄ Meteor incoming');
+        // The crater is fixed, so the impact point stays the right destination
+        // long after the fireball has landed.
+        Notifier.notify('☄ Meteor incoming', { focus: { kind: 'cell', col, row } });
         if (this.engine) this.engine.emitChange(true);
     }
 

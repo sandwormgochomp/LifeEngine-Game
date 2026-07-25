@@ -614,3 +614,116 @@ test.describe('Invasive predators', () => {
     expect(after.species).toBeLessThanOrEqual(before.species);
   });
 });
+
+/* Calling an event off from the status bar. Cancellation itself is old --
+   endWorldEvent() has always existed and the Fate Deck has always had a button
+   for it -- but until the chips grew a ✕ it was reachable only for cards, and
+   an ice age played from the tool palette could not be called off from
+   anywhere. What these cover is that the chip's ✕ performs the same wind-back
+   expiry does, from a surface that is always on screen. */
+test.describe('Calling an event off from its chip', () => {
+  test.beforeEach(async ({ page }) => {
+    await pauseEngine(page);
+    await page.locator('#tool-tab-events').click();
+  });
+
+  test('An ice age called off puts food production back where it was', async ({ page }) => {
+    const base = await page.evaluate(() => window.hyperparams.foodProdProb);
+
+    await page.locator('#event-iceage').click();
+    await expect(page.getByTestId('iceage-countdown')).toBeVisible();
+    // The spike is real before the cancel, or the assertion after it proves
+    // nothing: a no-op cancel would also leave the baseline in place.
+    expect(await page.evaluate(() => window.hyperparams.foodProdProb)).toBeLessThan(base);
+
+    await page.locator('#cancel-iceage').click();
+
+    await expect(page.getByTestId('iceage-countdown')).toBeHidden();
+    const after = await page.evaluate(() => ({
+      prob: window.hyperparams.foodProdProb,
+      events: window.engine.env.active_events.length,
+    }));
+    expect(after.prob).toBe(base);
+    expect(after.events).toBe(0);
+    await expect(page.getByTestId('hud-notifications')).toContainText('Ice Age called off');
+  });
+
+  /* The whole chip band goes away with the last event, and cancelling one of
+     several leaves the rest counting down. */
+  test('Cancelling one event leaves the others running', async ({ page }) => {
+    await page.locator('#event-bloom').click();
+    await page.locator('#event-radstorm').click();
+    await expect(page.getByTestId('bloom-countdown')).toBeVisible();
+
+    await page.locator('#cancel-bloom').click();
+
+    await expect(page.getByTestId('bloom-countdown')).toBeHidden();
+    await expect(page.getByTestId('radstorm-countdown')).toBeVisible();
+    await expect(page.getByTestId('event-tickers')).toBeVisible();
+
+    await page.locator('#cancel-radstorm').click();
+    await expect(page.getByTestId('event-tickers')).toBeHidden();
+  });
+
+  /* The storm owns its cells individually, so calling it off has to strip the
+     band it is standing on -- and only that band. Same contract Clear Radiation
+     is held to above, reached through the chip instead. */
+  test('A storm called off takes its radiation with it, and leaves painted zones', async ({ page }) => {
+    // A hand-painted cell the storm must not claim or strip
+    await page.evaluate(() => window.engine.env.controller.dropRadiation(2, 2, true));
+    const painted = await page.evaluate(() => window.engine.env.radiation_map.size);
+    expect(painted).toBeGreaterThan(0);
+
+    await page.locator('#event-radstorm').click();
+    await page.evaluate(() => {
+      for (let i = 0; i < 40; i++) window.engine.env.tickWorldEvents();
+    });
+    expect(await page.evaluate(() => window.engine.env.radiation_map.size)).toBeGreaterThan(painted);
+
+    await page.locator('#cancel-radstorm').click();
+
+    const after = await page.evaluate(() => {
+      const env = window.engine.env;
+      const cleared = env.radiation_map.size;
+      // A storm left running would re-irradiate on the very next tick
+      for (let i = 0; i < 5; i++) env.tickWorldEvents();
+      return { cleared, later: env.radiation_map.size, events: env.active_events.length };
+    });
+    expect(after.cleared).toBe(painted);
+    expect(after.later).toBe(painted);
+    expect(after.events).toBe(0);
+  });
+
+  /* Fate Deck eras cancel from the bar too, not just the weather -- the chips
+     are derived from the deck, so every timed card gets one. The deck has its
+     own END button for when the window is open (a modal backdrop covers the
+     status bar, so the chip is only reachable with the window shut); what this
+     covers is that the two agree about what is running.
+
+     It also pins down why endWorldEvent() forces the emit itself rather than
+     leaving it to callers: paused, there is no tick loop to carry the wind-back
+     to the HUD, so without it the chip would sit there counting down an era the
+     engine had already put back. */
+  test('A Fate Deck era cancels from its chip, and the deck agrees', async ({ page }) => {
+    const base = await page.evaluate(() => window.hyperparams.lifespanMultiplier);
+
+    await page.locator('#tool-rules').click();
+    await page.locator('#evo-tab-fate').click();
+    await page.locator('#fate-card-long-winter').click();
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByTestId('long-winter-countdown')).toBeVisible();
+    expect(await page.evaluate(() => window.hyperparams.lifespanMultiplier)).not.toBe(base);
+
+    await page.locator('#cancel-long-winter').click();
+
+    // The chip goes while paused, which is the forced emit doing its job
+    await expect(page.getByTestId('long-winter-countdown')).toBeHidden();
+    expect(await page.evaluate(() => window.hyperparams.lifespanMultiplier)).toBe(base);
+
+    // And the deck, reopened, no longer thinks the era is running
+    await page.locator('#tool-rules').click();
+    await page.locator('#evo-tab-fate').click();
+    await expect(page.locator('[data-testid="fate-card-long-winter"]')).toHaveAttribute('data-live', 'false');
+  });
+});

@@ -12,6 +12,11 @@ import type { ParamKey, ParamMirror } from './evolutionParams';
 
 interface EvolutionControlsModalProps {
   engine: Engine | null;
+  /* Which face to open on. Only a seed -- the tab is the window's own state
+     once it is up, so switching tabs by hand is never overridden. Exists so a
+     notification about a running era can land on the deck that lists it
+     instead of on the Console the player then has to navigate away from. */
+  initialTab?: TabId;
   onClose: () => void;
 }
 
@@ -31,10 +36,10 @@ const TABS: { id: TabId; label: string; icon: string; title: string }[] = [
   { id: 'fate', label: 'FATE DECK', icon: 'fa-clone', title: 'Play a pressure at the world' },
 ];
 
-const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine, onClose }) => {
+const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine, initialTab = 'console', onClose }) => {
   // Hyperparams is a plain module object; mirror it so edits re-render.
   const [params, setParams] = useState<ParamMirror>(snapshotParams);
-  const [tab, setTab] = useState<TabId>('console');
+  const [tab, setTab] = useState<TabId>(initialTab);
   /* The Console's fine-tuning fold, held here rather than in the tab: it is
      the window's exact-entry surface, and a player who opened it to type a
      number should still find it open after a look at the deck. */

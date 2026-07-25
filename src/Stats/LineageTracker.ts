@@ -94,6 +94,7 @@ class LineageTracker {
         Notifier.notify(`Following the ${this.name} line`, {
             key: 'lineage-follow',
             organism: this.founder_cells,
+            focus: { kind: 'lineage' },
         });
     }
 
@@ -133,7 +134,7 @@ class LineageTracker {
             this.born === 1
                 ? `${this.name} line: a descendant was born`
                 : `${this.name} line: ${this.born.toLocaleString()} born, ${this.alive.toLocaleString()} alive`,
-            { key: 'lineage-birth' }
+            { key: 'lineage-birth', focus: { kind: 'lineage' } }
         );
     }
 
@@ -150,6 +151,8 @@ class LineageTracker {
             const lived = this.born + 1;
             Notifier.notify(
                 `The ${this.name} line you were following has ended — ${lived.toLocaleString()} lived over ${(tick - this.start_tick).toLocaleString()} ticks`,
+                // Inert: nothing of this line is left to walk to, and the card
+                // is still up with the final tally.
                 { organism: this.founder_cells }
             );
             return;
@@ -158,7 +161,8 @@ class LineageTracker {
             this.root = null;
             Notifier.notify(
                 `The ${this.name} founder died at ${org.lifetime.toLocaleString()} ticks old — ${this.alive.toLocaleString()} descendants carry on`,
-                { organism: this.founder_cells }
+                // The descendants that carry on are exactly what a click wants.
+                { organism: this.founder_cells, focus: { kind: 'lineage' } }
             );
             return;
         }
@@ -166,7 +170,7 @@ class LineageTracker {
         this.last_death_notify = tick;
         Notifier.notify(
             `${this.name} line: ${this.died.toLocaleString()} died, ${this.alive.toLocaleString()} alive`,
-            { key: 'lineage-death' }
+            { key: 'lineage-death', focus: { kind: 'lineage' } }
         );
     }
 }

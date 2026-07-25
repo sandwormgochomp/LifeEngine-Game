@@ -3,6 +3,7 @@ import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
 import FossilRecord from '../Stats/FossilRecord';
+import Notifier from '../Utils/Notifier';
 import { FATE_CARDS } from '../Evolution/FateCards';
 import type { CardTone } from '../Evolution/FateCards';
 
@@ -56,6 +57,17 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine, onLifeformsClick })
     const [kind, left] = entry.split(':');
     return { kind, left: Number(left), ...EVENT_BADGES[kind] };
   }) : [];
+
+  /* Call an era off from the status bar. No confirmation on purpose: this is
+     the same wind-back expiry performs a few hundred ticks later, and every
+     event on this bar can simply be played again. The engine handles the
+     restore and the re-render; the toast is fired here because this is the
+     layer that knows what the thing is called. */
+  const cancel = (ev: { kind: string; glyph: string; label: string }) => {
+    if (!engine) return;
+    engine.env.endWorldEvent(ev.kind);
+    Notifier.notify(`${ev.glyph} ${ev.label} called off`);
+  };
 
   return (
     <div className={styles.topCenter}>
@@ -118,6 +130,16 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine, onLifeformsClick })
             >
               <span>{ev.glyph} {ev.label.toUpperCase()}</span>
               <span className={styles.eventTickerValue}>{ev.left.toLocaleString()}</span>
+              <button
+                id={`cancel-${ev.kind}`}
+                type="button"
+                className={styles.eventTickerCancel}
+                title={`Call off ${ev.label} now — the world goes back to what it was`}
+                aria-label={`Call off ${ev.label}`}
+                onClick={() => cancel(ev)}
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
           ))}
         </div>

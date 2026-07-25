@@ -171,9 +171,18 @@ class Narrator {
             this.emergedStreak += emerged;
             const key = `emerged:${this.emergedGen}`;
             if (this.emergedStreak === 1)
-                Notifier.notify(`A new lifeform emerged: ${last_name}`, { key, organism: last_emerged!.cells });
+                Notifier.notify(`A new lifeform emerged: ${last_name}`, {
+                    key,
+                    organism: last_emerged!.cells,
+                    // Named, so the click goes to a living member of this line.
+                    focus: { kind: 'species', name: last_name },
+                });
             else
-                Notifier.notify(`${this.emergedStreak} new lifeforms emerged`, { key });
+                // A count has no single subject; the picker lists them all.
+                Notifier.notify(`${this.emergedStreak} new lifeforms emerged`, {
+                    key,
+                    focus: { kind: 'panel', panel: 'lifeforms' },
+                });
         } else this.emergedStreak = 0;
 
         // Extinctions: names gone since the last sample. Age and preview come from
@@ -197,9 +206,17 @@ class Narrator {
                 Notifier.notify(extinctionMessage(last_extinct_name, tick - last_extinct!.start), {
                     key,
                     organism: last_extinct!.cells,
+                    /* The same descriptor the emergence above uses. Nothing of
+                       this line is alive to centre on, so it resolves to the
+                       fossil record -- which is the honest destination for a
+                       lineage that has just ended. */
+                    focus: { kind: 'species', name: last_extinct_name },
                 });
             else
-                Notifier.notify(`${this.extinctStreak} lineages went extinct`, { key });
+                Notifier.notify(`${this.extinctStreak} lineages went extinct`, {
+                    key,
+                    focus: { kind: 'panel', panel: 'lifeforms' },
+                });
         } else this.extinctStreak = 0;
 
         // New all-time size record, previewing the record holder. Keyed so a quick
@@ -208,12 +225,20 @@ class Narrator {
             Notifier.notify(`New largest organism ever: ${largest.toLocaleString()} cells`, {
                 key: 'record',
                 organism: env.largest_cells,
+                /* The picker rather than the holder itself. The record is
+                   captured in addOrganism(), which runs *before* a mutated
+                   child is given its own species -- so the name reachable there
+                   is the parent's, and centring on it would take you to the
+                   wrong lineage. A body plan is all the record honestly has. */
+                focus: { kind: 'panel', panel: 'lifeforms' },
             });
 
         // Population crash. No single organism to preview -- it's an aggregate.
         if (this.population >= MIN_POP_FOR_CRASH && pop <= this.population * (1 - CRASH_FRAC))
             Notifier.notify(
-                `Mass extinction — population crashed ${this.population.toLocaleString()} → ${pop.toLocaleString()}`
+                `Mass extinction — population crashed ${this.population.toLocaleString()} → ${pop.toLocaleString()}`,
+                // The population graph is the only place a crash is legible.
+                { focus: { kind: 'panel', panel: 'stats' } }
             );
 
         this.commit(current, pop, largest);

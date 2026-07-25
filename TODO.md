@@ -149,6 +149,58 @@ Notifier / FossilRecord / Floaties infrastructure.
 - [ ] **Tighten action→reaction.** Make food/radiation/wall drops show their
       consequence — briefly glow affected cells, reveal what a radiation burst
       actually mutated. Powerful systems that currently feel disconnected.
+- [x] ~~**Clickable notifications, cancelable events.**~~ — done, as two halves
+      of "the HUD reports things you cannot act on". `NotificationMeta` gained
+      an optional `focus` (`src/Utils/Notifier.ts`), and the toast log renders a
+      line carrying one as a `<button>` that goes to whatever it named. The
+      whole design point is that a focus says *what to look for*, never what it
+      found: a toast outlives its tick by up to six seconds, so `applyFocus`
+      (`src/components/notificationFocus.ts`) resolves against the live world at
+      click time and every variant has an answer for "it's gone". `species`
+      therefore serves both emergence and extinction — the difference is only
+      whether anything is still alive — and `event` is by kind, because the rad
+      storm's front has moved by the time you reach for it.
+      The camera API this needed did not exist: `EnvironmentController.centerOn`
+      inverts `overlayCamera()`'s mapping and floors the zoom at
+      `FOCUS_MIN_SCALE`, because a single organism centred at 1x is a few pixels
+      and reads as nothing having happened.
+      Cancel went on the status-bar chips, which already carried the `kind`
+      `endWorldEvent()` wants — so weather and Fate Deck eras call off the same
+      way, where before only a card could (from inside the deck). No
+      confirmation: it is the same wind-back expiry performs. Its ✕ is a
+      flex-centred `fa-xmark` in a full-height cap divided off the countdown,
+      not a text glyph: Press Start 2P has no ✕, so a literal one silently fell
+      back to a system font and sat on *that* font's baseline inside an 8px
+      line — tiny and visibly off-centre. Worth remembering for any other mark
+      dropped into pixel-font chrome.
+      Three things fell out of building it. `pointer-events: none` on the toast
+      panel means a `mouseenter` there never fires, so the hover guard that
+      stops the 6s idle clear yanking a line out from under the cursor lives on
+      the actionable rows — which is the better seam anyway, and keeps the panel
+      click-through to the canvas. `endWorldEvent` now forces the emit itself
+      rather than leaving it to callers, since the status bar has no line to the
+      evolution window's param mirror. And `FossilRecord.fossilize` had a
+      standing `// TODO: store as extinct species` — `extinct_species` was never
+      written to, so an extinction click would have opened a picker that could
+      not contain its subject. Completing it was three lines; `resurrect()` and
+      `uniqueSpeciesName()` already assumed it worked, `min_discard` already
+      bounded the growth, and saves are untouched (`serialize()` walks
+      `extant_species` by hand).
+      `tests/notification_actions.spec.js` covers the camera actually landing
+      the subject at viewport centre (not merely moving), the live/extinct split
+      on one descriptor, the storm's moving front, an inert line staying inert,
+      and the hover guard. `tests/world_events.spec.js` covers cancelling
+      weather, one-of-several, the storm's owned radiation, and a card.
+- [ ] **A chip's body does nothing.** Its ✕ cancels, but clicking the chip
+      itself is inert — it could run the same `applyFocus({kind:'event'})` the
+      toasts use and centre on a storm front or open the deck. Left out as a
+      third thing neither headline feature needed.
+- [ ] **`centerOn` cuts rather than travels.** Deliberate: `applyView()` writes
+      a CSS transform, and a `transition` on it would smear every wheel-zoom and
+      drag-pan too. An animated fly-to needs its own rAF loop.
+- [ ] **Cancelling always says the same thing.** "❄ Ice Age called off" is
+      derived from the chip's badge; per-event wording ("the world warms back
+      up") would read better and costs a table.
 
 Organism Lab
 - [ ] Move name input to top-center

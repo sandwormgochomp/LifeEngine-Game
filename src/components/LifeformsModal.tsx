@@ -22,6 +22,12 @@ interface Entry {
 
 interface LifeformsModalProps {
   engine: Engine | null;
+  /* A species to surface, set when the picker was opened by a notification
+     rather than from the toolbar. Its card is ringed, and -- the reason this
+     exists -- a name that is no longer extant is recovered from the fossil
+     record and listed as extinct. Without that, clicking "the Vexil line went
+     extinct" opens a picker that does not contain Vexil. */
+  highlight?: string | null;
   onClose: () => void;
   onOpenInLab: (raw: unknown, name: string) => void;
 }
@@ -30,7 +36,7 @@ const sameList = (a: Entry[], b: Entry[]) =>
   a.length === b.length &&
   a.every((e, i) => e.name === b[i].name && e.population === b[i].population && e.extinct === b[i].extinct);
 
-const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, onClose, onOpenInLab }) => {
+const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, highlight, onClose, onOpenInLab }) => {
   const [entries, setEntries] = useState<Entry[]>([]);
   // While the pointer is over the grid, extinct species stay in place (marked)
   // instead of being removed, so cards never shift out from under a click.
@@ -51,7 +57,10 @@ const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, onClose, onOpen
         if (species && species === entry.species) {
           next.push({ ...entry, species, population: species.population, extinct: false });
           seen.add(entry.name);
-        } else if (hovering.current) {
+        } else if (hovering.current || entry.name === highlight) {
+          // The highlighted species keeps its slot unconditionally: it is the
+          // one the player was sent here to look at, and it is usually the one
+          // that just died.
           next.push({ ...entry, extinct: true });
           seen.add(entry.name);
         }
@@ -65,9 +74,20 @@ const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, onClose, onOpen
         next.push({ name: species.name, species, population: species.population, extinct: false });
       }
 
+      /* Recover the highlighted species from the fossil record when it is no
+         longer extant. Appended rather than prepended so the living list keeps
+         the order it always had; the ring and the scroll below are what make it
+         findable. Seeded once -- the loop above holds the slot afterwards. */
+      if (highlight && !seen.has(highlight)) {
+        const dead = (FossilRecord.extinct_species ?? {})[highlight] as LiveSpecies | undefined;
+        if (dead?.anatomy) {
+          next.push({ name: highlight, species: dead, population: 0, extinct: true });
+        }
+      }
+
       return sameList(prev, next) ? prev : next;
     });
-  }, []);
+  }, [highlight]);
 
   useEffect(() => {
     refresh();
@@ -104,8 +124,20 @@ const LifeformsModal: React.FC<LifeformsModalProps> = ({ engine, onClose, onOpen
           {entries.map(entry => (
             <button
               key={entry.name}
-              className={`lifeform-card ${styles.pickerCard} ${entry.extinct ? styles.pickerCardExtinct : ''}`}
+              /* Scroll the highlighted card into view the moment it mounts. A
+                 grown world's list is long, and a ring you have to scroll to
+                 find is not a destination. */
+              ref={entry.name === highlight
+                ? el => el?.scrollIntoView({ block: 'nearest' })
+                : undefined}
+              className={[
+                'lifeform-card',
+                styles.pickerCard,
+                entry.extinct ? styles.pickerCardExtinct : '',
+                entry.name === highlight ? styles.pickerCardHighlight : '',
+              ].filter(Boolean).join(' ')}
               data-extinct={entry.extinct ? 'true' : 'false'}
+              data-highlight={entry.name === highlight ? 'true' : 'false'}
               title={entry.extinct
                 ? 'This species just died out — its design can still be opened'
                 : 'Open this species in the Organism Lab'}

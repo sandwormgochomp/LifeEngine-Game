@@ -96,6 +96,11 @@ const BRUSH_MODES: number[] = [Modes.FoodDrop, Modes.WallDrop, Modes.InvincibleW
 const SEED_LIFE_DENSITY = 0.02;
 const SEED_LIFE_MAX_PER_TICK = 6;
 
+/* Zoom floor for centerOn(): how close the camera gets when something asks to
+   be looked at. Tuned for the notification log's "go to the subject" click,
+   where the subject is often a single organism. */
+const FOCUS_MIN_SCALE = 2;
+
 const MODE_CURSORS: Record<number, string> = {
     [Modes.ClickKill]: 'not-allowed',
     [Modes.Select]: 'pointer',
@@ -204,6 +209,28 @@ class EnvironmentController extends CanvasController{
         this.scale = 1;
         this.pan_x = 0;
         this.pan_y = 0;
+        this.applyView();
+    }
+
+    /* Put a world cell in the middle of the viewport. The inverse of the
+       mapping overlayCamera() derives: a world pixel p lands at screen
+       W/2 + pan_x - (W/2)*s + p*s, so pinning that to W/2 gives
+       pan_x = s * (W/2 - p) -- the same algebra as the wheel handler's cursor
+       anchoring above, solved for the pan instead of the delta.
+
+       The zoom floor is the difference between "the camera moved" and "I can
+       see what it moved to": a single organism centred at 1x is a few pixels in
+       the middle of a hundred-cell world, which reads as nothing having
+       happened. An already-closer view is left alone -- this only ever moves
+       the camera towards the subject, never away from it. */
+    centerOn(col: number, row: number): void {
+        const cs = this.env.renderer.cell_size;
+        this.scale = Math.max(this.scale, FOCUS_MIN_SCALE);
+        this.pan_x = this.scale * (this.canvas!.width / 2 - (col + 0.5) * cs);
+        this.pan_y = this.scale * (this.canvas!.height / 2 - (row + 0.5) * cs);
+        // Not optional: applyView() is what tells the env the camera moved, and
+        // the viewport-sized overlays re-aim off that. Writing the three fields
+        // without it leaves the frost, smoke and floaties behind.
         this.applyView();
     }
 

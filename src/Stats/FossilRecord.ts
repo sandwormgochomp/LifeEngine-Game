@@ -164,7 +164,16 @@ const FossilRecord: FossilRecordType = {
         species.ancestor = undefined; // garbage collect ancestors
         delete this.extant_species[species.name];
         if (species.cumulative_pop >= this.min_discard) {
-            // TODO: store as extinct species
+            /* Keep the fossil. Everything else here already assumed this
+               happened: resurrect() deletes from this registry, and
+               uniqueSpeciesName() treats its names as taken so a later
+               lineage cannot reclaim a dead one's name. The min_discard gate
+               above is what bounds the growth -- a lineage that never got past
+               a handful of members is dropped, as it always was.
+
+               Not serialized: serialize() walks extant_species by hand and
+               copyNonObjects skips objects, so saves are unchanged. */
+            this.extinct_species[species.name] = species;
             return true;
         }
         return false;

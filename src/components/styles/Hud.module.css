@@ -447,6 +447,43 @@
   text-align: right;
 }
 
+/* Call the event off early: a full-height cap on the right end of the chip,
+   divided off from the countdown so it reads as a control rather than a stray
+   mark in the text.
+
+   It must not inherit the chip's type. At 8px Press Start 2P a ✕ is a few
+   pixels tall, and the font has no glyph for one anyway -- it fell back to
+   whatever the system offered, at that font's baseline rather than the chip's,
+   which is what made it look off-centre. So this is the same fa-xmark every
+   other close button in the HUD uses, sized in its own right and flex-centred
+   in a square. Stretching to the chip's full height (the negative margins undo
+   the chip's padding on three sides) is what turns a ~9px glyph into a ~20px
+   hit target without making the chip any taller. */
+.eventTickerCancel {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  margin: -5px -12px -5px -2px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--tick) 28%, transparent);
+  background: none;
+  font-size: 11px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--tick) 60%, transparent);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.eventTickerCancel:hover,
+.eventTickerCancel:focus-visible {
+  background: color-mix(in srgb, var(--tick) 22%, transparent);
+  color: var(--tick);
+  outline: none;
+}
+
 /* ---- Top-Right: Speed & Zoom ---- */
 .topRight {
   position: fixed;
@@ -1798,6 +1835,15 @@
   color: rgba(255, 140, 140, 0.8);
 }
 
+/* The card a notification sent you here to see. Overrides the extinct dimming,
+   since the usual reason to be pointed at a species is that it has just died --
+   and a card faded to 45% is not something you were sent to look at. */
+.pickerCardHighlight {
+  opacity: 1;
+  border-color: rgba(0, 255, 65, 0.8) !important;
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.35);
+}
+
 .pickerThumbPending {
   width: 72px;
   height: 72px;
@@ -2317,6 +2363,44 @@
 
 .notificationText {
   flex: 1;
+  text-align: left;
+}
+
+/* A line that knows what it is about. The panel stays pointer-events: none so
+   the canvas underneath keeps taking strokes through the log's dead space --
+   only the actionable rows opt back in, which is the whole reason the toasts
+   were unclickable before. Reset the button chrome the .notification styles
+   don't cover; it is a <button> for the keyboard and the cursor, not for looks. */
+.notificationAction {
+  pointer-events: auto;
+  width: 100%;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notificationAction:hover,
+.notificationAction:focus-visible {
+  background: rgba(0, 255, 65, 0.1);
+  outline: none;
+}
+
+/* The one mark that separates an actionable line from an inert one at a
+   glance. Brightens with the row rather than announcing itself: the log is
+   still a log, not a menu. */
+.notificationChevron {
+  color: rgba(0, 255, 65, 0.45);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.notificationAction:hover .notificationChevron,
+.notificationAction:focus-visible .notificationChevron {
+  color: #00FF41;
 }
 
 @keyframes notificationIn {
