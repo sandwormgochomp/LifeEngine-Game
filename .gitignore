@@ -3,6 +3,9 @@ dist/
 test-results/
 playwright-report/
 
+# local agent settings and the worktrees agents check out into
+.claude/
+
 # editor swap files
 *.swp
 *.swo
