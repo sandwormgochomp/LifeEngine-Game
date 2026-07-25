@@ -343,6 +343,32 @@
   user-select: none;
 }
 
+/* Active-event countdown, hanging under the stats bar. Ice blue where the bar
+   is terminal green: it reads as weather, not as another stat. */
+.eventTicker {
+  margin: 6px auto 0;
+  width: fit-content;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 14px;
+  background: rgba(0, 10, 26, 0.82);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #aad7ff;
+  text-shadow: 0 0 4px rgba(140, 190, 255, 0.5);
+  box-shadow:
+    0 -2px 0 0 rgba(140, 190, 255, 0.5), 0 2px 0 0 rgba(140, 190, 255, 0.5), -2px 0 0 0 rgba(140, 190, 255, 0.5), 2px 0 0 0 rgba(140, 190, 255, 0.5),
+    inset 0 0 6px rgba(140, 190, 255, 0.1), 0 0 8px rgba(140, 190, 255, 0.15);
+}
+
+.eventTickerValue {
+  color: #ffffff;
+  min-width: 5ch;
+  text-align: right;
+}
+
 /* ---- Top-Right: Speed & Zoom ---- */
 .topRight {
   position: fixed;

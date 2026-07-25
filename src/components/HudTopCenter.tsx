@@ -14,6 +14,12 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine, onLifeformsClick })
   const pop = useEngineValue(engine, e => e.env.organisms.length, 0);
   const lifeforms = useEngineValue(engine, () => FossilRecord.numExtantSpecies(), 0);
   const isNight = useEngineValue(engine, e => Boolean(e.env?.is_night), false);
+  // Ticks left in a running ice age, 0 when none. Derived per emit rather than
+  // stored anywhere: ends_at is absolute, so the countdown is just a subtraction.
+  const iceTicksLeft = useEngineValue(engine, e => {
+    const ev = e.env.active_events.find(ev => ev.kind === 'iceage');
+    return ev ? Math.max(0, ev.ends_at - e.env.total_ticks) : 0;
+  }, 0);
 
   return (
     <div className={styles.topCenter}>
@@ -65,6 +71,16 @@ const HudTopCenter: React.FC<HudTopCenterProps> = ({ engine, onLifeformsClick })
           )}
         </button>
       </div>
+      {iceTicksLeft > 0 && (
+        <div
+          className={styles.eventTicker}
+          data-testid="iceage-countdown"
+          title="Ticks until the ice age thaws and food production recovers"
+        >
+          <span>❄ ICE AGE</span>
+          <span className={styles.eventTickerValue}>{iceTicksLeft.toLocaleString()}</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -141,6 +141,42 @@ test.describe('World events', () => {
     expect(restored.events).toBe(0);
   });
 
+  test('An ice age shows a live countdown and frosts the world until it thaws', async ({ page }) => {
+    // Cold open: no countdown chip, no frost.
+    await expect(page.getByTestId('iceage-countdown')).toBeHidden();
+    await expect(page.getByTestId('frost-overlay')).toHaveAttribute('data-frost', 'false');
+
+    await page.locator('#tool-tab-events').click();
+    await page.locator('#event-iceage').click();
+
+    // The chip appears with the event's full span on it...
+    await expect(page.getByTestId('iceage-countdown')).toBeVisible();
+    const full = await page.evaluate(() => {
+      const env = window.engine.env;
+      return env.active_events.find(e => e.kind === 'iceage').ends_at - env.total_ticks;
+    });
+    await expect(page.getByTestId('iceage-countdown')).toContainText(full.toLocaleString('en-US'));
+    // ...and the frost layer notices the weather (rAF-driven, hence the poll).
+    await expect(page.getByTestId('frost-overlay')).toHaveAttribute('data-frost', 'true');
+
+    // Wind the clock forward: the countdown is ends_at - total_ticks, live.
+    await page.evaluate(() => {
+      window.engine.env.total_ticks += 500;
+      window.engine.emitChange(true);
+    });
+    await expect(page.getByTestId('iceage-countdown')).toContainText((full - 500).toLocaleString('en-US'));
+
+    // Thaw: run the event out and both the chip and the frost stand down.
+    await page.evaluate(() => {
+      const env = window.engine.env;
+      env.total_ticks = env.active_events.find(e => e.kind === 'iceage').ends_at;
+      env.tickWorldEvents();
+      window.engine.emitChange(true);
+    });
+    await expect(page.getByTestId('iceage-countdown')).toBeHidden();
+    await expect(page.getByTestId('frost-overlay')).toHaveAttribute('data-frost', 'false');
+  });
+
   test('An ice age cancels a running bloom instead of nesting inside it', async ({ page }) => {
     const base = await page.evaluate(() => window.hyperparams.foodProdProb);
 

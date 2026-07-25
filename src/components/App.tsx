@@ -27,6 +27,7 @@ import BrainModal from './BrainModal';
 import WorldsModal from './WorldsModal';
 import Floaties from './Floaties';
 import RadiationSmoke from './RadiationSmoke';
+import FrostOverlay from './FrostOverlay';
 import MicroscopeOverlay from './MicroscopeOverlay';
 import PerfPanel from './PerfPanel';
 
@@ -309,6 +310,7 @@ const App: React.FC = () => {
         <canvas id="env-deco-canvas" ref={decoCanvasRef} style={nightStyle}></canvas>
         <canvas id="env-glow-canvas" ref={glowCanvasRef} style={nightStyle}></canvas>
       </div>
+      <FrostOverlay engine={engine} />
       <RadiationSmoke engine={engine} />
       <Floaties engine={engine} />
       <MicroscopeOverlay engine={engine} />
