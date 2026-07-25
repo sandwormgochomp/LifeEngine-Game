@@ -217,8 +217,10 @@ async function run() {
       const dirtyAllOrganismCells = () => {
         for (const org of env.organisms)
           for (const bc of org.anatomy.cells) {
-            const cell = org.getRealCell(bc);
-            if (cell) env.renderer.addToRender(cell);
+            // addToRender takes a grid index, and getRealCell is long gone --
+            // same pattern as WorldEnvironment's own dirty passes.
+            const idx = org.getRealCellIndex(bc);
+            if (idx >= 0) env.renderer.addToRender(idx);
           }
       };
       return {
