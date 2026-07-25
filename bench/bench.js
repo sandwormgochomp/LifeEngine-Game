@@ -34,7 +34,9 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const RESULTS = path.join(__dirname, 'results.jsonl');
-const URL = 'http://localhost:3000/?floaties=static';
+// firstrun=off: the bench context is always fresh, and the live-rate scenario
+// must measure the blank origin world, not the first-run demo world.
+const URL = 'http://localhost:3000/?floaties=static&firstrun=off';
 const HISTORY_WINDOW = 10; // prior runs each metric is compared against
 const DRIFT_WARN = 0.15;   // default fraction worse than the median that flags
 const SIM_TICKS = 2000;    // fixed sim workload

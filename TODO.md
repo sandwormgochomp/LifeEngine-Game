@@ -49,10 +49,24 @@ Notifier / FossilRecord / Floaties infrastructure.
       starves beside its own kills; and only `has_shooter` matters, so extra
       shooter cells buy nothing. Outcomes stay world-dependent by design — a
       pack dropped into a food-starved world dies, and so does that world.
-- [ ] **First-run legibility, not a tutorial.** A curated "start here" demo
-      world chosen to do something interesting within ~1 minute, plus 2–3
-      contextual one-line hints that fire on the world itself ("← just evolved
-      a mover"). Get to the first "wow" without reading the About wall.
+- [x] ~~**First-run legibility, not a tutorial.**~~ — done. The very first
+      visit (localStorage flag, `?firstrun=off` to opt out — the fixtures and
+      bench do) loads a curated bundled world instead of the blank origin
+      world, then `FirstRunHints` fires three one-line labels anchored to real
+      organisms through `overlayCamera()`: meet-a-lifeform, the producer food
+      economy, and "just evolved a mover" when a species that didn't exist at
+      load shows up. The world was picked by audition, not taste
+      (`scripts/audition-worlds.js`): all 20 bundled worlds ran a simulated
+      first minute at default speed, finalists ran longer. ArthursWorld won —
+      named emergences every ~7s where churnier worlds coalesce into "23 new
+      lifeforms emerged" noise, a new mover species inside ~100 ticks, 1.2ms
+      ticks, and it *recovers* (605→317→630 over 8 min) where the flashier
+      SymbioticColony (810→65) and ephemeral (394→60) turned out to be
+      population bubbles. Hints stop the moment `env.organisms` is reassigned
+      (reset/load replaced the world under them). `tests/first_run.spec.js`
+      covers the swap, the flag, the opt-out, hint anchoring in-viewport,
+      reset-kills-hints, and the full sequence reaching the evolution hint
+      (`?hintpace=fast` compresses timings 10x to fit the 15s test budget).
 - [ ] **Follow-a-lineage.** Clicking an organism tracks it and its descendants:
       highlight the line, keep a small card on it, notify on reproduce/death.
       Reuses the Select/sample plumbing, which currently doesn't persist focus.

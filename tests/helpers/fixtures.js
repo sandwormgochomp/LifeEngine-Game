@@ -9,7 +9,9 @@ const test = base.test.extend({
     });
     // ?floaties=static pins the decorative dust layer (seeded + frozen) so
     // zero-tolerance visual snapshots don't flake on drifting motes.
-    await page.goto('/?floaties=static');
+    // ?firstrun=off keeps the blank origin world: test contexts are always
+    // fresh, so without it every test would open on the first-run demo world.
+    await page.goto('/?floaties=static&firstrun=off');
     await page.waitForSelector('div[data-engine-ready="true"]');
     await use(page);
   },
