@@ -41,6 +41,40 @@ Notifier / FossilRecord / Floaties infrastructure.
       covers both new events, the mutual exclusion, storm ownership, and the
       scheduler's silence when off; the ownership and version guards were each
       verified to fail when deliberately broken.
+- [x] ~~**Overhaul the evolution window.**~~ — done, as three tabs over one set
+      of parameters (`concepts/evolution-window-overhauls.md` proposes five
+      treatments; two were built). **Console** promotes abundance / lifespan /
+      mutation to pixel dials, puts the four world-reshaping toggles in a hazard
+      block, and replaces hover tooltips with always-visible consequence lines.
+      **Fate Deck** is seven cards played at the world — bundled parameter
+      pressures that wind themselves back, on the `active_events` queue the
+      weather already used. **Manual** is the old flat list, unchanged.
+      The engine's `triggerFoodShift` is now the one-field case of a general
+      `triggerParamShift`; bloom/ice-age exclusion falls out of the rule that no
+      two live shifts may hold the same field. Two bugs came out of it: a card in
+      flight survived a world load (`active_events` is an array, so the save
+      round trip never touched it), and the window kept displaying values an
+      expired era had already wound back.
+      Guardrail held throughout: a card is a pressure, never a result — it
+      changes what the world rewards and never targets a species or trait.
+      The Great Cull is the one exception and earns it by being blind.
+- [ ] **The other three evolution-window treatments.**
+      `concepts/evolution-window-overhauls.md` — **Live Petri** (dock it instead
+      of covering the world with a backdrop; the feedback loop already exists and
+      the modal is the only thing hiding it) is the cheapest and probably the
+      best of the remainder. **Four Forces** (21 params → four named macro dials)
+      and **Test Chamber** (fork the world, fast-forward 2000 ticks, forecast
+      before committing — needs a Web Worker) are the bigger bets.
+- [ ] **No sign a control is currently held by an era.** Editing a field a live
+      Fate Deck card holds now takes it off that era rather than letting the
+      era's expiry throw the edit away, and says so in a toast
+      (`WorldEnvironment.releaseParamClaim`) — but until you touch it, nothing on
+      the Console or Manual tab marks the value as borrowed rather than yours.
+- [ ] **`foodProdProb`'s row is `min: 0.001, step: 1`.** So every value the
+      Manual slider can produce ends in `.001` (`evolutionParams.ts`). The
+      Console's ABUNDANCE dial sidesteps it with its own `0..100` scale; the
+      underlying row is still odd, and `tests/evolution_window.spec.js` has to
+      fill `7.001` to satisfy it.
 - [ ] **Predator bestiary: what the trials showed.** Six species in
       `src/Organism/Predators.ts`, each tuned against a 2400-tick trial in
       several grown worlds. Three lessons, if more are added: a functional cell
@@ -51,22 +85,41 @@ Notifier / FossilRecord / Floaties infrastructure.
       pack dropped into a food-starved world dies, and so does that world.
 - [x] ~~**First-run legibility, not a tutorial.**~~ — done. The very first
       visit (localStorage flag, `?firstrun=off` to opt out — the fixtures and
-      bench do) loads a curated bundled world instead of the blank origin
-      world, then `FirstRunHints` fires three one-line labels anchored to real
-      organisms through `overlayCamera()`: meet-a-lifeform, the producer food
-      economy, and "just evolved a mover" when a species that didn't exist at
-      load shows up. The world was picked by audition, not taste
-      (`scripts/audition-worlds.js`): all 20 bundled worlds ran a simulated
-      first minute at default speed, finalists ran longer. ArthursWorld won —
-      named emergences every ~7s where churnier worlds coalesce into "23 new
-      lifeforms emerged" noise, a new mover species inside ~100 ticks, 1.2ms
-      ticks, and it *recovers* (605→317→630 over 8 min) where the flashier
-      SymbioticColony (810→65) and ephemeral (394→60) turned out to be
-      population bubbles. Hints stop the moment `env.organisms` is reassigned
-      (reset/load replaced the world under them). `tests/first_run.spec.js`
-      covers the swap, the flag, the opt-out, hint anchoring in-viewport,
-      reset-kills-hints, and the full sequence reaching the evolution hint
-      (`?hintpace=fast` compresses timings 10x to fit the 15s test budget).
+      bench do) fires three one-line labels anchored to real organisms through
+      `overlayCamera()`, telling the origin world's own story: the founder
+      ("click it to look inside"), the producer food economy, and the first
+      species to branch off it. Nothing blocks and nothing must be clicked.
+      Hints stop the moment `env.organisms` is reassigned — the one signal that
+      the world they were narrating was reset or replaced.
+      **A curated demo world was tried here first and pulled.** The first visit
+      used to `loadRaw()` a bundled world (ArthursWorld, picked by auditioning
+      all 20) over the origin world, so a new player never saw the petri dish
+      the simulation is about — and it applied that world's saved `controls`
+      over the user's Hyperparams silently, where the Worlds picker gates the
+      same call behind a checkbox. The hints turned out not to need it: on a
+      one-organism world the "new species" beat *is* the first branch off the
+      founder, which reads better than it did on a crowded world.
+      Three things the sparse world forced. The producer hint can re-anchor on
+      the founder (which is itself a producer) when nothing else is on screen
+      yet, rather than being dropped — `REPEAT_AFTER` in `FirstRunHints.tsx`.
+      A hint whose anchor *dies* now moves to another organism making the same
+      point instead of vanishing with it: organisms here are short-lived by
+      design, and at 8x the old behaviour cut hints down to an unreadable flash
+      (measured at 2–57ms against a 900ms fast-pace `HINT_MS`). That is what
+      `ActiveHint.kind` and the shared `anchorFor()` exist for.
+      And the third hint's patience is budgeted in **sim ticks**, not
+      wall-clock: pausing to click the founder is exactly what the first hint
+      asks for, and it must not spend the third one's budget. 3000 ticks, from
+      measurement — `scripts/measure-origin-world.js` (which replaced the
+      audition harness) put the first non-founder species between 54 and 1103
+      ticks across 15 runs, median ~330.
+      `tests/first_run.spec.js` covers the origin world surviving the first
+      visit, the flag, the opt-out, hints not returning on a later visit, hint
+      anchoring in-viewport, reset-kills-hints, a hint outliving its anchor,
+      and all three beats firing in order (`?hintpace=fast` compresses the
+      wall-clock timings 10x to fit the 15s test budget; the tick budget is
+      bought with `setSpeedIndex` instead). The outlives-its-anchor test was
+      checked against a deliberately broken re-anchor and fails on it.
 - [x] ~~**Follow-a-lineage.**~~ — done. The sample click (Select tool or unarmed
       left-click) now persists focus: `env.followOrganism` hands the live world
       organism to `env.lineage` (`src/Stats/LineageTracker.ts`, owned
@@ -241,11 +294,13 @@ different window, with no cross-reference.
 - [ ] **The lab's "Mutation rate" can be inert.** `EditorDock.tsx:407` edits
       `organism.mutability`, which the engine ignores whenever
       "Use evolved mutation rate" is off in Evolution Controls
-      (`EvolutionControlsModal.tsx:70`). The field stays fully editable and
-      gives no hint that a global override is winning.
+      (`evolutionParams.ts`, the `useGlobalMutability` field). The field stays
+      fully editable and gives no hint that a global override is winning.
+      The evolution window's Console dial now states this where it applies
+      (EVOLVED vs MANUAL); the lab still doesn't.
 - [ ] **Healer cost exists twice with unstated precedence.** Per-organism
       `healer_food_cost` (`EditorDock.tsx:414`) and global `healerFoodCost`
-      (`EvolutionControlsModal.tsx:80`) share a label across two windows.
+      (`evolutionParams.ts`, the Cells group) share a label across two windows.
       Actual behaviour: the global value is only the default at spawn
       (`Organism.ts:184`); runtime always uses the per-organism value
       (`HealerCell.ts:14`). Say so in both tooltips.
