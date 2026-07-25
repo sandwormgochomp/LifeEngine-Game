@@ -1,0 +1,271 @@
+/* ==========================================================
+   THE CONSOLE — evolution window, tab 1
+   Lifted from concepts/evolution-window-options.html §1.
+   Everything the Console tab and PixelDial draw lives here;
+   Hud.module.css stays the shared chrome (.ctrlRow, .ctrlGroup)
+   so the two can be composed on one element.
+   ========================================================== */
+
+/* Not .ctrlBody: that is a multi-column auto-fit grid, which would break the
+   dial row into a masonry of stray columns. The console is one column that
+   scrolls inside the window's 76vh. */
+.console {
+  padding: 12px 16px 14px;
+  overflow-y: auto;
+  font-family: 'VT323', monospace;
+  color: rgba(0, 255, 65, 0.85);
+}
+
+/* ---------------- dials ---------------- */
+
+.dials {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 2px 0 12px;
+}
+
+/* Wide enough that a consequence line wraps to two rows rather than four:
+   three of these plus the hazard block have to clear the window's 76vh
+   without the tab scrolling. */
+.dial {
+  width: 176px;
+  text-align: center;
+}
+
+/* Two conic gradients on one element: the lit arc (0deg to --dial-arc) fading
+   to a dim rail for the rest of the sweep, over a dark face. The 260deg stop
+   is where the sweep ends and the blind spot behind the stops begins. */
+.dialFace {
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 9px;
+  position: relative;
+  border-radius: 50%;
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+  background:
+    conic-gradient(from var(--dial-from, 220deg),
+      rgba(0, 255, 65, 0.3) 0deg var(--dial-arc, 0deg),
+      rgba(0, 255, 65, 0.05) var(--dial-arc, 0deg) var(--dial-sweep, 260deg),
+      transparent var(--dial-sweep, 260deg) 360deg),
+    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.9) 55%, rgba(0, 255, 65, 0.08) 56%);
+  box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.45), inset 0 0 18px rgba(0, 255, 65, 0.15);
+  transition: box-shadow 0.12s;
+}
+
+.dialFace:active {
+  cursor: grabbing;
+}
+
+.dialFace:hover {
+  box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.75), inset 0 0 18px rgba(0, 255, 65, 0.22);
+}
+
+/* Keyboard focus has to be loud: this is a round div, and without a ring there
+   is nothing on a dial that says "arrow keys work here". */
+.dialFace:focus-visible {
+  box-shadow: 0 0 0 2px #00FF41, 0 0 12px rgba(0, 255, 65, 0.6), inset 0 0 18px rgba(0, 255, 65, 0.25);
+}
+
+/* The danger arc, drawn as a thin ring outside the face and masked to a band.
+   It marks where the interesting values stop and the different-kind-of-world
+   values start — the thing the old slider list never said. */
+.dialFace::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(from var(--dial-from, 220deg),
+    transparent 0deg var(--dial-danger, 195deg),
+    rgba(255, 59, 59, 0.55) var(--dial-danger, 195deg) var(--dial-sweep, 260deg),
+    transparent var(--dial-sweep, 260deg));
+  -webkit-mask: radial-gradient(circle, transparent 56%, #000 57%, #000 63%, transparent 64%);
+          mask: radial-gradient(circle, transparent 56%, #000 57%, #000 63%, transparent 64%);
+}
+
+/* Needle in the red: the arc flares and the whole gauge reads as armed. */
+.dialFaceDanger::before {
+  background: conic-gradient(from var(--dial-from, 220deg),
+    transparent 0deg var(--dial-danger, 195deg),
+    rgba(255, 59, 59, 0.95) var(--dial-danger, 195deg) var(--dial-sweep, 260deg),
+    transparent var(--dial-sweep, 260deg));
+}
+
+/* The overshoot-and-settle from the spec is one easing curve: the back-out
+   bezier throws the needle a little past the target and lets it drop in. */
+.dialNeedle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 41px;
+  background: #00FF41;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotate(var(--dial-needle, 0deg));
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.8);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.dialFaceDanger .dialNeedle {
+  background: #ff3b3b;
+  box-shadow: 0 0 9px rgba(255, 59, 59, 0.9);
+}
+
+.dialHub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  transform: translate(-50%, -50%);
+  background: #00FF41;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.dialFaceDanger .dialHub {
+  background: #ff3b3b;
+}
+
+.dialName {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #00FF41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.4);
+  line-height: 1.6;
+}
+
+.dialBadge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 4px;
+  font-size: 6px;
+  letter-spacing: 1px;
+  color: rgba(0, 255, 65, 0.75);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  vertical-align: middle;
+}
+
+.dialBadgeAlert {
+  color: #ffb000;
+  border-color: rgba(255, 176, 0, 0.6);
+}
+
+.dialValue {
+  font-size: 25px;
+  line-height: 1.2;
+  color: #00FF41;
+  margin-top: 4px;
+}
+
+.dialHint {
+  font-size: 15px;
+  line-height: 1.15;
+  color: rgba(0, 255, 65, 0.5);
+}
+
+.revert {
+  margin-top: 7px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 176, 0, 0.55);
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  color: #ffb000;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  letter-spacing: 1px;
+  padding: 6px 7px;
+  cursor: pointer;
+}
+
+.revert:hover {
+  background: rgba(255, 176, 0, 0.14);
+  border-color: #ffb000;
+}
+
+/* ---------------- hazard ---------------- */
+
+.hazard {
+  position: relative;
+  border: 2px solid rgba(255, 59, 59, 0.5);
+  background: rgba(255, 59, 59, 0.05);
+  padding: 2px 12px 8px 22px;
+  margin: 0 0 12px;
+}
+
+.hazard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: repeating-linear-gradient(45deg, #ff3b3b 0 5px, rgba(0, 0, 0, 0.9) 5px 10px);
+}
+
+.hazardTitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #ff3b3b;
+  letter-spacing: 1px;
+  margin: 8px 0 6px;
+}
+
+/* ---------------- rows ---------------- */
+
+/* A parameter and the sentence that says what it does to the world. The
+   sentence is the reason this tab exists, so it gets layout, not a tooltip. */
+.field {
+  margin-bottom: 3px;
+}
+
+.consequence {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  line-height: 1.1;
+  color: rgba(0, 255, 65, 0.45);
+  margin: -2px 0 4px;
+}
+
+/* ---------------- fine tuning fold ---------------- */
+
+.foldToggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: rgba(0, 255, 65, 0.6);
+  background: transparent;
+  border: 1px dashed rgba(0, 255, 65, 0.3);
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  margin: 0;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+.foldToggle:hover {
+  color: #00FF41;
+  border-color: rgba(0, 255, 65, 0.6);
+}
+
+/* Two columns once open: twelve rows plus their consequence lines is a long
+   scroll otherwise, and these are the parameters you came in already knowing
+   you wanted. */
+.fine {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 22px;
+  align-content: start;
+  padding-top: 4px;
+}
