@@ -10,7 +10,9 @@
   overflow-y: auto;
 }
 
-.deckNote {
+/* Doubled selector: this overrides a property set by kit Control.note, and the
+   bundler emits the kit after this file, so equal specificity would lose. */
+.deckNote.deckNote {
   margin: 0 0 10px;
   text-align: center;
 }
@@ -229,4 +231,11 @@
 @media (prefers-reduced-motion: reduce) {
   .cardPlayed { animation: none; }
   .cardLive .timed { animation: none; }
+}
+
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.ctrlNote {
+  composes: note from './kit/Control.module.css';
 }

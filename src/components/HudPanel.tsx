@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/HudPanel.module.css';
 
 interface HudPanelProps {
   title: string;

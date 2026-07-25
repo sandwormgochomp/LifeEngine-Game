@@ -1,0 +1,56 @@
+/* First-run world hints. Owned by FirstRunHints.tsx.
+
+   One-line labels anchored to a live organism (FirstRunHints positions them
+   every frame through the overlay camera). Amber, not terminal green: these are
+   the interface talking, not the world's own event log. */
+.worldHint {
+  position: fixed;
+  z-index: 250;
+  /* Mounts unpositioned; the per-frame positioner reveals it in place */
+  visibility: hidden;
+  transform: translate(0, -50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-family: 'VT323', monospace;
+  font-size: 19px;
+  line-height: 1;
+  color: #ffd24a;
+  text-shadow: 0 0 6px rgba(255, 210, 74, 0.45);
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 210, 74, 0.4);
+  padding: 5px 9px;
+  animation: worldHintIn 0.25s ease-out;
+}
+
+/* Anchor is near the right edge: the label sits to its left, arrow trailing */
+.worldHintFlip {
+  transform: translate(-100%, -50%);
+}
+
+.worldHintArrow {
+  animation: worldHintNudge 1.2s ease-in-out infinite;
+}
+
+/* Flipped labels point right, so the beckon reverses too */
+.worldHintFlip .worldHintArrow {
+  animation-name: worldHintNudgeR;
+}
+
+@keyframes worldHintIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* A gentle horizontal beckon toward the anchor */
+@keyframes worldHintNudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-3px); }
+}
+
+@keyframes worldHintNudgeR {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}

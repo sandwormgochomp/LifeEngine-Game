@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/FirstRunHints.module.css';
 import type Engine from '../Engine';
 import type Organism from '../Organism/Organism';
 

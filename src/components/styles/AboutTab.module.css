@@ -1,0 +1,42 @@
+.legendGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+}
+
+.legendSwatch {
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.legendName {
+  color: #00FF41;
+  width: 76px;
+  flex-shrink: 0;
+}
+
+.legendDesc {
+  color: rgba(0, 255, 65, 0.65);
+}
+
+.hotkey {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #00FF41;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  padding: 3px 5px;
+  min-width: 34px;
+  text-align: center;
+  flex-shrink: 0;
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/EvolutionControlsModal.module.css';
 import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
 import type { HyperparamsSingleton } from '../Hyperparameters';

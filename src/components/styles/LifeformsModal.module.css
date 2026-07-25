@@ -1,0 +1,68 @@
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.modalBackdrop {
+  composes: backdrop from './kit/Surface.module.css';
+}
+
+.panelClose {
+  composes: close from './kit/Surface.module.css';
+}
+
+.panelHeader {
+  composes: header from './kit/Surface.module.css';
+}
+
+.panelTitle {
+  composes: title from './kit/Surface.module.css';
+}
+
+.pickerCard {
+  composes: card from './kit/Picker.module.css';
+}
+
+.pickerEmpty {
+  composes: empty from './kit/Picker.module.css';
+}
+
+.pickerGrid {
+  composes: grid from './kit/Picker.module.css';
+}
+
+.pickerMeta {
+  composes: meta from './kit/Picker.module.css';
+}
+
+.pickerModal {
+  composes: modal from './kit/Surface.module.css';
+}
+
+.pickerName {
+  composes: name from './kit/Picker.module.css';
+}
+
+/* Per-picker card states. These sat under the predator bestiary section, which
+   is not where they belong or are used: extinct/highlight are the lifeforms
+   grid, pending is the presets grid. */
+
+/* A species that died while the cursor was over the grid: held in place so
+   nothing shifts mid-click, then pruned once the pointer leaves */
+.pickerCardExtinct {
+  opacity: 0.45;
+  border-color: rgba(255, 120, 120, 0.35) !important;
+}
+
+.pickerCardExtinct .pickerMeta {
+  color: rgba(255, 140, 140, 0.8);
+}
+
+/* The card a notification sent you here to see. Overrides the extinct dimming,
+   since the usual reason to be pointed at a species is that it has just died --
+   and a card faded to 45% is not something you were sent to look at. */
+/* Doubled selector: this overrides a property set by kit Picker.card, and the
+   bundler emits the kit after this file, so equal specificity would lose. */
+.pickerCardHighlight.pickerCardHighlight {
+  opacity: 1;
+  border-color: rgba(0, 255, 65, 0.8) !important;
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.35);
+}

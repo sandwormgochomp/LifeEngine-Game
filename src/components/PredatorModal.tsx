@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/PredatorModal.module.css';
 import OrganismThumb from './OrganismThumb';
 import PREDATORS from '../Organism/Predators';
 import type { PredatorSpecies } from '../Organism/Predators';

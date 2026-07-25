@@ -1,0 +1,154 @@
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.statDivider {
+  composes: divider from './kit/Bar.module.css';
+}
+
+.statsBar {
+  composes: bar from './kit/Bar.module.css';
+  padding: 8px 24px;
+  gap: 16px;
+}
+
+.topCenter {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.statItem {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+  letter-spacing: 1px;
+}
+
+.statLabel {
+  color: rgba(0, 255, 65, 0.6);
+}
+
+.statValue {
+  color: #00FF41;
+}
+
+/* Live-event countdowns, hanging under the stats bar: the weather, plus every
+   Fate Deck era that is currently running. Several can hold at once (a card
+   during an ice age, two cards at once), so they wrap into a centred band
+   rather than sitting in one row that could push past the viewport. */
+.eventTickers {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 70vw;
+}
+
+/* One chip. Suit-coloured rather than terminal green so it reads as weather
+   rather than as another stat, and in the same four suits the Fate Deck prints
+   its cards in -- a running era looks like the card that started it. Colours
+   come from --tick, set per suit below. */
+.eventTicker {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 12px;
+  background: rgba(0, 6, 16, 0.85);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--tick);
+  text-shadow: 0 0 4px color-mix(in srgb, var(--tick) 55%, transparent);
+  box-shadow:
+    0 -2px 0 0 color-mix(in srgb, var(--tick) 55%, transparent), 0 2px 0 0 color-mix(in srgb, var(--tick) 55%, transparent),
+    -2px 0 0 0 color-mix(in srgb, var(--tick) 55%, transparent), 2px 0 0 0 color-mix(in srgb, var(--tick) 55%, transparent),
+    inset 0 0 6px color-mix(in srgb, var(--tick) 12%, transparent), 0 0 8px color-mix(in srgb, var(--tick) 18%, transparent);
+}
+
+.cold { --tick: #aad7ff; }
+
+.hot { --tick: #ffb000; }
+
+.dark { --tick: #ff3b3b; }
+
+.verdant { --tick: #00FF41; }
+
+.eventTickerValue {
+  color: #ffffff;
+  min-width: 5ch;
+  text-align: right;
+}
+
+/* Call the event off early: a full-height cap on the right end of the chip,
+   divided off from the countdown so it reads as a control rather than a stray
+   mark in the text.
+
+   It must not inherit the chip's type. At 8px Press Start 2P a ✕ is a few
+   pixels tall, and the font has no glyph for one anyway -- it fell back to
+   whatever the system offered, at that font's baseline rather than the chip's,
+   which is what made it look off-centre. So this is the same fa-xmark every
+   other close button in the HUD uses, sized in its own right and flex-centred
+   in a square. Stretching to the chip's full height (the negative margins undo
+   the chip's padding on three sides) is what turns a ~9px glyph into a ~20px
+   hit target without making the chip any taller. */
+.eventTickerCancel {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  margin: -5px -12px -5px -2px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--tick) 28%, transparent);
+  background: none;
+  font-size: 11px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--tick) 60%, transparent);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.eventTickerCancel:hover,
+.eventTickerCancel:focus-visible {
+  background: color-mix(in srgb, var(--tick) 22%, transparent);
+  color: var(--tick);
+  outline: none;
+}
+
+/* The LIFEFORMS stat doubles as the modal trigger */
+.statButton {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  transition: text-shadow 0.12s;
+}
+
+.statButton:hover .statValue,
+.statButton:hover .statLabel {
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.9);
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .statsBar {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+
+  .statItem {
+    font-size: 8px;
+  }
+}

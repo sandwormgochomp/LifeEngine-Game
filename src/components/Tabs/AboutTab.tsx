@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/Hud.module.css';
+import styles from '../styles/AboutTab.module.css';
 import CellStates from '../../Organism/Cell/CellStates';
 import { CELL_INFO } from '../cellInfo';
 

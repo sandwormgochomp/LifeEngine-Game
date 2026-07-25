@@ -1,0 +1,56 @@
+/* Top-Right: speed & zoom readout. Owned by HudTopRight.tsx. */
+
+.topRight {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.speedZoomBar {
+  composes: bar from './kit/Bar.module.css';
+  padding: 8px 18px;
+  gap: 12px;
+}
+
+.statDivider {
+  composes: divider from './kit/Bar.module.css';
+}
+
+.zoomLabel {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: rgba(0, 255, 65, 0.6);
+  letter-spacing: 1px;
+}
+
+.zoomValue {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+  display: inline-block;
+  text-align: center;
+  min-width: 52px;
+}
+
+.fpsActual {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.6);
+  min-width: 52px;
+  text-align: right;
+}
+
+.zoomIcon {
+  color: rgba(0, 255, 65, 0.6);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s;
+  margin-left: 4px;
+}
+
+.zoomIcon:hover {
+  color: #00FF41;
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/HudTopLeft.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
 import { SPEED_MODES } from '../Engine';

@@ -207,7 +207,7 @@ Organism Lab
 - [ ] **The dock body still scrolls at short window heights.** The palette rail
       no longer does — erase is pinned above a swatch-only cell list that fits
       down to ~690px — but `.dockCanvasBox` is `aspect-ratio: 1 / 1` at the
-      dock's 348px width (`Hud.module.css:1103`), so it claims 348px of height
+      dock's 348px width (`Hud.module.css:895`), so it claims 348px of height
       whatever is left over, and the Organism card below it gets cut off after
       Move range on a 700-800px window. Cap it with a `max-height` that flexes
       against the panel to hand ~100px back to the controls.
@@ -298,6 +298,79 @@ Groups are ordered so each one is a single coherent sitting — the items inside
 group touch the same files and share a decision, so splitting them means making
 the same call twice.
 
+## Group 1b — Finish compartmentalizing the component CSS
+
+Started 2026-07-25. `Hud.module.css` was a 2498-line shared file imported by 24
+components, of which only ~10% of classes had more than one caller. **It is now
+deleted:** every component owns a `<Name>.module.css`, and the genuinely-shared
+classes live in `src/components/styles/kit/` (`Surface`, `Picker`, `Control`,
+`Bar`), consumed with `composes`. The 16 dead classes and the orphaned
+`public/css/style.css` are gone too.
+The rule going forward: **a component module is owned by one component; sharing
+happens only through `kit/`, never by importing another component's module.**
+
+**The trap this refactor hit, and the one to remember:** the bundler emits the
+kit CSS *after* the component modules, so a component class that sits on the
+same element as a composed kit class and redeclares one of its properties has
+equal specificity and silently loses. That cost seven real regressions (the
+worlds modal narrowed to the kit's 680px, the predator modal lost its amber
+border, `.dockBody`'s padding-top, `.dockTitle`'s font-size, the lifeform
+highlight glow, `.worldsFooter`'s gap, `.deckNote`'s margin) — none of which
+failed a test, because the visual snapshots allow a 5% pixel diff. Each is fixed
+by doubling the component's selector (`.thing.thing`). `python3
+scripts/css-kit-conflicts.py` finds them and exits non-zero; it is currently
+clean. Import order does *not* fix this — importing the kits first in
+`index.tsx` was tried and Rollup ignores it.
+- [x] ~~**Carve the leaf components out.**~~ — done. `FirstRunHints`,
+      `HudNotifications` and `LineageCard` were verbatim moves (each section was
+      already self-contained, keyframes included). `HudTopRight` was not a clean
+      leaf: it shared `.statDivider` with `HudTopCenter`, and its `.speedZoomBar`
+      turned out to be `.statsBar` with different padding/gap — same background,
+      same six-segment pixel border. That pair became `kit/Bar.module.css`
+      (`.bar` + `.divider`), which both now compose. Verified by asserting
+      computed styles in the browser, not just the snapshot: the dashboard
+      screenshot allows a 5% pixel diff and the top-right bar is under 1% of the
+      frame, so it could have lost its chrome without failing.
+- [x] ~~**Then the big ones.**~~ — done. All 20 remaining components were split
+      in one pass and `Hud.module.css` deleted. Every one of its 212 blocks was
+      accounted for (189 moved, 23 folded into kits, the media query
+      redistributed to the five components it touched). `ctrlNote` and
+      `dockNameInput` turned out to be shared too and became `Control.note` /
+      `Control.textInput`. `EvolutionConsole` and `FateDeck` had *two* module
+      imports each and bound Hud under different identifiers (`local`, `hud`) —
+      both now import one module named `styles`, like everything else.
+      Verified by diffing computed styles for all 952 elements across five UI
+      states against a pre-refactor build: identical apart from keyframe name
+      hashes (file-scoped, same definitions) and two playback buttons whose
+      in-flight transition also differs run-to-run on an unchanged build.
+- [ ] **Widen `kit/Bar` or fold it into a `Surface` primitive.** That
+      six-segment `box-shadow` pixel border is copy-pasted across `.toolPalette`,
+      `.panelOverlay`, `Surface.modal`, the dock and both bars. `Bar` now owns
+      one copy; the others are still literal duplicates. Worth one primitive
+      once more of the sections have moved and the real variants are visible.
+- [ ] **`PixelDial` imports `EvolutionConsole.module.css`.** Same anti-pattern
+      at small scale; give it `PixelDial.module.css`.
+- [ ] **Split `index.css` into `tokens.css` + `global.css`.** Tokens are the one
+      thing that should be globally shared; today they sit in a file that also
+      owns the canvas stack and the uPlot theming. The kits still hardcode
+      `#00FF41` / `rgba(0, 255, 65, …)` — point them at the tokens once the
+      tokens have a file of their own.
+- [ ] **Add the guardrail.** A lint rule or a `CLAUDE.md` line: a `.tsx` may
+      import at most one non-`kit/` module, and that module must share its
+      basename. Without it the shared file grows back — appending to
+      `Hud.module.css` was always the path of least resistance, which is how it
+      reached 2498 lines and how `pickerName`/`ctrlFooter` ended up filed under
+      sections that neither used them. Pair it with
+      `scripts/css-kit-conflicts.py` in the same check.
+- [ ] **Give the style dump a permanent home.** The computed-style diff that
+      caught the seven cascade regressions was a throwaway spec run against a
+      worktree of the previous commit. The visual snapshots cannot catch this
+      class of bug (5% pixel tolerance, and a modal losing 140px of width sits
+      under it). Worth keeping as a script: dump N UI states, diff against a
+      built baseline. Note the worktree needs `server.fs.allow` widened or the
+      fonts 403 and every text metric shifts, which looks like a regression and
+      is not.
+
 ## Group 2 — One concept, one name
 
 Pure naming pass, no behaviour change. Cheap, and it makes the rest of the audit
@@ -319,7 +392,7 @@ Top HUD readouts and controls. Small, self-contained.
       universally reads as *zoom in*, and zoom still has no `+`/`−` controls at
       all (wheel only).
 - [ ] **`LIFEFORMS` is a button dressed as a readout.** `.statButton`
-      (`Hud.module.css:1615`) strips background, border and padding, leaving it
+      (`Hud.module.css:1829`) strips background, border and padding, leaving it
       pixel-identical to the inert `GEN`/`POP` beside it; only a hover text-glow
       distinguishes it. A CSS comment says the double-duty is deliberate —
       decide whether that stands, then close this either way.
@@ -329,7 +402,7 @@ Top HUD readouts and controls. Small, self-contained.
       rung for a moment even though the world starts running.
 - [ ] **The perf panel still covers the editor dock's close button.** Same bug
       the lineage card had: `.perfPanel` (`PerfPanel.module.css:7`) and
-      `.dockWrap` (`Hud.module.css:858`) both pin to `right: 12px` near the top,
+      `.dockWrap` (`Hud.module.css:721`) both pin to `right: 12px` near the top,
       and the dock has the *lower* z-index (98 vs 100), so the readout draws over
       its header and the ✕. The lineage card was fixed by moving it into the
       top-left column, which left the perf panel as the last squatter on that

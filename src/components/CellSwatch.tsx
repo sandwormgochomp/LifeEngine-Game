@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/CellSwatch.module.css';
 import { renderCellSwatch } from '../Rendering/DecorationRenderer';
 import type { CellState } from '../Organism/Cell/CellStates';
 

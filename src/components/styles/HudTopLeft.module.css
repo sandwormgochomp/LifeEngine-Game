@@ -1,0 +1,90 @@
+/* ======================================
+   HUD STYLES — Matching Pixel Art Concept
+   ====================================== */
+.topLeft {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.logoRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.82);
+  padding: 6px 14px;
+  border: none;
+  box-shadow:
+    0 -2px 0 0 rgba(67, 232, 224, 0.55), 0 2px 0 0 rgba(67, 232, 224, 0.55), -2px 0 0 0 rgba(67, 232, 224, 0.55), 2px 0 0 0 rgba(67, 232, 224, 0.55),
+    inset 0 0 6px rgba(67, 232, 224, 0.1), 0 0 8px rgba(67, 232, 224, 0.14);
+}
+
+.logoTitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--crt-cyan);
+  text-shadow: 0 0 6px rgba(67, 232, 224, 0.55);
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.logoVersion {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(67, 232, 224, 0.55);
+  white-space: nowrap;
+}
+
+.playbackRow {
+  display: flex;
+  gap: 4px;
+}
+
+/* Sets the world actions apart from the speed ladder they sit beside, so the
+   row reads as two groups rather than seven identical squares. */
+.playbackGroupBreak {
+  margin-left: 10px;
+}
+
+.playbackBtn {
+  background: rgba(0, 0, 0, 0.82);
+  border: 2px solid rgba(67, 232, 224, 0.45);
+  color: var(--crt-cyan);
+  font-size: 18px;
+  width: 40px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  padding: 0;
+  margin: 0;
+  font-family: 'VT323', monospace;
+  box-shadow: none;
+  border-radius: 0;
+  min-width: unset;
+}
+
+.playbackBtn:hover {
+  background: rgba(67, 232, 224, 0.15);
+  border-color: var(--crt-cyan);
+}
+
+.playbackBtnActive {
+  background: rgba(67, 232, 224, 0.25);
+  border-color: var(--crt-cyan);
+  text-shadow: 0 0 6px rgba(67, 232, 224, 0.6);
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .logoTitle {
+    font-size: 12px;
+  }
+}

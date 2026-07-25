@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/HudNotifications.module.css';
 import Notifier, { type NotificationMeta, type NotificationFocus } from '../Utils/Notifier';
 import OrganismThumb from './OrganismThumb';
 import { applyFocus, type FocusHandlers } from './notificationFocus';

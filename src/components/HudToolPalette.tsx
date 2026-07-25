@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/HudToolPalette.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
 import Modes from '../Controllers/ControlModes';

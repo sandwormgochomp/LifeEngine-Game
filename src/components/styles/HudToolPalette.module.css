@@ -1,0 +1,246 @@
+.toolPalette {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 182px;
+  background: rgba(0, 0, 0, 0.82);
+  padding: 8px 10px 10px;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 8px rgba(0, 255, 65, 0.12);
+}
+
+/* Tabs are folder tabs, not buttons. The tools below are boxed keys you press;
+   these are labels hanging on a rail, and the open one breaks the rail to join
+   the panel it opens. Zero gap so each tab's bottom border is one segment of a
+   line that runs the palette's full width. */
+.toolPaletteTabs {
+  display: flex;
+  gap: 0;
+  /* Pulls the rail down onto the tools it opens; the palette's own 6px gap
+     would otherwise leave the open tab floating clear of its panel. */
+  margin-bottom: -4px;
+}
+
+.toolPaletteTab {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  /* Extra bottom padding so the label clears the rail it sits on. */
+  padding: 3px 2px 5px;
+  margin: 0;
+  background: transparent;
+  /* Sides and top are reserved for the open tab; every tab draws its own
+     segment of the rail, and the open one blanks it (below). */
+  border: 2px solid transparent;
+  border-bottom-color: rgba(0, 255, 65, 0.5);
+  color: rgba(0, 255, 65, 0.45);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: unset;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.toolPaletteTab:hover {
+  color: rgba(0, 255, 65, 0.8);
+  border-bottom-color: rgba(0, 255, 65, 0.8);
+}
+
+/* The open tab: boxed on three sides and open at the bottom, so it reads as
+   continuous with the tools underneath rather than as another pressed key. */
+.toolPaletteTabActive {
+  background: rgba(0, 255, 65, 0.12);
+  border-color: #00FF41;
+  border-bottom-color: transparent;
+  color: #00FF41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
+}
+
+/* An armed tool on a tab you're not looking at: mark the tab so the armed
+   state stays discoverable. Suppressed on the active tab, where the highlighted
+   button already shows it. */
+.toolPaletteTabArmed:not(.toolPaletteTabActive) {
+  color: rgba(0, 255, 65, 0.9);
+  border-bottom-color: rgba(0, 255, 65, 0.9);
+}
+
+.toolPaletteTabArmed:not(.toolPaletteTabActive)::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  background: #00FF41;
+  box-shadow: 0 0 4px rgba(0, 255, 65, 0.9);
+}
+
+/* Fixed size so a taller glyph can't change the tab row's height. */
+.toolPaletteTabIcon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Overlays every tab's copy of a region in one grid cell: the stack is as tall
+   as the tallest copy, and the hidden ones still hold their space so nothing in
+   the bottom-anchored palette moves when you switch tabs. */
+.toolPaletteStack {
+  display: grid;
+}
+
+.toolPaletteStack > * {
+  grid-area: 1 / 1;
+}
+
+.toolPaletteStack > [data-hidden] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.toolPaletteGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  /* The stack stretches every grid to the tallest tab's height; pack the rows
+     at the top so a short tab's buttons keep their size instead of growing. */
+  align-content: start;
+}
+
+.toolPaletteBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  min-width: unset;
+}
+
+.toolPaletteBtn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+.toolPaletteBtnActive {
+  background: rgba(0, 255, 65, 0.25);
+  border-color: #00FF41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.6);
+}
+
+.toolPaletteIcon {
+  font-size: 14px;
+}
+
+.toolPaletteLabel {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.toolPaletteBrush {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: rgba(0, 255, 65, 0.85);
+  cursor: help;
+}
+
+.toolPaletteBrushLabel {
+  flex-shrink: 0;
+}
+
+.toolPaletteBrush input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolPaletteBrushValue {
+  font-size: 13px;
+  color: rgba(0, 255, 65, 0.7);
+  flex-shrink: 0;
+  min-width: 40px;
+  text-align: right;
+}
+
+.toolPaletteActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(0, 255, 65, 0.25);
+  padding-top: 8px;
+}
+
+.toolPaletteAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  padding: 5px 6px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.12s, border-color 0.12s;
+  min-width: unset;
+}
+
+/* A fixed width keeps every action label on the same left edge, and a glyph
+   shorter than the 14px text line leaves the row height alone. */
+.toolPaletteActionIcon {
+  font-size: 12px;
+  width: 14px;
+  text-align: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toolPaletteAction:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+/* An action that armed a world tool (Predator), lit like an active Tool button
+   so the palette shows something is waiting on a click in the world. */
+.toolPaletteActionArmed {
+  background: rgba(255, 176, 60, 0.2);
+  border-color: #FFB03C;
+  color: #FFB03C;
+  text-shadow: 0 0 6px rgba(255, 140, 40, 0.6);
+}
+
+.toolPaletteActionArmed:hover {
+  background: rgba(255, 176, 60, 0.28);
+  border-color: #FFB03C;
+}

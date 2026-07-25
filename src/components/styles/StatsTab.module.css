@@ -1,0 +1,39 @@
+/* Stats tab */
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 18px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  padding: 8px 10px;
+}
+
+.statsGrid p {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  cursor: help;
+}
+
+.statsGrid p span {
+  color: rgba(0, 255, 65, 0.55);
+}
+
+.statsGrid p b {
+  color: #00FF41;
+  font-weight: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statsWide {
+  grid-column: 1 / -1;
+}
+
+.chartControls {
+  margin-bottom: 8px;
+}

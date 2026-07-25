@@ -1,0 +1,151 @@
+/* ======================================
+   KIT: Control — labeled setting rows
+   ======================================
+   One row = one setting: label on the left, the control (checkbox, number,
+   slider, readout) hard right. Shared by the evolution console, world controls,
+   new-game modal, brain editor and the organism dock.
+
+   Consume with `composes`:
+
+     .row { composes: row from './kit/Control.module.css'; }
+
+   The element-level rules below (`.row input[type=...]`) let callers drop a
+   bare input into a row without classing it.
+
+   Overriding one of these from a component? Double the component's class
+   (.thing.thing) — the bundler emits this kit AFTER the component modules, so
+   an equal-specificity override silently loses. `python3 scripts/css-kit-conflicts.py`
+   finds these; the doubled rules in EditorDock/WorldsModal/PredatorModal are
+   why it currently exits clean. */
+
+/* A titled block of rows. break-inside keeps a group whole when the consuming
+   modal lays its groups out in columns. */
+.group {
+  break-inside: avoid;
+  margin-bottom: 10px;
+}
+
+.group h4 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(0, 255, 65, 0.7);
+  letter-spacing: 1px;
+  margin: 8px 0 6px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+  padding-bottom: 5px;
+}
+
+/* cursor:help because every row carries a title= explaining the setting */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(0, 255, 65, 0.85);
+  cursor: help;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+}
+
+.row input[type="checkbox"] {
+  accent-color: #00FF41;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.row input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+}
+
+.number {
+  width: 78px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 0;
+  outline: none;
+  text-align: right;
+}
+
+.number:focus {
+  border-color: #00FF41;
+}
+
+/* Read-only readout of a slider's current value */
+.value {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.7);
+  min-width: 46px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Explanatory line under a control, dimmer than the row it belongs to */
+.note {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.6);
+  margin: 4px 0 0;
+}
+
+/* Full-width free-text field — naming an organism, naming a brain */
+.textInput {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  padding: 3px 8px;
+  outline: none;
+  border-radius: 0;
+  max-width: unset;
+  margin-bottom: 6px;
+}
+
+.textInput:focus {
+  border-color: #00FF41;
+}
+
+/* Action bar closing a control modal (apply / cancel / file actions) */
+.footer {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.footer button {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-width: unset;
+  transition: all 0.12s;
+}
+
+.footer button:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}

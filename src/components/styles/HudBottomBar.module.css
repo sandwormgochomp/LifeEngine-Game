@@ -1,0 +1,114 @@
+.bottomCenter {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  /* below .modalBackdrop (200): the toolbar must never cover modal content,
+     and clicking through the backdrop closes the modal anyway */
+  z-index: 100;
+  /* The container spans the width of its widest child; keep the empty parts
+     click-transparent so it can't shadow the editor dock's cell rail. */
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.bottomCenter > * {
+  pointer-events: auto;
+}
+
+.gameHintBar {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #00FF41;
+  background: rgba(0, 0, 0, 0.85);
+  border: none;
+  padding: 3px 14px;
+  white-space: nowrap;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.4), 0 2px 0 0 rgba(0, 255, 65, 0.4), -2px 0 0 0 rgba(0, 255, 65, 0.4), 2px 0 0 0 rgba(0, 255, 65, 0.4),
+    0 0 8px rgba(0, 255, 65, 0.12);
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+}
+
+/* Headless: world tools are dead (only middle-drag pan works), so the hint
+   bar dims to match. Wrapper opacity also fades the inline-green mouse SVGs. */
+.gameHintBarDisabled {
+  opacity: 0.45;
+  text-shadow: none;
+}
+
+.toolbar {
+  background: rgba(0, 0, 0, 0.85);
+  padding: 6px 12px;
+  border: none;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 12px rgba(0, 255, 65, 0.15);
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+}
+
+.toolbarBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 2px solid transparent;
+  color: rgba(0, 255, 65, 0.6);
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 56px;
+  font-family: 'VT323', monospace;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+
+.toolbarBtn:hover {
+  color: #00FF41;
+  background: rgba(0, 255, 65, 0.08);
+  border-color: rgba(0, 255, 65, 0.25);
+}
+
+.toolbarBtnActive {
+  color: #00FF41;
+  background: rgba(0, 255, 65, 0.15);
+  border-color: rgba(0, 255, 65, 0.5);
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+}
+
+.toolbarIcon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.toolbarLabel {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .toolbarBtn {
+    padding: 6px 8px;
+    min-width: 44px;
+  }
+
+  .toolbarIcon {
+    font-size: 18px;
+  }
+
+  .toolbarLabel {
+    font-size: 6px;
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/PresetsModal.module.css';
 import Notifier from '../Utils/Notifier';
 import OrganismThumb from './OrganismThumb';
 import type { ThumbCell } from './OrganismThumb';

@@ -1,0 +1,180 @@
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.active {
+  composes: buttonActive from './kit/Surface.module.css';
+}
+
+.ctrlNote {
+  composes: note from './kit/Control.module.css';
+}
+
+.ctrlNumber {
+  composes: number from './kit/Control.module.css';
+}
+
+.ctrlRow {
+  composes: row from './kit/Control.module.css';
+}
+
+.dockNameInput {
+  composes: textInput from './kit/Control.module.css';
+}
+
+.modalBackdrop {
+  composes: backdrop from './kit/Surface.module.css';
+}
+
+.panelClose {
+  composes: close from './kit/Surface.module.css';
+}
+
+.panelHeader {
+  composes: header from './kit/Surface.module.css';
+}
+
+.panelTitle {
+  composes: title from './kit/Surface.module.css';
+}
+
+.pickerModal {
+  composes: modal from './kit/Surface.module.css';
+}
+
+.ctrlBtn {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-width: unset;
+  transition: all 0.12s;
+}
+
+.ctrlBtn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+.brainBody {
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+}
+
+.brainHeading {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(0, 255, 65, 0.7);
+  letter-spacing: 1px;
+  margin: 14px 0 6px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+  padding-bottom: 5px;
+}
+
+.brainStateTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.brainStateTab {
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.3);
+  color: rgba(0, 255, 65, 0.8);
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 3px 12px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-width: unset;
+}
+
+.brainStateTab:hover {
+  border-color: rgba(0, 255, 65, 0.7);
+}
+
+.brainTransition {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.8);
+  padding: 4px 0;
+}
+
+.brainSelect {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  padding: 2px 4px;
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.brainRemove {
+  background: transparent;
+  border: 1px solid rgba(255, 90, 90, 0.4);
+  color: rgba(255, 120, 120, 0.9);
+  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+}
+
+.brainRemove:hover {
+  background: rgba(255, 90, 90, 0.18);
+}
+
+.brainRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.brainSwatch {
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.brainCellName {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(0, 255, 65, 0.85);
+  width: 78px;
+  flex-shrink: 0;
+}
+
+.brainSlider {
+  flex: 1;
+  min-width: 90px;
+}
+
+.brainWeight {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #00FF41;
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}

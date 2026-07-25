@@ -1,0 +1,87 @@
+/* Toast notifications. Owned by HudNotifications.tsx.
+
+   Rolling event log, pinned flush into the lower-right corner. A single bordered
+   panel (not floating pills): lines stack with the newest at the bottom and roll
+   off the top once full. */
+.notifications {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(340px, 46vw);
+  max-height: 320px;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.82);
+  border: 1px solid rgba(0, 255, 65, 0.35);
+  box-shadow:
+    inset 0 0 8px rgba(0, 255, 65, 0.06), 0 0 10px rgba(0, 255, 65, 0.12);
+}
+
+.notification {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  line-height: 1.15;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.35);
+  padding: 6px 10px;
+  border-top: 1px solid rgba(0, 255, 65, 0.12);
+  animation: notificationIn 0.15s ease-out;
+}
+
+.notification:first-child {
+  border-top: none;
+}
+
+.notificationText {
+  flex: 1;
+  text-align: left;
+}
+
+/* A line that knows what it is about. The panel stays pointer-events: none so
+   the canvas underneath keeps taking strokes through the log's dead space --
+   only the actionable rows opt back in, which is the whole reason the toasts
+   were unclickable before. Reset the button chrome the .notification styles
+   don't cover; it is a <button> for the keyboard and the cursor, not for looks. */
+.notificationAction {
+  pointer-events: auto;
+  width: 100%;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notificationAction:hover,
+.notificationAction:focus-visible {
+  background: rgba(0, 255, 65, 0.1);
+  outline: none;
+}
+
+/* The one mark that separates an actionable line from an inert one at a
+   glance. Brightens with the row rather than announcing itself: the log is
+   still a log, not a menu. */
+.notificationChevron {
+  color: rgba(0, 255, 65, 0.45);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.notificationAction:hover .notificationChevron,
+.notificationAction:focus-visible .notificationChevron {
+  color: #00FF41;
+}
+
+@keyframes notificationIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

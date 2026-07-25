@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/NewGameModal.module.css';
 import type Engine from '../Engine';
 import WorldConfig from '../WorldConfig';
 import Notifier from '../Utils/Notifier';

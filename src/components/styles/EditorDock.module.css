@@ -1,0 +1,409 @@
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.active {
+  composes: buttonActive from './kit/Surface.module.css';
+}
+
+.ctrlLabel {
+  composes: label from './kit/Control.module.css';
+}
+
+.ctrlRow {
+  composes: row from './kit/Control.module.css';
+}
+
+.ctrlValue {
+  composes: value from './kit/Control.module.css';
+}
+
+.dockNameInput {
+  composes: textInput from './kit/Control.module.css';
+}
+
+.panelBody {
+  composes: body from './kit/Surface.module.css';
+}
+
+.panelClose {
+  composes: close from './kit/Surface.module.css';
+}
+
+.panelHeader {
+  composes: header from './kit/Surface.module.css';
+}
+
+.panelTitle {
+  composes: title from './kit/Surface.module.css';
+}
+
+.dockWrap {
+  position: fixed;
+  top: 64px;
+  right: 12px;
+  bottom: 76px;
+  z-index: 98;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+  animation: dockSlideIn 0.18s ease-out;
+}
+
+/* Cell palette rail attached to the dock's left edge. The rail itself does not
+   scroll -- only the cell list inside it does, so the pinned tools above stay
+   put at every window height. */
+.dockRail {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.9);
+  border: none;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 10px rgba(0, 255, 65, 0.05), 0 0 20px rgba(0, 255, 65, 0.15);
+}
+
+/* Tools that must never scroll out of reach */
+.dockRailPinned {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* min-height:0 lets this shrink below its content so it actually scrolls
+   instead of pushing the pinned group off the rail */
+.dockRailScroll {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dockRailBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 1px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.2);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  min-width: unset;
+  flex-shrink: 0;
+}
+
+/* Cell-type buttons carry no label, so they close up to just the swatch.
+   Erase and paint keep theirs -- naming the two tools is worth the height. */
+.dockRailSwatchBtn {
+  padding: 3px 1px;
+  gap: 0;
+}
+
+/* Thin rule separating the tool buttons from the cell types */
+.dockRailSep {
+  flex-shrink: 0;
+  height: 1px;
+  margin: 4px 2px;
+  background: rgba(0, 255, 65, 0.25);
+}
+
+/* The paint tool's color input doubles as its palette swatch */
+.dockPaintSwatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.dockPaintSwatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.dockPaintSwatch::-webkit-color-swatch {
+  border: none;
+}
+
+.dockRailBtn:hover {
+  border-color: rgba(0, 255, 65, 0.7);
+  background: rgba(0, 255, 65, 0.08);
+}
+
+.dock {
+  width: 348px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.9);
+  border: none;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 10px rgba(0, 255, 65, 0.05), 0 0 20px rgba(0, 255, 65, 0.15);
+}
+
+/* Doubled selector: this overrides a property set by kit Surface.title, and the
+   bundler emits the kit after this file, so equal specificity would lose. */
+.dockTitle.dockTitle {
+  font-size: 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* File controls living in the dock header */
+.dockHeaderTools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.dockHeaderBtn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.35);
+  color: rgba(0, 255, 65, 0.8);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  transition: all 0.12s;
+}
+
+.dockHeaderBtn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+  color: #00FF41;
+}
+
+@keyframes dockSlideIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Doubled selector: this overrides a property set by kit Surface.body, and the
+   bundler emits the kit after this file, so equal specificity would lose. */
+.dockBody.dockBody {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 4px;
+}
+
+.dockCanvasSection {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.dockCanvasBox {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  background: #111;
+  overflow: hidden;
+}
+
+/* The engine sizes the canvas to exactly the grid; center it in the box */
+.dockCanvasBox canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: crosshair;
+}
+
+.dockCanvasBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* Zoom cluster floating over the canvas corner */
+.dockZoomOverlay,
+.dockToolOverlay,
+.dockBrainOverlay {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 255, 65, 0.25);
+}
+
+/* Clear/random cluster mirrors zoom in the opposite corner */
+.dockToolOverlay {
+  left: 6px;
+  right: auto;
+}
+
+/* Brain floats top-right, clear of the ability badges on the left */
+.dockBrainOverlay {
+  top: 6px;
+  bottom: auto;
+}
+
+.dockZoomOverlay button,
+.dockToolOverlay button,
+.dockBrainOverlay button {
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: 10px !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0, 0, 0, 0.82) !important;
+  border: 1px solid rgba(0, 255, 65, 0.4) !important;
+  color: #00FF41 !important;
+  border-radius: 0 !important;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.dockZoomOverlay button:hover:not(:disabled),
+.dockToolOverlay button:hover:not(:disabled),
+.dockBrainOverlay button:hover:not(:disabled) {
+  background: rgba(0, 255, 65, 0.2) !important;
+  border-color: #00FF41 !important;
+}
+
+.dockZoomOverlay button:disabled {
+  opacity: 0.35 !important;
+  cursor: default !important;
+}
+
+.zoomPixelLabel {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #00FF41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
+  min-width: 38px;
+  text-align: center;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.dockHint {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: rgba(0, 255, 65, 0.55);
+  white-space: nowrap;
+}
+
+.dockCellBtnActive {
+  border-color: #00FF41 !important;
+  background: rgba(0, 255, 65, 0.15) !important;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.4) !important;
+}
+
+.dockCellName {
+  font-family: 'VT323', monospace;
+  font-size: 11px;
+  color: rgba(0, 255, 65, 0.85);
+  text-transform: lowercase;
+  letter-spacing: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dockInfoCard {
+  border: 1px solid rgba(0, 255, 65, 0.25);
+  padding: 8px 10px;
+}
+
+.dockWarning {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #ff9f43;
+  margin: 4px 0;
+  cursor: help;
+}
+
+/* Ability badges floating over the canvas corner, mirroring the zoom cluster */
+.dockBadgeOverlay {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  max-width: 65%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.dockBadge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: rgba(0, 255, 65, 0.85);
+  border: 1px solid rgba(0, 255, 65, 0.35);
+  background: rgba(0, 0, 0, 0.55);
+  padding: 3px 5px;
+  letter-spacing: 1px;
+}
+
+/* Footer pinned below the scrollable body so deploy/select stay reachable */
+.dockDeployRow {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.dockDeployRow button {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 10px 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-width: unset;
+}
+
+.dockDeployRow button:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: #00FF41;
+}
+
+/* Bridge rule between two kits: Surface's `.body label` stacks its children,
+   but control rows inside the dock stay on one line (label left, input right).
+   Lives here rather than in either kit because neither owns the pairing. */
+.panelBody .ctrlRow {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}

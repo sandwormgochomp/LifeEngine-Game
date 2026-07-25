@@ -1,0 +1,225 @@
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.ctrlFooter {
+  composes: footer from './kit/Control.module.css';
+}
+
+.ctrlLabel {
+  composes: label from './kit/Control.module.css';
+}
+
+.ctrlRow {
+  composes: row from './kit/Control.module.css';
+}
+
+.modalBackdrop {
+  composes: backdrop from './kit/Surface.module.css';
+}
+
+.panelClose {
+  composes: close from './kit/Surface.module.css';
+}
+
+.panelHeader {
+  composes: header from './kit/Surface.module.css';
+}
+
+.panelTitle {
+  composes: title from './kit/Surface.module.css';
+}
+
+.pickerEmpty {
+  composes: empty from './kit/Picker.module.css';
+}
+
+.pickerMeta {
+  composes: meta from './kit/Picker.module.css';
+}
+
+.pickerModal {
+  composes: modal from './kit/Surface.module.css';
+}
+
+/* Wider than the organism picker: world tiles carry a minimap wide enough to
+   read, and the names are long enough to ellipsize without the room */
+/* Doubled selector: this overrides a property set by kit Surface.modal, and the
+   bundler emits the kit after this file, so equal specificity would lose. */
+.worldsModal.worldsModal {
+  width: min(820px, 94vw);
+}
+
+.worldsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+.worldCard {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 6px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.2);
+  color: rgba(0, 255, 65, 0.85);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: unset;
+  text-align: left;
+}
+
+/* The minimap sits in a fixed slot so tiles line up whatever a world's aspect
+   ratio is; the fallback globe sits behind it, uncovered only if the image is
+   missing (a checkout that hasn't run `npm run thumbs`). */
+.worldThumbSlot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  background: #0E1318;
+  border: 1px solid rgba(0, 255, 65, 0.15);
+  overflow: hidden;
+}
+
+.worldThumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.worldThumbFallback {
+  font-size: 26px;
+  color: rgba(0, 255, 65, 0.35);
+}
+
+.worldCardFoot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.worldCard:hover:not(:disabled) {
+  border-color: #00FF41;
+  background: rgba(0, 255, 65, 0.08);
+}
+
+/* One world at a time: the rest fade out for the duration of the fetch */
+.worldCard:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.worldCard.worldCardLoading:disabled {
+  opacity: 1;
+  border-color: #00FF41;
+}
+
+.worldName {
+  flex: 1;
+  min-width: 0;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A section label spanning the grid, shown once the user's own saves give the
+   list two halves worth telling apart */
+.worldsSection {
+  grid-column: 1 / -1;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(0, 255, 65, 0.55);
+  padding: 6px 2px 2px;
+}
+
+/* A saved world carries a delete button, so its tile is a container holding
+   the load button and the delete button rather than one big button */
+.savedCardMain {
+  display: block;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  color: inherit;
+  cursor: pointer;
+}
+
+.savedIconBtn {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+  margin: 0;
+  padding: 6px 7px;
+  color: rgba(0, 255, 65, 0.5);
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.savedIconBtn:hover:not(:disabled) {
+  color: #00FF41;
+}
+
+.savedIconDanger {
+  color: rgba(255, 120, 120, 0.8);
+}
+
+.savedIconDanger:hover:not(:disabled) {
+  color: #FF6B6B;
+}
+
+/* Mirrors .worldCard:disabled, which can't reach a card that is a div */
+.worldCardDead {
+  opacity: 0.35;
+}
+
+.worldNameInput {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.4);
+  color: #00FF41;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  padding: 4px 8px;
+  border-radius: 0;
+  outline: none;
+}
+
+.worldNameInput:focus {
+  border-color: #00FF41;
+}
+
+/* The worlds footer carries the load option above its file actions */
+/* Doubled selector: this overrides a property set by kit Control.footer, and the
+   bundler emits the kit after this file, so equal specificity would lose. */
+.worldsFooter.worldsFooter {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.worldsActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}

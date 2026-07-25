@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/LifeformsModal.module.css';
 import type Engine from '../Engine';
 import FossilRecord from '../Stats/FossilRecord';
 import type Species from '../Stats/Species';

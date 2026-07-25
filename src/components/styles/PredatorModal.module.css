@@ -1,0 +1,143 @@
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.modalBackdrop {
+  composes: backdrop from './kit/Surface.module.css';
+}
+
+.panelClose {
+  composes: close from './kit/Surface.module.css';
+}
+
+.panelHeader {
+  composes: header from './kit/Surface.module.css';
+}
+
+.panelTitle {
+  composes: title from './kit/Surface.module.css';
+}
+
+.pickerModal {
+  composes: modal from './kit/Surface.module.css';
+}
+
+/* Amber rather than the HUD's green: this is the one picker whose entries are
+   released into the world to eat it, and the colour is the warning. */
+/* Doubled selector: this overrides a property set by kit Surface.modal, and the
+   bundler emits the kit after this file, so equal specificity would lose. */
+.predatorModal.predatorModal {
+  width: min(760px, 94vw);
+  box-shadow:
+    0 -2px 0 0 rgba(255, 176, 60, 0.5), 0 2px 0 0 rgba(255, 176, 60, 0.5), -2px 0 0 0 rgba(255, 176, 60, 0.5), 2px 0 0 0 rgba(255, 176, 60, 0.5),
+    inset 0 0 10px rgba(255, 176, 60, 0.05), 0 0 24px rgba(255, 140, 40, 0.2);
+}
+
+/* The header, title and close button are the shared green ones; tint them so
+   the panel reads as one piece rather than a green frame around amber cards. */
+.predatorModal .panelHeader {
+  border-bottom-color: rgba(255, 176, 60, 0.25);
+}
+
+.predatorModal .panelTitle {
+  color: #FFB03C;
+  text-shadow: 0 0 6px rgba(255, 140, 40, 0.4);
+}
+
+.predatorModal .panelClose {
+  color: rgba(255, 176, 60, 0.6);
+  border-color: rgba(255, 176, 60, 0.3);
+}
+
+.predatorModal .panelClose:hover {
+  color: #FFB03C;
+  border-color: #FFB03C;
+  background: rgba(255, 176, 60, 0.15);
+}
+
+.predatorIntro {
+  margin: 0;
+  padding: 10px 16px 0;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  line-height: 1.25;
+  color: rgba(255, 200, 130, 0.75);
+}
+
+/* One row per species rather than a tile grid: each carries a paragraph of
+   behaviour the player has to read to choose between them. */
+.predatorList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+}
+
+.predatorCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 10px;
+  margin: 0;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 176, 60, 0.25);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  min-width: unset;
+}
+
+.predatorCard:hover {
+  border-color: #FFB03C;
+  background: rgba(255, 176, 60, 0.08);
+  box-shadow: 0 0 8px rgba(255, 140, 40, 0.3);
+}
+
+.predatorCard canvas {
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  background: rgba(255, 176, 60, 0.04);
+  border: 1px solid rgba(255, 176, 60, 0.2);
+}
+
+.predatorText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.predatorName {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #FFB03C;
+  text-shadow: 0 0 6px rgba(255, 140, 40, 0.4);
+}
+
+.predatorBinomial {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  font-style: italic;
+  color: rgba(255, 200, 130, 0.6);
+}
+
+.predatorTagline {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgba(255, 210, 150, 0.95);
+}
+
+.predatorDesc {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1.2;
+  color: rgba(255, 200, 130, 0.7);
+}
+
+.predatorMeta {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: rgba(255, 176, 60, 0.5);
+}

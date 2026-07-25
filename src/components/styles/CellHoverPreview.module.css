@@ -1,0 +1,45 @@
+@keyframes dockSlideIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Floating live preview shown while a palette cell is hovered. Fixed so it can
+   sit over the world to the left of the rail; inert so the cursor still reaches
+   the button's mouseleave. */
+.cellPreviewPop {
+  position: fixed;
+  z-index: 99;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px;
+  background: rgba(2, 6, 4, 0.98);
+  box-shadow:
+    0 0 0 2px rgba(0, 255, 65, 0.5),
+    inset 0 0 10px rgba(0, 255, 65, 0.05),
+    0 0 20px rgba(0, 255, 65, 0.2);
+  animation: dockSlideIn 0.12s ease-out;
+}
+
+.cellPreviewCanvas {
+  image-rendering: pixelated;
+  display: block;
+  border: 1px solid rgba(0, 255, 65, 0.25);
+}
+
+.cellPreviewName {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  line-height: 1;
+  color: rgba(0, 255, 65, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cellPreviewDesc {
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  line-height: 1.15;
+  color: rgba(0, 255, 65, 0.7);
+}

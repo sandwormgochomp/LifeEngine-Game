@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import styles from '../styles/Hud.module.css';
+import styles from '../styles/StatsTab.module.css';
 import useEngineValue from '../useEngineValue';
 import type Engine from '../../Engine';
 import FossilRecord from '../../Stats/FossilRecord';

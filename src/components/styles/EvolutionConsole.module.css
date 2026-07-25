@@ -1,9 +1,9 @@
 /* ==========================================================
    THE CONSOLE — evolution window, tab 1
    Lifted from concepts/evolution-window-options.html §1.
-   Everything the Console tab and PixelDial draw lives here;
-   Hud.module.css stays the shared chrome (.ctrlRow, .ctrlGroup)
-   so the two can be composed on one element.
+   Everything the Console tab and PixelDial draw lives here; the shared
+   chrome (.ctrlRow, .ctrlGroup, …) is composed in from kit/Control at the
+   bottom of this file.
    ========================================================== */
 
 /* Not .ctrlBody: that is a multi-column auto-fit grid, which would break the
@@ -268,4 +268,23 @@
   gap: 0 22px;
   align-content: start;
   padding-top: 4px;
+}
+
+/* Shared primitives, aliased so this component's call sites keep
+   reading styles.<name>. Definitions live in the kit. */
+
+.ctrlGroup {
+  composes: group from './kit/Control.module.css';
+}
+
+.ctrlLabel {
+  composes: label from './kit/Control.module.css';
+}
+
+.ctrlRow {
+  composes: row from './kit/Control.module.css';
+}
+
+.ctrlValue {
+  composes: value from './kit/Control.module.css';
 }

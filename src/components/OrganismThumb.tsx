@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/OrganismThumb.module.css';
 import CellStates from '../Organism/Cell/CellStates';
 import { renderOrganismSprite } from '../Rendering/DecorationRenderer';
 

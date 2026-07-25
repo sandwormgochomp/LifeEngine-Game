@@ -1,0 +1,35 @@
+/* ======================================
+   KIT: Bar — the HUD's corner readout bars
+   ======================================
+   The pinned strips of live numbers along the top of the screen: the stats bar
+   (top-center) and the speed/zoom bar (top-right). Same chrome, differing only
+   in padding and gap, so callers set those two and compose the rest.
+
+     .speedZoomBar { composes: bar from './kit/Bar.module.css'; padding: 8px 18px; gap: 12px; }
+
+   Positioning is the caller's: a bar does not know which corner it lives in.
+
+   Overriding one of these from a component? Double the component's class
+   (.thing.thing) — the bundler emits this kit AFTER the component modules, so
+   an equal-specificity override silently loses. `python3 scripts/css-kit-conflicts.py`
+   finds these; the doubled rules in EditorDock/WorldsModal/PredatorModal are
+   why it currently exits clean. */
+
+.bar {
+  background: rgba(0, 0, 0, 0.82);
+  border: none;
+  box-shadow:
+    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
+    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 8px rgba(0, 255, 65, 0.12);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* The dim vertical rule between readouts within a bar */
+.divider {
+  color: rgba(0, 255, 65, 0.3);
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  user-select: none;
+}

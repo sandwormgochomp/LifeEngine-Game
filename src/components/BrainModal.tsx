@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/BrainModal.module.css';
 import type Engine from '../Engine';
 import CellStates from '../Organism/Cell/CellStates';
 import type { CellName } from '../Organism/Cell/CellStates';

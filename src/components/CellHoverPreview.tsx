@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import styles from './styles/Hud.module.css';
+import styles from './styles/CellHoverPreview.module.css';
 import PreviewEnvironment from '../Environments/PreviewEnvironment';
 import { PREVIEW_SCENARIOS, PREVIEW_COLS, PREVIEW_ROWS, PREVIEW_CELL } from './cellPreviews';
 import type { LivingCellName } from '../Organism/Cell/CellStates';

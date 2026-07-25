@@ -1,0 +1,74 @@
+/* ======================================
+   KIT: Picker — card grid for choose-one modals
+   ======================================
+   The grid of thumbnail cards shared by the lifeforms, presets and worlds
+   modals. Pairs with kit/Surface: the picker fills a Surface `.modal` between
+   its `.header` and `.footer`.
+
+   Consume with `composes`:
+
+     .grid { composes: grid from './kit/Picker.module.css'; }
+
+   State variants that only one picker has (extinct dimming, pending thumbs)
+   belong in that component's module, not here.
+
+   Overriding one of these from a component? Double the component's class
+   (.thing.thing) — the bundler emits this kit AFTER the component modules, so
+   an equal-specificity override silently loses. `python3 scripts/css-kit-conflicts.py`
+   finds these; the doubled rules in EditorDock/WorldsModal/PredatorModal are
+   why it currently exits clean. */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+/* The "nothing here yet" line, spanning the full grid width */
+.empty {
+  grid-column: 1 / -1;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: rgba(0, 255, 65, 0.7);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(0, 255, 65, 0.2);
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  min-width: unset;
+}
+
+.card:hover {
+  border-color: #00FF41;
+  background: rgba(0, 255, 65, 0.08);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+/* Card caption: name on top, dimmer metadata line under it */
+.name {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #00FF41;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  color: rgba(0, 255, 65, 0.55);
+}

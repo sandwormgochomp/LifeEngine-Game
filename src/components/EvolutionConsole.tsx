@@ -1,6 +1,5 @@
 import React from 'react';
-import styles from './styles/Hud.module.css';
-import local from './styles/EvolutionConsole.module.css';
+import styles from './styles/EvolutionConsole.module.css';
 import PixelDial, { linearScale, logScale } from './PixelDial';
 import PixelSlider from './PixelSlider';
 import useEngineValue from './useEngineValue';
@@ -105,13 +104,13 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
   };
 
   const consequence = (key: ParamKey) =>
-    CONSEQUENCE[key] ? <p className={local.consequence}>{CONSEQUENCE[key]}</p> : null;
+    CONSEQUENCE[key] ? <p className={styles.consequence}>{CONSEQUENCE[key]}</p> : null;
 
   const renderRow = (field: Field, idPrefix = 'console-') => {
     if (field.kind === 'bool') {
       const checked = field.invert ? !params[field.key] : !!params[field.key];
       return (
-        <div key={field.key} className={local.field}>
+        <div key={field.key} className={styles.field}>
           <label className={styles.ctrlRow} title={field.title}>
             <span className={styles.ctrlLabel}>{field.label}</span>
             <input
@@ -126,7 +125,7 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
       );
     }
     return (
-      <div key={field.key} className={local.field}>
+      <div key={field.key} className={styles.field}>
         <label className={styles.ctrlRow} title={field.title}>
           <span className={styles.ctrlLabel}>{field.label}</span>
           <PixelSlider
@@ -165,8 +164,8 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
   const fineCount = fineGroups.reduce((n, g) => n + g.fields.length, 0);
 
   return (
-    <div className={local.console} data-testid="evolution-console">
-      <div className={local.dials}>
+    <div className={styles.console} data-testid="evolution-console">
+      <div className={styles.dials}>
         <PixelDial
           id="dial-abundance"
           label="ABUNDANCE"
@@ -223,7 +222,7 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
           {!evolvedRates && (
             <button
               id="console-return-evolved"
-              className={local.revert}
+              className={styles.revert}
               title="Hand mutation rates back to the organisms; the global number goes inert again"
               onClick={() => setParam('useGlobalMutability', false)}
             >
@@ -235,8 +234,8 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
 
       {/* Not tuning — these four decide what kind of world it is. The stripe
           and the red border are the only thing on the tab that says so. */}
-      <section className={local.hazard} data-testid="console-hazard">
-        <div className={local.hazardTitle}>⚠ HAZARD</div>
+      <section className={styles.hazard} data-testid="console-hazard">
+        <div className={styles.hazardTitle}>⚠ HAZARD</div>
         {HAZARD_KEYS.map(key => (
           <React.Fragment key={key}>
             {renderRow(fieldOf(key))}
@@ -250,7 +249,7 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
 
       <button
         id="console-fine-toggle"
-        className={local.foldToggle}
+        className={styles.foldToggle}
         aria-expanded={fineOpen}
         onClick={onFineToggle}
       >
@@ -258,7 +257,7 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
       </button>
 
       {fineOpen && (
-        <div className={local.fine} data-testid="console-fine-tuning">
+        <div className={styles.fine} data-testid="console-fine-tuning">
           {fineGroups.map(group => (
             <section key={group.title} className={styles.ctrlGroup}>
               <h4>{group.title}</h4>

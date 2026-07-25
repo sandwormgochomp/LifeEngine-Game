@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import hud from './styles/Hud.module.css';
 import styles from './styles/FateDeck.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
@@ -65,7 +64,7 @@ const FateDeck: React.FC<FateDeckProps> = ({ engine, onParamsChanged }) => {
 
   return (
     <div className={styles.deckBody} data-testid="fate-deck">
-      <p className={`${hud.ctrlNote} ${styles.deckNote}`}>
+      <p className={`${styles.ctrlNote} ${styles.deckNote}`}>
         Every card is a pressure, never a result: it changes what the world rewards
         and leaves the choosing to the world. Timed cards wind themselves back.
       </p>
