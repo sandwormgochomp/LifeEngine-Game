@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styles from './styles/Hud.module.css';
 import local from './styles/EvolutionConsole.module.css';
 import PixelDial, { linearScale, logScale } from './PixelDial';
@@ -11,6 +11,12 @@ import type { Field, ParamAccess, ParamKey } from './evolutionParams';
 export interface EvolutionConsoleProps extends ParamAccess {
   /** For live readouts a parameter can't give — e.g. the world's evolved mutability */
   engine: Engine | null;
+  /* Whether the fine-tuning fold is open. Lifted to the modal rather than held
+     here: the fold is now the window's only exact-entry surface, and state
+     inside this component would re-collapse it every time you looked at the
+     Fate Deck and came back. */
+  fineOpen: boolean;
+  onFineToggle: () => void;
 }
 
 /* The Console tab — concepts/evolution-window-overhauls.md, overhaul 1.
@@ -20,13 +26,18 @@ export interface EvolutionConsoleProps extends ParamAccess {
    decide a run's character, a hazard block for the toggles that reshape a
    world rather than tune it, and everything else folded away.
 
+   The fold is also the whole of the old Manual tab: the escape hatch that tab
+   existed to be (concepts/evolution-window-overhauls.md:197 proposed it for a
+   world where the Fate Deck replaced the window) is this, so the window is now
+   two tabs — one surface you tune, one you play.
+
    The consequence lines below are the point of the exercise. Every one of them
    used to be a `title` tooltip on a `cursor: help` row, which meant invisible
    at a glance and entirely absent on touch. They live here, in the tab that
    shows them, rather than in evolutionParams.ts: that table is the shared
-   schema and the Manual tab reads it too, so an outcome-phrased sentence
-   belongs to this presentation, not to the parameter. The tooltips stay on as
-   well — the long mechanical explanation is still worth having on hover. */
+   schema the Fate Deck and the New Game dialog read too, so an outcome-phrased
+   sentence belongs to this presentation, not to the parameter. The tooltips
+   stay on as well — the long mechanical explanation is still worth on hover. */
 const CONSEQUENCE: Partial<Record<ParamKey, string>> = {
   foodProdProb: 'how fast producers turn bare space into food',
   lifespanMultiplier: 'ticks a body earns per cell — high enough, nothing turns over',
@@ -50,23 +61,26 @@ const CONSEQUENCE: Partial<Record<ParamKey, string>> = {
   foodBlocksReproduction: 'offspring cannot be born into food; when off they eat their way out',
 };
 
-/* Everything the console gives its own treatment. The fold is derived by
-   subtracting this set from GROUPS rather than by listing the remainder, so a
-   parameter added to evolutionParams.ts turns up in the fold on its own
-   instead of quietly vanishing from this tab. */
-const PROMOTED = new Set<ParamKey>([
-  'foodProdProb', 'lifespanMultiplier', 'globalMutability', 'useGlobalMutability',
-  'instaKill', 'randomEvents', 'randomEventInterval', 'maxOrganisms', 'moversCanProduce',
-]);
-
 const HAZARD_KEYS: ParamKey[] = ['instaKill', 'randomEvents', 'maxOrganisms', 'moversCanProduce'];
+
+/* What the console already gives an exact control, and so keeps out of the
+   fold. The hazard block draws the very rows the fold would — a checkbox is a
+   checkbox — so listing them twice buys nothing, and the event interval is
+   already attached to the toggle that makes it mean anything.
+
+   The three *dial* parameters are deliberately not in here. A dial is aimable,
+   not typeable: LIFESPAN runs on a log scale whose keyboard step is a
+   percentage of the sweep, so the fold is where you go when you want exactly
+   250. It is also the only place `useGlobalMutability` can be turned on
+   without the mutation dial overwriting the rate in the same gesture. Those
+   are the one duplication on this tab and they are the reason the fold
+   absorbed the old Manual tab rather than the tab simply being deleted. */
+const EXACT_ELSEWHERE = new Set<ParamKey>([...HAZARD_KEYS, 'randomEventInterval']);
 
 const fieldOf = (key: ParamKey): Field =>
   GROUPS.flatMap(g => g.fields).find(f => f.key === key) as Field;
 
-const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, setParam }) => {
-  const [fineOpen, setFineOpen] = useState(false);
-
+const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, setParam, fineOpen, onFineToggle }) => {
   /* THE MUTATION DIAL.
 
      globalMutability is inert by default. useGlobalMutability starts false,
@@ -135,8 +149,18 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
     );
   };
 
+  /* The fold: every parameter the console does not already give an exact
+     control, derived by subtraction rather than listed, so one added to
+     evolutionParams.ts turns up here on its own instead of quietly vanishing
+     from the window. The global rate is the one conditional — it is inert
+     while organisms carry their own, so it appears only once evolved rates are
+     off. That rule came from the Manual tab and moved here with it. */
+  const inFold = (field: Field) =>
+    !EXACT_ELSEWHERE.has(field.key) &&
+    !(field.key === 'globalMutability' && !params.useGlobalMutability);
+
   const fineGroups = GROUPS
-    .map(group => ({ title: group.title, fields: group.fields.filter(f => !PROMOTED.has(f.key)) }))
+    .map(group => ({ title: group.title, fields: group.fields.filter(inFold) }))
     .filter(group => group.fields.length > 0);
   const fineCount = fineGroups.reduce((n, g) => n + g.fields.length, 0);
 
@@ -228,7 +252,7 @@ const EvolutionConsole: React.FC<EvolutionConsoleProps> = ({ engine, params, set
         id="console-fine-toggle"
         className={local.foldToggle}
         aria-expanded={fineOpen}
-        onClick={() => setFineOpen(open => !open)}
+        onClick={onFineToggle}
       >
         {fineOpen ? '▾' : '▸'} FINE TUNING ({fineCount})
       </button>

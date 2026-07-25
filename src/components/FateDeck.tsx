@@ -44,9 +44,9 @@ const FateDeck: React.FC<FateDeckProps> = ({ engine, onParamsChanged }) => {
   const play = (card: FateCard) => {
     if (!engine) return;
     card.apply(engine.env);
-    /* The sibling tabs mirror Hyperparams in React state and a card writes the
-       singleton directly, so without this the Manual tab would keep showing the
-       pre-card numbers until something else happened to resync it. */
+    /* The Console mirrors Hyperparams in React state and a card writes the
+       singleton directly, so without this its dials and fold would keep showing
+       the pre-card numbers until something else happened to resync them. */
     onParamsChanged();
     window.clearTimeout(flash_timer.current);
     flash_seq.current++;

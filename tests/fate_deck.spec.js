@@ -295,12 +295,13 @@ test.describe('The Fate Deck', () => {
     await expect(page.getByTestId('long-winter-countdown')).toBeHidden();
   });
 
-  test('The card writes reach the sibling Manual tab, not just the engine', async ({ page }) => {
+  test('The card writes reach the sibling Console tab, not just the engine', async ({ page }) => {
     await page.locator('#fate-card-long-night').click();
-    await page.locator('#evo-tab-manual').click();
-    // The Manual tab mirrors Hyperparams in React state; onParamsChanged is
-    // what stops it showing the pre-card number until something else resyncs it
-    await expect(page.locator('#lookRange')).toHaveValue('4');
+    await page.locator('#evo-tab-console').click();
+    await page.locator('#console-fine-toggle').click();
+    // The Console mirrors Hyperparams in React state; onParamsChanged is what
+    // stops it showing the pre-card number until something else resyncs it
+    await expect(page.locator('#console-lookRange')).toHaveValue('4');
   });
 });
 

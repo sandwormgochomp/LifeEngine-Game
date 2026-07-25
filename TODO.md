@@ -41,14 +41,20 @@ Notifier / FossilRecord / Floaties infrastructure.
       covers both new events, the mutual exclusion, storm ownership, and the
       scheduler's silence when off; the ownership and version guards were each
       verified to fail when deliberately broken.
-- [x] ~~**Overhaul the evolution window.**~~ — done, as three tabs over one set
+- [x] ~~**Overhaul the evolution window.**~~ — done, as two tabs over one set
       of parameters (`concepts/evolution-window-overhauls.md` proposes five
       treatments; two were built). **Console** promotes abundance / lifespan /
       mutation to pixel dials, puts the four world-reshaping toggles in a hazard
       block, and replaces hover tooltips with always-visible consequence lines.
       **Fate Deck** is seven cards played at the world — bundled parameter
       pressures that wind themselves back, on the `active_events` queue the
-      weather already used. **Manual** is the old flat list, unchanged.
+      weather already used. A third tab, **Manual**, carried the pre-React flat
+      list until the Console's FINE TUNING fold was widened to hold every
+      parameter without an exact control up top — which is that list, in place,
+      so the tab was two names for one surface and went. The fold now also
+      carries typed rows for the three dialled parameters (a log-scale dial can
+      be aimed but not typed at) and for `useGlobalMutability`, the one control
+      the dials could only reach by overwriting the rate in the same gesture.
       The engine's `triggerFoodShift` is now the one-field case of a general
       `triggerParamShift`; bloom/ice-age exclusion falls out of the rule that no
       two live shifts may hold the same field. Two bugs came out of it: a card in
@@ -68,13 +74,8 @@ Notifier / FossilRecord / Floaties infrastructure.
 - [ ] **No sign a control is currently held by an era.** Editing a field a live
       Fate Deck card holds now takes it off that era rather than letting the
       era's expiry throw the edit away, and says so in a toast
-      (`WorldEnvironment.releaseParamClaim`) — but until you touch it, nothing on
-      the Console or Manual tab marks the value as borrowed rather than yours.
-- [ ] **`foodProdProb`'s row is `min: 0.001, step: 1`.** So every value the
-      Manual slider can produce ends in `.001` (`evolutionParams.ts`). The
-      Console's ABUNDANCE dial sidesteps it with its own `0..100` scale; the
-      underlying row is still odd, and `tests/evolution_window.spec.js` has to
-      fill `7.001` to satisfy it.
+      (`WorldEnvironment.releaseParamClaim`) — but until you touch it, nothing
+      on the Console marks the value as borrowed rather than yours.
 - [ ] **Predator bestiary: what the trials showed.** Six species in
       `src/Organism/Predators.ts`, each tuned against a 2400-tick trial in
       several grown worlds. Three lessons, if more are added: a functional cell
@@ -217,6 +218,13 @@ Performance (bundled-world evaluation, 2026-07-23)
       materialization of the old `Cell[][]` — the specs read it, nothing in
       the engine does, and touching it from engine code allocates the per-cell
       objects this work removed.
+- [ ] **`food_adjacency.spec.js`'s fallback test is seed-dependent.** "Falls
+      back to the full scan when the edible set is not the four neighbours"
+      hunts the randomly-generated origin world for a mouth with `food_adj === 0`
+      and a clear diagonal, and bails with `no mouth with a clear diagonal` when
+      the seed hands it none — seen failing once in a full run on 2026-07-25 and
+      passing on the next. It should build the arrangement it needs rather than
+      look for it; every other test in the file is deterministic.
 
 ---
 

@@ -34,12 +34,16 @@ async function openNewGame(page) {
   await page.locator('[data-testid="newgame-modal"]').waitFor();
 }
 
-// Open the evolution window on its Manual tab, where the one-row-per-parameter
-// controls live. The window opens on the Console tab, which only carries the
-// handful of parameters it promotes to dials.
-async function openEvolutionManual(page) {
+/* Open the evolution window and expand FINE TUNING, where the
+   one-row-per-parameter controls live -- the surface that used to be the
+   Manual tab. The window opens on the Console, which shows the parameters it
+   promotes to dials and the hazard block; everything else is behind the fold,
+   and so are the exact-entry rows for the dialled three. Rows there are id'd
+   `#console-<key>`. */
+async function openEvolutionFineTuning(page) {
   await page.locator('#tool-rules').click();
-  await page.locator('#evo-tab-manual').click();
+  await page.locator('#console-fine-toggle').click();
+  await page.locator('[data-testid="console-fine-tuning"]').waitFor();
 }
 
 // Dismiss the open modal. The modal backdrop covers the toolbar, so a modal
@@ -94,4 +98,4 @@ async function localCellState(page, dc, dr) {
   }, [dc, dr]);
 }
 
-module.exports = { test, expect: base.expect, openPanel, openEditor, openNewGame, openEvolutionManual, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, expectCellCount, localCellState };
+module.exports = { test, expect: base.expect, openPanel, openEditor, openNewGame, openEvolutionFineTuning, closeModal, loadPreset, pauseEngine, editorCellPosition, clickEditorCell, expectCellCount, localCellState };

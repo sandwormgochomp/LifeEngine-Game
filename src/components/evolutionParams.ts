@@ -8,8 +8,8 @@ import type { HyperparamsData, HyperparamsSingleton } from '../Hyperparameters';
    so are not editable here, which matches what GROUPS lists.
 
    These live outside the modal because every tab of the window shares them: the
-   Manual tab renders GROUPS wholesale, the Console promotes a handful of keys to
-   dials, and the Fate Deck writes through the same setParam. */
+   Console promotes a handful of keys to dials and renders the rest of GROUPS
+   wholesale in its fold, and the Fate Deck writes through the same setParam. */
 export type NumParamKey = { [K in keyof HyperparamsData]: HyperparamsData[K] extends number ? K : never }[keyof HyperparamsData];
 export type BoolParamKey = { [K in keyof HyperparamsData]: HyperparamsData[K] extends boolean ? K : never }[keyof HyperparamsData];
 export type ParamKey = NumParamKey | BoolParamKey;
@@ -53,7 +53,10 @@ export const GROUPS: { title: string; fields: Field[] }[] = [
   {
     title: 'Life',
     fields: [
-      { kind: 'num', key: 'foodProdProb', label: 'Food production %', title: 'The probability that a producer cell will produce food each tick.', min: 0.001, max: 100, step: 1 },
+      /* 0..100 by halves, the same scale the Console's ABUNDANCE dial runs on.
+         It was min 0.001 step 1, which meant every value the slider could
+         produce ended in .001 -- a rate of 7 was unreachable from the row. */
+      { kind: 'num', key: 'foodProdProb', label: 'Food production %', title: 'The probability that a producer cell will produce food each tick.', min: 0, max: 100, step: 0.5 },
       { kind: 'num', key: 'lifespanMultiplier', label: 'Lifespan multiplier', title: 'An organism lives for this many ticks per cell in its body.', min: 1, max: 10000, step: 1 },
       { kind: 'num', key: 'foodDropProb', label: 'Auto food drop rate', title: 'Rate at which food is automatically generated and dropped in the world.', min: 0, max: 1000, step: 0.1 },
       { kind: 'bool', key: 'rotationEnabled', label: 'Rotation enabled', title: 'Organisms rotate when born and while moving.' },

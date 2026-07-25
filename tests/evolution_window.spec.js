@@ -1,10 +1,13 @@
 const { test, expect, pauseEngine } = require('./helpers/fixtures');
 
-/* The evolution window as a whole: three tabs over one set of parameters.
+/* The evolution window as a whole: two tabs over one set of parameters.
    evolution_console.spec and fate_deck.spec each cover their own tab in
    isolation; what is left over -- and what neither can see -- is the seam
    between them, where a card played on one tab and a slider dragged on another
    are writing the same Hyperparams fields. */
+
+// The exact-entry rows live behind the Console's fold, id'd `#console-<key>`.
+const openFold = page => page.locator('#console-fine-toggle').click();
 
 const paramsOf = (page, keys) => page.evaluate(
   keys => Object.fromEntries(keys.map(k => [k, window.hyperparams[k]])), keys);
@@ -31,16 +34,22 @@ test.describe('The evolution window', () => {
     await expect(page.getByTestId('fate-deck')).toBeVisible();
     await expect(page.getByTestId('evolution-console')).toBeHidden();
 
-    await page.locator('#evo-tab-manual').click();
-    await expect(page.locator('#lifespanMultiplier')).toBeVisible();
-
     await page.locator('#evo-tab-console').click();
     await expect(page.getByTestId('evolution-console')).toBeVisible();
+
+    // ...and the fold under it survives the trip to the deck and back
+    await openFold(page);
+    await expect(page.locator('#console-lifespanMultiplier')).toBeVisible();
+    await page.locator('#evo-tab-fate').click();
+    await page.locator('#evo-tab-console').click();
+    await expect(page.locator('#console-lifespanMultiplier')).toBeVisible();
   });
 
-  /* The three tabs are three views of one singleton, so a write on any of them
-     has to be the value the others show. A card is the strongest version of
-     the case: it writes several fields at once, from a tab with no sliders. */
+  /* The tabs are two views of one singleton, so a write on either has to be
+     the value the other shows -- and within the Console, the dial and its
+     exact-entry row in the fold are a third. A card is the strongest version
+     of the case: it writes several fields at once, from a tab with no
+     sliders. */
   test('A card played on the deck is the number the other tabs show', async ({ page }) => {
     const before = await paramsOf(page, ['lifespanMultiplier', 'foodProdProb']);
 
@@ -54,8 +63,8 @@ test.describe('The evolution window', () => {
     await expect(page.locator('#dial-abundance'))
       .toHaveAttribute('aria-valuenow', String(before.foodProdProb / 2));
 
-    await page.locator('#evo-tab-manual').click();
-    await expect(page.locator('#lifespanMultiplier'))
+    await openFold(page);
+    await expect(page.locator('#console-lifespanMultiplier'))
       .toHaveValue(String(before.lifespanMultiplier * 3));
   });
 
@@ -68,12 +77,13 @@ test.describe('The evolution window', () => {
     await page.locator('#evo-tab-fate').click();
     await page.locator('#fate-card-long-winter').click();
 
-    await page.locator('#evo-tab-manual').click();
-    await expect(page.locator('#lifespanMultiplier')).toHaveValue('300');
+    await page.locator('#evo-tab-console').click();
+    await openFold(page);
+    await expect(page.locator('#console-lifespanMultiplier')).toHaveValue('300');
 
     await expire(page, 'long-winter');
 
-    await expect(page.locator('#lifespanMultiplier')).toHaveValue('100');
+    await expect(page.locator('#console-lifespanMultiplier')).toHaveValue('100');
     expect((await paramsOf(page, ['lifespanMultiplier'])).lifespanMultiplier).toBe(100);
   });
 
@@ -85,12 +95,13 @@ test.describe('The evolution window', () => {
     await page.locator('#evo-tab-fate').click();
     await page.locator('#fate-card-long-winter').click();
 
-    await page.locator('#evo-tab-manual').click();
-    await page.locator('#lifespanMultiplier').fill('500');
+    await page.locator('#evo-tab-console').click();
+    await openFold(page);
+    await page.locator('#console-lifespanMultiplier').fill('500');
 
     await expire(page, 'long-winter');
 
-    await expect(page.locator('#lifespanMultiplier')).toHaveValue('500');
+    await expect(page.locator('#console-lifespanMultiplier')).toHaveValue('500');
     expect((await paramsOf(page, ['lifespanMultiplier'])).lifespanMultiplier).toBe(500);
   });
 
@@ -101,8 +112,9 @@ test.describe('The evolution window', () => {
 
     await page.locator('#evo-tab-fate').click();
     await page.locator('#fate-card-long-winter').click();
-    await page.locator('#evo-tab-manual').click();
-    await page.locator('#lifespanMultiplier').fill('500');
+    await page.locator('#evo-tab-console').click();
+    await openFold(page);
+    await page.locator('#console-lifespanMultiplier').fill('500');
 
     // The era is still live, still holding food production
     await expect(page.getByTestId('fate-card-long-winter')).toBeHidden();
@@ -121,18 +133,16 @@ test.describe('The evolution window', () => {
     await page.locator('#fate-card-fertile-crescent').click();
 
     /* Fertile Crescent holds foodProdProb and foodBlocksReproduction, so both
-       have to be taken over for the era to be left holding nothing.
-       7.001 rather than 7 because the Manual tab's food row is min 0.001 step 1
-       (evolutionParams.ts), so every value its slider can produce ends in .001
-       -- the Console's ABUNDANCE dial is the one with round numbers on it. */
-    await page.locator('#evo-tab-manual').click();
-    await page.locator('#foodProdProb').fill('7.001');
-    await page.locator('#foodBlocksReproduction').check();
+       have to be taken over for the era to be left holding nothing. */
+    await page.locator('#evo-tab-console').click();
+    await openFold(page);
+    await page.locator('#console-foodProdProb').fill('7');
+    await page.locator('#console-foodBlocksReproduction').check();
 
     expect(await page.evaluate(() => window.engine.env.active_events.map(e => e.kind)))
       .not.toContain('fertile-crescent');
     // ...and the player's own numbers are left standing
     expect(await paramsOf(page, ['foodProdProb', 'foodBlocksReproduction']))
-      .toEqual({ foodProdProb: 7.001, foodBlocksReproduction: true });
+      .toEqual({ foodProdProb: 7, foodBlocksReproduction: true });
   });
 });

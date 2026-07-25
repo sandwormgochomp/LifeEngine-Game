@@ -139,39 +139,61 @@ test.describe('The Console', () => {
     expect(await engineParam(page, 'randomEventInterval')).toBe(600);
   });
 
-  test('Fine tuning folds away everything the console did not promote', async ({ page }) => {
+  /* The fold absorbed the Manual tab, so it holds every parameter the console
+     does not already give an exact control -- including the three the dials
+     take, which a dial can aim at but not type. */
+  test('Fine tuning folds away everything without an exact control up top', async ({ page }) => {
     await expect(page.getByTestId('console-fine-tuning')).toHaveCount(0);
     const toggle = page.locator('#console-fine-toggle');
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    // The count is derived from GROUPS minus the promoted keys
-    await expect(toggle).toHaveText(/FINE TUNING \(12\)/);
+    /* 21 parameters, less the four hazards and the event interval (which are
+       already exact controls on the tab) and less the global mutation rate
+       (inert, and hidden while evolved rates are on) */
+    await expect(toggle).toHaveText(/FINE TUNING \(15\)/);
 
     await toggle.click();
     const fold = page.getByTestId('console-fine-tuning');
     await expect(fold).toBeVisible();
 
-    // The un-promoted parameters live here, and only here
+    // Everything the tab does not otherwise show lives here...
     for (const key of ['lookRange', 'addProb', 'wallDurability', 'extraMoverFoodCost', 'seeThroughSelf']) {
       await expect(page.locator(`#console-${key}`)).toBeVisible();
     }
-    // ...and the promoted ones do not appear twice
-    for (const key of ['foodProdProb', 'lifespanMultiplier', 'globalMutability']) {
-      await expect(page.locator(`#console-${key}`)).toHaveCount(0);
+    // ...and so do exact-entry rows for the dialled parameters
+    for (const key of ['foodProdProb', 'lifespanMultiplier', 'useGlobalMutability']) {
+      await expect(page.locator(`#console-${key}`)).toBeVisible();
+    }
+    // The hazards are not duplicated: their rows up top are already exact
+    for (const key of ['instaKill', 'randomEvents', 'maxOrganisms', 'moversCanProduce']) {
+      await expect(page.locator(`#console-${key}`)).toHaveCount(1);
     }
 
     await page.locator('#console-lookRange').fill('7');
     expect(await engineParam(page, 'lookRange')).toBe(7);
   });
 
-  test('The console and the manual tab stay in step', async ({ page }) => {
+  /* A dial and its row in the fold are two views of one field, and the fold is
+     the half you can type an exact number into -- the job the Manual tab used
+     to be kept around for. */
+  test('A dial and its row in the fold stay in step', async ({ page }) => {
     await page.locator('#dial-lifespan').press('End');
-    await page.locator('#evo-tab-manual').click();
-    await expect(page.locator('#lifespanMultiplier')).toHaveValue('10000');
-
-    // ...and back the other way
-    await page.locator('#lookRange').fill('9');
-    await page.locator('#evo-tab-console').click();
     await page.locator('#console-fine-toggle').click();
-    await expect(page.locator('#console-lookRange')).toHaveValue('9');
+    await expect(page.locator('#console-lifespanMultiplier')).toHaveValue('10000');
+
+    // ...and back the other way, at a number the log-scale dial cannot aim at
+    await page.locator('#console-lifespanMultiplier').fill('250');
+    await expect(page.locator('#dial-lifespan')).toHaveAttribute('aria-valuenow', '250');
+    expect(await engineParam(page, 'lifespanMultiplier')).toBe(250);
+  });
+
+  /* The fold is the window's exact-entry surface, so it has to still be open
+     when you come back from consulting the deck. */
+  test('The fold stays open across a trip to the Fate Deck', async ({ page }) => {
+    await page.locator('#console-fine-toggle').click();
+    await expect(page.locator('#console-lookRange')).toBeVisible();
+
+    await page.locator('#evo-tab-fate').click();
+    await page.locator('#evo-tab-console').click();
+    await expect(page.locator('#console-lookRange')).toBeVisible();
   });
 });

@@ -462,17 +462,17 @@ test.describe('Random world events', () => {
   });
 
   test('The interval slider only appears once the scheduler is on', async ({ page }) => {
+    // Both live in the Console's hazard block, no fold to open
     await page.locator('#tool-rules').click();
-    await page.locator('#evo-tab-manual').click();
-    await expect(page.locator('#randomEvents')).toBeVisible();
-    await expect(page.locator('#randomEventInterval')).toBeHidden();
+    await expect(page.locator('#console-randomEvents')).toBeVisible();
+    await expect(page.locator('#console-randomEventInterval')).toBeHidden();
 
-    await page.locator('#randomEvents').check();
-    await expect(page.locator('#randomEventInterval')).toBeVisible();
+    await page.locator('#console-randomEvents').check();
+    await expect(page.locator('#console-randomEventInterval')).toBeVisible();
     expect(await page.evaluate(() => window.hyperparams.randomEvents)).toBe(true);
 
     // Leave the world as we found it: the scheduler is off by default
-    await page.locator('#randomEvents').uncheck();
+    await page.locator('#console-randomEvents').uncheck();
     expect(await page.evaluate(() => window.hyperparams.randomEvents)).toBe(false);
   });
 });

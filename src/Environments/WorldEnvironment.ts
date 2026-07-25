@@ -1055,8 +1055,8 @@ class WorldEnvironment extends Environment{
 
        `ticks <= 0` applies the changes and enqueues nothing: a permanent card
        is a rule the player has changed, not weather to sit out, and it is
-       indistinguishable from having moved the same sliders by hand on the
-       Manual tab. Such a card must express itself entirely in `set` transforms,
+       indistinguishable from having moved the same sliders by hand in the
+       Console's fold. Such a card must express itself entirely in `set` transforms,
        or replaying it will compound.
 
        Mutating the Hyperparams singleton is the same swap-a-global pattern

@@ -6,7 +6,6 @@ import type { HyperparamsSingleton } from '../Hyperparameters';
 import Notifier from '../Utils/Notifier';
 import EvolutionConsole from './EvolutionConsole';
 import FateDeck from './FateDeck';
-import EvolutionManualTab from './EvolutionManualTab';
 import useEngineValue from './useEngineValue';
 import { ALL_KEYS, snapshotParams } from './evolutionParams';
 import type { ParamKey, ParamMirror } from './evolutionParams';
@@ -16,22 +15,30 @@ interface EvolutionControlsModalProps {
   onClose: () => void;
 }
 
-/* The three faces of the same parameters: dials and hazards (Console), played
-   as bundled pressures (Fate Deck), or one row per field (Manual). Every tab
-   reads the one mirror this shell owns and writes through the one setParam, so
-   a change made on any of them is visible on the others the moment you switch. */
-type TabId = 'console' | 'fate' | 'manual';
+/* The two faces of the same parameters: one you tune (Console — dials, a
+   hazard block, and every remaining field in its fine-tuning fold) and one you
+   play (Fate Deck — bundled pressures thrown at the world). Both read the one
+   mirror this shell owns and write through the one setParam, so a change made
+   on either is visible on the other the moment you switch.
+
+   There was a third, MANUAL, holding the pre-React flat list. The Console's
+   fold is that list, so the tab was two names for one surface; the fold took
+   over the exact-entry job that was the only thing Manual still did alone. */
+type TabId = 'console' | 'fate';
 
 const TABS: { id: TabId; label: string; icon: string; title: string }[] = [
-  { id: 'console', label: 'CONSOLE', icon: 'fa-gauge-high', title: 'The controls that decide a run’s character, as dials' },
+  { id: 'console', label: 'CONSOLE', icon: 'fa-gauge-high', title: 'The controls that decide a run’s character, as dials — with every remaining parameter under FINE TUNING' },
   { id: 'fate', label: 'FATE DECK', icon: 'fa-clone', title: 'Play a pressure at the world' },
-  { id: 'manual', label: 'MANUAL', icon: 'fa-sliders', title: 'Every parameter, one row each' },
 ];
 
 const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine, onClose }) => {
   // Hyperparams is a plain module object; mirror it so edits re-render.
   const [params, setParams] = useState<ParamMirror>(snapshotParams);
   const [tab, setTab] = useState<TabId>('console');
+  /* The Console's fine-tuning fold, held here rather than in the tab: it is
+     the window's exact-entry surface, and a player who opened it to type a
+     number should still find it open after a look at the deck. */
+  const [fineOpen, setFineOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* Re-read the singleton wholesale. Used after anything that writes it behind
@@ -126,9 +133,16 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
           ))}
         </div>
 
-        {tab === 'console' && <EvolutionConsole engine={engine} params={params} setParam={setParam} />}
+        {tab === 'console' && (
+          <EvolutionConsole
+            engine={engine}
+            params={params}
+            setParam={setParam}
+            fineOpen={fineOpen}
+            onFineToggle={() => setFineOpen(open => !open)}
+          />
+        )}
         {tab === 'fate' && <FateDeck engine={engine} onParamsChanged={syncFromEngine} />}
-        {tab === 'manual' && <EvolutionManualTab params={params} setParam={setParam} />}
 
         <div className={styles.ctrlFooter}>
           <button id="reset-rules" title="Restore every control to its default" onClick={handleReset}>
