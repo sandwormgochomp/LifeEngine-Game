@@ -205,6 +205,16 @@ Top HUD readouts and controls. Small, self-contained.
       engine mounts, the `speedIndex` fallback is 0 while `DEFAULT_SPEED_INDEX`
       is 1 (`Engine.ts:53`, `HudTopLeft.tsx:34`), so Pause shows as the active
       rung for a moment even though the world starts running.
+- [ ] **The perf panel still covers the editor dock's close button.** Same bug
+      the lineage card had: `.perfPanel` (`PerfPanel.module.css:7`) and
+      `.dockWrap` (`Hud.module.css:858`) both pin to `right: 12px` near the top,
+      and the dock has the *lower* z-index (98 vs 100), so the readout draws over
+      its header and the ✕. The lineage card was fixed by moving it into the
+      top-left column, which left the perf panel as the last squatter on that
+      anchor. Cheapest fix is raising the dock above the panel; the better one is
+      shifting the panel left by the dock's width (64px rail + 6px gap + 348px
+      body) while the dock is open, since hiding a live timing readout behind the
+      dock is its own bug.
 
 ## Group 4 — Modal and tool flow
 

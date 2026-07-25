@@ -3,6 +3,7 @@ import styles from './styles/Hud.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
 import { SPEED_MODES } from '../Engine';
+import LineageCard from './LineageCard';
 
 import WorldConfig from '../WorldConfig';
 
@@ -45,6 +46,9 @@ const HudTopLeft: React.FC<HudTopLeftProps> = ({ engine, headless, onToggleHeadl
           <i className={`fa-solid ${headless ? 'fa-eye-slash' : 'fa-eye'}`} />
         </button>
       </div>
+      {/* Renders null unless a lineage is being followed, so the column is
+          just the logo and playback row the rest of the time. */}
+      <LineageCard engine={engine} />
     </div>
   );
 };

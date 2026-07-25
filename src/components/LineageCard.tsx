@@ -6,17 +6,19 @@ import OrganismThumb from './OrganismThumb';
 
 interface LineageCardProps {
   engine: Engine | null;
-  // The perf panel docks at the same top-right anchor; when it is open the
-  // card steps left of it instead of hiding underneath.
-  shiftForPerf?: boolean;
 }
 
 // The follow-a-lineage card: a small persistent readout on the line the player
-// clicked (Select/sample), pinned under the top-right bar in the same cyan as
-// the highlight the tracked organisms wear. It stays up after the line goes
-// extinct -- frozen at the final tally -- until dismissed or replaced, so a
-// player who looked away still gets the ending.
-const LineageCard: React.FC<LineageCardProps> = ({ engine, shiftForPerf }) => {
+// clicked (Select/sample), in the same cyan as the highlight the tracked
+// organisms wear. It stays up after the line goes extinct -- frozen at the
+// final tally -- until dismissed or replaced, so a player who looked away
+// still gets the ending.
+//
+// It renders as the last child of the top-left HUD column (HudTopLeft), so it
+// flows under the playback controls rather than positioning itself. The
+// top-right anchor it used to share with the editor dock and the perf panel
+// left it covering the dock's close button.
+const LineageCard: React.FC<LineageCardProps> = ({ engine }) => {
   const following = useEngineValue(engine, e => e.env.lineage.following, false);
   const extinct = useEngineValue(engine, e => e.env.lineage.extinct, false);
   const name = useEngineValue(engine, e => e.env.lineage.name, '');
@@ -40,7 +42,7 @@ const LineageCard: React.FC<LineageCardProps> = ({ engine, shiftForPerf }) => {
 
   return (
     <div
-      className={`${styles.lineageCard} ${shiftForPerf ? styles.lineageCardShifted : ''}`}
+      className={styles.lineageCard}
       data-testid="lineage-card"
     >
       <div className={styles.lineageCardHeader}>

@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel HUD Design Options — The Life Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ==========================================
+   GLOBAL DESIGN SYSTEM
+   ========================================== */
+:root {
+  /* Common variables */
+  --font-title: 'Press Start 2P', monospace;
+  --font-mono: 'VT323', monospace;
+
+  /* Theme: CRT Terminal (Green) */
+  --crt-green: #00FF41;
+  --crt-green-glow: rgba(0, 255, 65, 0.45);
+  --crt-bg: #020604;
+  --crt-border: rgba(0, 255, 65, 0.45);
+  --crt-cyan: #43e8e0;
+  
+  /* Theme: Minimalist Dithered */
+  --min-fg: #d2ebd9;
+  --min-bg: rgba(14, 20, 18, 0.88);
+  --min-border: rgba(210, 235, 217, 0.25);
+  --min-accent: #ff8c42;
+  --min-accent-muted: #5e6b63;
+
+  /* Theme: Cyberpunk Neon */
+  --cyber-pink: #ff0055;
+  --cyber-pink-glow: rgba(255, 0, 85, 0.6);
+  --cyber-blue: #00ffff;
+  --cyber-blue-glow: rgba(0, 255, 255, 0.6);
+  --cyber-bg: rgba(5, 5, 12, 0.94);
+  --cyber-border: rgba(0, 255, 255, 0.4);
+
+  /* Theme: Fantasy RPG */
+  --rpg-gold: #ffd700;
+  --rpg-wood: #2c1a11;
+  --rpg-border: #8b5a2b;
+  --rpg-corner: #ffd700;
+  --rpg-health: #e63946;
+  --rpg-energy: #457b9d;
+  --rpg-food: #e9c46a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #060b08;
+  font-family: var(--font-mono);
+  color: #8da396;
+  padding: 40px 20px 80px;
+  overflow-x: hidden;
+}
+
+/* Page Headers */
+h1 {
+  font-family: var(--font-title);
+  font-size: 18px;
+  color: #fff;
+  text-align: center;
+  margin: 0 0 10px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  letter-spacing: 1px;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 18px;
+  color: #557563;
+  margin-bottom: 30px;
+  text-transform: uppercase;
+}
+
+/* Top Showcase Layout */
+.showcase-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 28px;
+}
+
+@media (max-width: 900px) {
+  .showcase-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Live Simulation Screen Frame */
+.screen-frame {
+  position: relative;
+  background: #000;
+  border: 4px solid #1a2920;
+  border-radius: 4px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+/* Canvas simulation background */
+#sim-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  z-index: 1;
+}
+
+/* Glass screen glare / crt curve overlay */
+.crt-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.4);
+  transition: all 0.3s ease;
+}
+
+/* Scanlines overlay */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 98;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 1px,
+    rgba(0, 0, 0, 0.3) 1px, rgba(0, 0, 0, 0.3) 3px
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.theme-crt .scanlines {
+  opacity: 1;
+}
+
+/* ==========================================
+   INTERACTIVE HUD LAYOUT (Simulation Overlay)
+   ========================================== */
+.hud-layer {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.25s ease;
+}
+
+.hud-layer * {
+  pointer-events: auto;
+}
+
+/* Top HUD row */
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+/* Bottom HUD row */
+.hud-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+/* Corner panels base styles */
+.hud-panel {
+  background: rgba(0, 0, 0, 0.85);
+  transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+/* Pixel corners helper */
+.pixel-corners-sml {
+  clip-path: polygon(
+    0 4px, 4px 4px, 4px 0,
+    calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
+    100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%,
+    4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)
+  );
+}
+
+/* ==========================================
+   HUD THEME 1: GREEN CRT TERMINAL
+   ========================================= */
+.theme-crt .hud-panel {
+  background: rgba(2, 6, 4, 0.9);
+  border: 2px solid var(--crt-border);
+  box-shadow: 
+    inset 0 0 6px rgba(0, 255, 65, 0.1),
+    0 0 8px rgba(0, 255, 65, 0.15);
+  font-family: var(--font-mono);
+  color: var(--crt-green);
+}
+
+.theme-crt .hud-title {
+  font-family: var(--font-title);
+  font-size: 8px;
+  color: var(--crt-cyan);
+  text-shadow: 0 0 6px var(--crt-green-glow);
+  letter-spacing: 1px;
+}
+
+.theme-crt .stat-value {
+  color: var(--crt-green);
+  text-shadow: 0 0 4px var(--crt-green-glow);
+  font-size: 16px;
+}
+
+.theme-crt .stat-label {
+  color: rgba(0, 255, 65, 0.5);
+  text-transform: uppercase;
+}
+
+.theme-crt .trend-up { color: var(--crt-cyan); }
+.theme-crt .trend-down { color: #ff5555; }
+
+/* CRT style buttons */
+.theme-crt .hud-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  color: var(--crt-green);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 3px 8px;
+  cursor: pointer;
+  box-shadow: inset 0 0 4px rgba(0, 255, 65, 0.05);
+}
+.theme-crt .hud-btn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: var(--crt-green);
+  text-shadow: 0 0 4px var(--crt-green-glow);
+}
+.theme-crt .hud-btn.active {
+  background: rgba(0, 255, 65, 0.25);
+  border-color: var(--crt-green);
+  box-shadow: 0 0 6px var(--crt-green-glow);
+}
+
+/* ==========================================
+   HUD THEME 2: MINIMALIST DITHERED
+   ========================================== */
+.theme-minimal .hud-panel {
+  background: var(--min-bg);
+  border: 1px solid var(--min-border);
+  color: var(--min-fg);
+  font-family: var(--font-mono);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  /* Subtle checkerboard header pattern */
+  background-image: radial-gradient(var(--min-accent-muted) 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-position: 0 0;
+}
+
+.theme-minimal .hud-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--min-accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.theme-minimal .stat-value {
+  color: #fff;
+  font-size: 15px;
+}
+
+.theme-minimal .stat-label {
+  color: rgba(210, 235, 217, 0.5);
+}
+
+.theme-minimal .hud-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(210, 235, 217, 0.2);
+  color: var(--min-fg);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.theme-minimal .hud-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(210, 235, 217, 0.4);
+}
+.theme-minimal .hud-btn.active {
+  background: var(--min-accent);
+  color: #000;
+  border-color: var(--min-accent);
+}
+
+/* ==========================================
+   HUD THEME 3: CYBERPUNK NEON
+   ========================================== */
+.theme-cyber .hud-panel {
+  background: var(--cyber-bg);
+  border: 2px solid var(--cyber-border);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.15),
+    inset 0 0 10px rgba(0, 255, 255, 0.05);
+  font-family: var(--font-mono);
+  color: #fff;
+  position: relative;
+  /* Cyberpunk cut corner */
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+/* Glowing diagnostic grid in background of panels */
+.theme-cyber .hud-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(0, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 10px 10px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.theme-cyber .hud-title {
+  font-family: var(--font-title);
+  font-size: 7px;
+  color: var(--cyber-pink);
+  text-shadow: 0 0 6px var(--cyber-pink-glow);
+  letter-spacing: 1px;
+}
+
+.theme-cyber .stat-value {
+  color: var(--cyber-blue);
+  text-shadow: 0 0 6px var(--cyber-blue-glow);
+  font-size: 16px;
+}
+
+.theme-cyber .stat-label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.theme-cyber .hud-btn {
+  background: transparent;
+  border: 1px solid var(--cyber-pink);
+  color: var(--cyber-pink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 3px 8px;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+  transition: all 0.1s ease;
+}
+.theme-cyber .hud-btn:hover {
+  background: var(--cyber-pink-glow);
+  color: #fff;
+  box-shadow: 0 0 8px var(--cyber-pink-glow);
+}
+.theme-cyber .hud-btn.active {
+  background: var(--cyber-blue);
+  border-color: var(--cyber-blue);
+  color: #000;
+  box-shadow: 0 0 10px var(--cyber-blue-glow);
+}
+
+/* ==========================================
+   HUD THEME 4: FANTASY RPG
+   ========================================== */
+.theme-fantasy .hud-panel {
+  background: var(--rpg-wood);
+  border: 3px solid var(--rpg-border);
+  box-shadow: 
+    inset 0 0 12px rgba(0, 0, 0, 0.7),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-mono);
+  color: #f4eae1;
+  position: relative;
+  /* Gold corner pieces */
+  padding: 8px 12px;
+}
+
+/* Render small gold pixel art corners */
+.theme-fantasy .hud-panel::after {
+  content: '';
+  position: absolute;
+  top: -3px; left: -3px; right: -3px; bottom: -3px;
+  border: 3px solid transparent;
+  border-image: linear-gradient(135deg, var(--rpg-gold) 0%, transparent 20%, transparent 80%, var(--rpg-gold) 100%) 3;
+  pointer-events: none;
+}
+
+.theme-fantasy .hud-title {
+  font-family: var(--font-title);
+  font-size: 8px;
+  color: var(--rpg-gold);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.5px;
+}
+
+.theme-fantasy .stat-value {
+  color: #fff;
+  font-size: 16px;
+  text-shadow: 1px 1px 1px #000;
+}
+
+.theme-fantasy .stat-label {
+  color: #c9b4a4;
+}
+
+/* RPG health / energy style meters */
+.theme-fantasy .hud-btn {
+  background: #3e2617;
+  border: 2px solid #5a3d25;
+  color: #ffd700;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 4px 8px;
+  cursor: pointer;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1);
+}
+.theme-fantasy .hud-btn:hover {
+  background: #503421;
+  border-color: var(--rpg-gold);
+}
+.theme-fantasy .hud-btn.active {
+  background: var(--rpg-gold);
+  color: #3e2617;
+  border-color: #fff;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+}
+
+/* ==========================================
+   HUD ELEMENTS & SLIDERS PROTOTYPE
+   ========================================== */
+.top-left-group {
+  padding: 8px 12px;
+}
+.top-center-group {
+  padding: 6px 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.top-right-group {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.bottom-left-palette {
+  padding: 8px 10px;
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+.bottom-center-toolbar {
+  padding: 6px 12px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.diet-line {
+  font-size: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 4px;
+  padding-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.theme-crt .diet-line { border-color: rgba(0, 255, 65, 0.2); }
+.theme-minimal .diet-line { border-color: rgba(210, 235, 217, 0.1); }
+.theme-cyber .diet-line { border-color: rgba(0, 255, 255, 0.15); }
+.theme-fantasy .diet-line { border-color: rgba(139, 90, 43, 0.3); }
+
+/* Meter bar design */
+.hud-meter {
+  width: 80px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: 2px;
+  position: relative;
+  overflow: hidden;
+}
+.hud-meter-fill {
+  height: 100%;
+  width: 75%;
+}
+
+.theme-crt .hud-meter { border-color: var(--crt-green); }
+.theme-crt .hud-meter-fill { background: var(--crt-green); }
+
+.theme-minimal .hud-meter { border-color: var(--min-accent-muted); }
+.theme-minimal .hud-meter-fill { background: var(--min-accent); }
+
+.theme-cyber .hud-meter { border-color: var(--cyber-blue); }
+.theme-cyber .hud-meter-fill { 
+  background: var(--cyber-blue); 
+  box-shadow: 0 0 6px var(--cyber-blue-glow);
+}
+
+.theme-fantasy .hud-meter { border-color: #5a3d25; background: #22120b; }
+.theme-fantasy .hud-meter-fill { background: var(--rpg-health); }
+
+/* Control Panel */
+.control-panel {
+  background: #0d1612;
+  border: 2px solid #1a2c24;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.control-panel h2 {
+  font-family: var(--font-title);
+  font-size: 10px;
+  color: #fff;
+  margin: 0 0 4px;
+}
+
+.control-panel p {
+  margin: 0;
+  font-size: 15px;
+  color: #5d7869;
+}
+
+/* Radio buttons styled as pixel tiles */
+.theme-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.theme-btn {
+  padding: 10px 8px;
+  text-align: center;
+  background: #080f0c;
+  border: 2px solid #1e352a;
+  color: #6a8c79;
+  cursor: pointer;
+  font-family: var(--font-title);
+  font-size: 7px;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.theme-btn:hover {
+  border-color: #2e5241;
+  color: #a3c4b1;
+}
+
+.theme-btn.selected {
+  border-color: var(--crt-green);
+  background: #020604;
+  color: var(--crt-green);
+  text-shadow: 0 0 6px var(--crt-green-glow);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.15);
+}
+
+.speed-control-box {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.speed-tick {
+  width: 6px;
+  height: 14px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.theme-crt .speed-tick.lit {
+  background: var(--crt-green);
+  border-color: var(--crt-green);
+  box-shadow: 0 0 4px var(--crt-green-glow);
+}
+.theme-minimal .speed-tick.lit {
+  background: var(--min-accent);
+  border-color: var(--min-accent);
+}
+.theme-cyber .speed-tick.lit {
+  background: var(--cyber-blue);
+  border-color: var(--cyber-blue);
+  box-shadow: 0 0 6px var(--cyber-blue-glow);
+}
+.theme-fantasy .speed-tick.lit {
+  background: var(--rpg-gold);
+  border-color: var(--rpg-gold);
+}
+
+/* Info Cards for option explanation */
+.info-section {
+  max-width: 1100px;
+  margin: 40px auto 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .info-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.info-card {
+  background: rgba(13, 22, 18, 0.65);
+  border: 1px solid #1a2c24;
+  padding: 18px;
+}
+
+.info-card h3 {
+  font-family: var(--font-title);
+  font-size: 10px;
+  margin: 0 0 8px;
+}
+
+.info-card.crt-card h3 { color: var(--crt-green); }
+.info-card.min-card h3 { color: var(--min-accent); }
+.info-card.cyber-card h3 { color: var(--cyber-pink); }
+.info-card.fantasy-card h3 { color: var(--rpg-gold); }
+
+.info-card p {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #8da396;
+}
+
+.info-card ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #6a8c79;
+}
+.info-card li {
+  margin-bottom: 4px;
+}
+</style>
+</head>
+<body class="theme-crt">
+
+<h1>PIXEL HUD CONCEPT LAB</h1>
+<div class="subtitle">&gt; SELECT HUD STYLE OPTIONS BELOW_</div>
+
+<div class="showcase-container">
+  
+  <!-- Visual Simulator Window -->
+  <div class="screen-frame">
+    <!-- live canvas background -->
+    <canvas id="sim-canvas"></canvas>
+    
+    <!-- glare and scanline overlays -->
+    <div class="scanlines"></div>
+    <div class="crt-overlay"></div>
+    
+    <!-- interactive HUD overlay -->
+    <div class="hud-layer">
+      <!-- TOP HUD -->
+      <div class="hud-top">
+        <!-- Logo Panel -->
+        <div class="hud-panel pixel-corners-sml top-left-group">
+          <div class="hud-title">LIFE ENGINE</div>
+          <div style="font-size: 11px; opacity: 0.6;">v2.4-evolution</div>
+        </div>
+        
+        <!-- Stats Center Panel (HUD Diet: demoted, single line) -->
+        <div class="hud-panel pixel-corners-sml top-center-group">
+          <div>
+            <span class="stat-label">Ticks</span>
+            <span class="stat-value" id="hud-ticks">12048</span>
+          </div>
+          <div style="opacity: 0.3;">|</div>
+          <div>
+            <span class="stat-label">Pop</span>
+            <span class="stat-value" id="hud-pop">843</span>
+          </div>
+          <div style="opacity: 0.3;">|</div>
+          <div>
+            <span class="stat-label">Species</span>
+            <span class="stat-value" id="hud-species">14</span>
+          </div>
+        </div>
+        
+        <!-- Environment Indicator -->
+        <div class="hud-panel pixel-corners-sml top-right-group">
+          <div class="hud-title" style="margin-bottom: 2px;">ENVIRONMENT</div>
+          <div class="diet-line" style="gap: 12px; margin-top: 0; padding-top: 0;">
+            <span>PH: 7.2</span>
+            <span>TEMP: 24°C</span>
+          </div>
+          <div class="hud-meter">
+            <div class="hud-meter-fill"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- BOTTOM HUD -->
+      <div class="hud-bottom">
+        <!-- Tool Palette -->
+        <div class="hud-panel pixel-corners-sml bottom-left-palette">
+          <div class="hud-title" style="margin-bottom: 4px; font-size: 7px;">DEPLOY TOOL</div>
+          <div class="palette-grid">
+            <button class="hud-btn active">FOOD</button>
+            <button class="hud-btn">WALL</button>
+            <button class="hud-btn">RAD</button>
+            <button class="hud-btn">KILL</button>
+          </div>
+        </div>
+        
+        <!-- Event Ticker / Dominant Lineage (The Promoted Diet Line) -->
+        <div class="hud-panel pixel-corners-sml" style="padding: 6px 14px; max-width: 280px; text-align: center;">
+          <div class="hud-title" style="font-size: 7px; margin-bottom: 2px;">NARRATION STREAM</div>
+          <div style="font-size: 14px;" id="narrator-feed">
+            DOMINANT: <span style="font-weight: bold; color: #fff;" id="lineage-name">Mouth-Mover V4</span> 
+            <span class="trend-up" id="trend-icon">▲ RISING</span>
+          </div>
+        </div>
+        
+        <!-- Controls & Speed -->
+        <div class="hud-panel pixel-corners-sml bottom-center-toolbar">
+          <button class="hud-btn" id="play-btn">PLAY</button>
+          <button class="hud-btn" id="step-btn">STEP</button>
+          <div style="margin-left: 8px;">
+            <div class="hud-title" style="font-size: 6px;">SIM SPEED</div>
+            <div class="speed-control-box" id="speed-indicator">
+              <div class="speed-tick lit"></div>
+              <div class="speed-tick lit"></div>
+              <div class="speed-tick lit"></div>
+              <div class="speed-tick"></div>
+              <div class="speed-tick"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Control Dashboard Side Panel -->
+  <div class="control-panel">
+    <div>
+      <h2>HUD OPTIONS</h2>
+      <p>Click below to swap the styles overlaying the live petri dish simulation.</p>
+    </div>
+    
+    <div class="theme-selector">
+      <div class="theme-btn selected" data-theme="crt">CRT Terminal</div>
+      <div class="theme-btn" data-theme="minimal">Minimalist</div>
+      <div class="theme-btn" data-theme="cyber">Cyberpunk</div>
+      <div class="theme-btn" data-theme="fantasy">Fantasy RPG</div>
+    </div>
+    
+    <div>
+      <h2>SIMULATION STATUS</h2>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 16px;">
+        <div>Ticks Elapsed: <span style="color: #fff;" id="ctrl-ticks">12,048</span></div>
+        <div>Active Organisms: <span style="color: #fff;" id="ctrl-pop">843</span></div>
+        <div>Extant Lineages: <span style="color: #fff;" id="ctrl-species">14</span></div>
+      </div>
+    </div>
+
+    <div>
+      <h2>ENVIRONMENT CONTROLS</h2>
+      <button class="hud-btn" id="spawn-btn" style="width: 100%; padding: 8px 0; margin-bottom: 8px; font-weight: bold;">SPAWN RADIAL MUTATOR</button>
+      <button class="hud-btn" id="extinct-btn" style="width: 100%; padding: 8px 0; border-color: #ff5555; color: #ff5555;">TRIGGER MASS EXTINCTION</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAILED OPTION CARDS -->
+<div class="info-section">
+  
+  <!-- CRT Terminal Card -->
+  <div class="info-card crt-card">
+    <h3>OPTION A: RETRO CRT TERMINAL (Active)</h3>
+    <p>A classic monochrome green phosphor aesthetic representing high-tech laboratory telemetry screens.</p>
+    <ul>
+      <li><strong>Styling:</strong> Scanline overlays, CSS box-shadow glow effects, phosphor blur, and CRT curved border.</li>
+      <li><strong>Feel:</strong> Clinical, diagnostic, scientific, immersive.</li>
+      <li><strong>Ideal for:</strong> Players who want the simulation to feel like a computer simulation run inside a laboratory.</li>
+    </ul>
+  </div>
+
+  <!-- Minimalist Dithered Card -->
+  <div class="info-card min-card">
+    <h3>OPTION B: MINIMALIST DITHERED</h3>
+    <p>A slate-colored, high-legibility interface utilizing a subtle grid pattern and fine 1px borders.</p>
+    <ul>
+      <li><strong>Styling:</strong> Fine 1px solid borders, low-contrast slate colors, dithered headers, and orange accents.</li>
+      <li><strong>Feel:</strong> Professional, clean, lightweight, out-of-the-way.</li>
+      <li><strong>Ideal for:</strong> Long-term observation where the interface elements should not distract from biological evolution.</li>
+    </ul>
+  </div>
+
+  <!-- Cyberpunk Card -->
+  <div class="info-card cyber-card">
+    <h3>OPTION C: CYBERPUNK NEON</h3>
+    <p>High-contrast glowing blue and pink borders with sharp diagonal corner cuts and hexagon matrices.</p>
+    <ul>
+      <li><strong>Styling:</strong> Glowing neon line gradients, hex panel mask, diagonal corners, and high-frequency wave telemetry.</li>
+      <li><strong>Feel:</strong> High-tech, futuristic, edgy, active.</li>
+      <li><strong>Ideal for:</strong> Emphasizing active combat features, invasive species, and radioactive events.</li>
+    </ul>
+  </div>
+
+  <!-- Fantasy RPG Card -->
+  <div class="info-card fantasy-card">
+    <h3>OPTION D: FANTASY RPG</h3>
+    <p>Cozy dark wooden panels and brass corners, translating the evolution model into a fantasy ecosystem simulator.</p>
+    <ul>
+      <li><strong>Styling:</strong> Wood-texture background gradients, golden double-bordered frame, and health-potion colored status bars.</li>
+      <li><strong>Feel:</strong> Cozy, retro, traditional, game-like.</li>
+      <li><strong>Ideal for:</strong> Attracting classic RPG and strategy players; frames the species as "creatures" rather than "cells".</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- SIMULATION LOGIC -->
+<script>
+// Theme switching logic
+const body = document.body;
+const buttons = document.querySelectorAll('.theme-btn');
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    buttons.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    
+    // Clear other classes
+    body.className = '';
+    body.classList.add('theme-' + btn.getAttribute('data-theme'));
+    
+    // Update card highlights
+    document.querySelectorAll('.info-card').forEach(card => {
+      card.style.borderColor = '#1a2c24';
+      card.style.background = 'rgba(13, 22, 18, 0.65)';
+    });
+    const activeCard = document.querySelector('.' + btn.getAttribute('data-theme') + '-card');
+    if (activeCard) {
+      activeCard.style.borderColor = 'rgba(0, 255, 65, 0.4)';
+      activeCard.style.background = 'rgba(13, 22, 18, 0.9)';
+    }
+  });
+});
+
+// Live canvas simulator logic
+const canvas = document.getElementById('sim-canvas');
+const ctx = canvas.getContext('2d');
+
+// Size setup
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Organisms and cell simulation particles
+let cells = [];
+let food = [];
+let simRunning = true;
+let tickCount = 12048;
+let speciesCount = 14;
+
+// Particle setup
+class Organism {
+  constructor(x, y, color, speed, size, name) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * speed;
+    this.vy = (Math.random() - 0.5) * speed;
+    this.color = color;
+    this.size = size;
+    this.name = name;
+    this.age = 0;
+  }
+  
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.age += 1;
+    
+    // Bounce off walls
+    if (this.x < 10 || this.x > canvas.width - 10) this.vx *= -1;
+    if (this.y < 10 || this.y > canvas.height - 10) this.vy *= -1;
+    
+    // Subtle wandering steering force
+    this.vx += (Math.random() - 0.5) * 0.2;
+    this.vy += (Math.random() - 0.5) * 0.2;
+    
+    // Cap speed
+    const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (speed > 2.5) {
+      this.vx = (this.vx / speed) * 2.5;
+      this.vy = (this.vy / speed) * 2.5;
+    }
+  }
+  
+  draw() {
+    ctx.fillStyle = this.color;
+    // Draw pixel organism body (simple 3x3 layout or clustered pixels)
+    ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
+    // Draw cells
+    ctx.fillRect(Math.floor(this.x) + 4, Math.floor(this.y), 3, 3);
+    ctx.fillRect(Math.floor(this.x) - 4, Math.floor(this.y), 3, 3);
+    ctx.fillRect(Math.floor(this.x), Math.floor(this.y) + 4, 3, 3);
+  }
+}
+
+// Populate simulation
+function initSim() {
+  cells = [];
+  food = [];
+  const speciesNames = [
+    'Mouth-Mover V4', 'Armor-Blob', 'Photosynth-3', 'Killer-Spike', 
+    'Parasite-Root', 'Pheromone-A', 'Chameleon-Mage', 'Shooter-Drone'
+  ];
+  const colors = ['#00FF41', '#43e8e0', '#ff8c42', '#ff0055', '#ffd700', '#9b5de5', '#f15bb5', '#00bbf9'];
+  
+  for (let i = 0; i < 22; i++) {
+    const specIndex = Math.floor(Math.random() * colors.length);
+    cells.push(new Organism(
+      Math.random() * (canvas.width - 20) + 10,
+      Math.random() * (canvas.height - 20) + 10,
+      colors[specIndex],
+      1.5,
+      6,
+      speciesNames[specIndex]
+    ));
+  }
+  
+  // Seed food
+  for (let i = 0; i < 40; i++) {
+    food.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height
+    });
+  }
+}
+
+initSim();
+
+// Simulation loop
+function animate() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // trail effect
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw grid pattern (subtle cell grid)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)';
+  ctx.lineWidth = 1;
+  const gridSize = 16;
+  for (let x = 0; x < canvas.width; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  // Draw food particles
+  ctx.fillStyle = '#4ade80'; // soft green food
+  food.forEach(f => {
+    ctx.fillRect(Math.floor(f.x), Math.floor(f.y), 3, 3);
+  });
+  
+  if (simRunning) {
+    tickCount++;
+    
+    // Update organisms
+    cells.forEach(org => org.update());
+    
+    // Food interaction (eating)
+    cells.forEach(org => {
+      food = food.filter(f => {
+        const dx = org.x - f.x;
+        const dy = org.y - f.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 10) {
+          // Spawn new food elsewhere
+          setTimeout(() => {
+            food.push({
+              x: Math.random() * canvas.width,
+              y: Math.random() * canvas.height
+            });
+          }, 1000);
+          return false;
+        }
+        return true;
+      });
+    });
+    
+    // Random mutation / birth event
+    if (Math.random() < 0.01 && cells.length > 0 && cells.length < 50) {
+      const parent = cells[Math.floor(Math.random() * cells.length)];
+      cells.push(new Organism(
+        parent.x + (Math.random() - 0.5) * 30,
+        parent.y + (Math.random() - 0.5) * 30,
+        parent.color,
+        1.5,
+        parent.size,
+        parent.name
+      ));
+    }
+    
+    // Natural death
+    if (Math.random() < 0.008 && cells.length > 5) {
+      cells.splice(Math.floor(Math.random() * cells.length), 1);
+    }
+  }
+  
+  // Draw organisms
+  cells.forEach(org => org.draw());
+  
+  // Update HUD text elements
+  document.getElementById('hud-ticks').textContent = tickCount;
+  document.getElementById('hud-pop').textContent = cells.length;
+  document.getElementById('ctrl-ticks').textContent = tickCount.toLocaleString();
+  document.getElementById('ctrl-pop').textContent = cells.length;
+  
+  // Determine dominant species in sim
+  if (cells.length > 0) {
+    const counts = {};
+    cells.forEach(c => counts[c.name] = (counts[c.name] || 0) + 1);
+    let maxName = cells[0].name;
+    let maxVal = counts[maxName] || 0;
+    for (const name in counts) {
+      if (counts[name] > maxVal) {
+        maxName = name;
+        maxVal = counts[name];
+      }
+    }
+    document.getElementById('lineage-name').textContent = maxName;
+  }
+  
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+
+// Controls wiring
+const playBtn = document.getElementById('play-btn');
+playBtn.addEventListener('click', () => {
+  simRunning = !simRunning;
+  playBtn.textContent = simRunning ? 'PAUSE' : 'PLAY';
+  playBtn.classList.toggle('active', simRunning);
+});
+
+document.getElementById('step-btn').addEventListener('click', () => {
+  if (!simRunning) {
+    tickCount++;
+    cells.forEach(org => org.update());
+  }
+});
+
+// Mass extinction trigger
+const extinctBtn = document.getElementById('extinct-btn');
+extinctBtn.addEventListener('click', () => {
+  if (cells.length > 2) {
+    // Kill off 80% of organisms
+    const killCount = Math.floor(cells.length * 0.8);
+    cells.splice(0, killCount);
+    
+    // Trigger notification toast simulation in the narration stream
+    const feed = document.getElementById('narrator-feed');
+    const oldHtml = feed.innerHTML;
+    feed.innerHTML = '<span style="color: #ff5555; font-weight: bold;">⚡ EXTINCTION EVENT ACTIVE</span>';
+    setTimeout(() => {
+      feed.innerHTML = oldHtml;
+    }, 3000);
+  }
+});
+
+// Radial mutator spawn trigger
+const spawnBtn = document.getElementById('spawn-btn');
+spawnBtn.addEventListener('click', () => {
+  const colors = ['#00FF41', '#43e8e0', '#ff8c42', '#ff0055', '#ffd700', '#9b5de5', '#f15bb5', '#00bbf9'];
+  const newColor = colors[Math.floor(Math.random() * colors.length)];
+  const name = 'Mutant-X ' + Math.floor(Math.random() * 100);
+  
+  for (let i = 0; i < 8; i++) {
+    cells.push(new Organism(
+      canvas.width / 2 + Math.cos(i) * 40,
+      canvas.height / 2 + Math.sin(i) * 40,
+      newColor,
+      2.0,
+      7,
+      name
+    ));
+  }
+  
+  speciesCount++;
+  document.getElementById('hud-species').textContent = speciesCount;
+  document.getElementById('ctrl-species').textContent = speciesCount;
+});
+</script>
+</body>
+</html>
