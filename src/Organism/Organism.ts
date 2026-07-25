@@ -107,6 +107,15 @@ export interface OrganismEnv {
        singleton. PreviewEnvironment injects a no-op sink so preview ticks never
        land in the real world's perf-panel buckets. */
     perf?: PerfLike;
+    /* Lineage-tracking hooks (follow-a-lineage). Optional because only
+       WorldEnvironment implements them: reproduce() and die() are also run by
+       the editor and the Lab preview's mini-sim, and leaving the hooks off
+       those environments is what keeps preview births/deaths out of the
+       tracker -- the same gating argument Narrator makes, applied at the env
+       seam instead of the sampling cadence, because a birth hook needs the
+       parent and only reproduce() still knows it. */
+    onOrganismBorn?(parent: Organism, child: Organism): void;
+    onOrganismDied?(org: Organism): void;
 }
 
 export interface SerializedBrain {
@@ -341,6 +350,7 @@ class Organism {
                    extinction detection -- worse than failing loudly. */
                 org.species!.addPop();
             }
+            this.env.onOrganismBorn?.(this, org);
         }
         Math.max(this.food_collected -= this.foodNeeded(), 0);
     }
@@ -528,6 +538,7 @@ class Organism {
            only ever contain published organisms. A guard here would desync
            Species.population. */
         this.species!.decreasePop();
+        this.env.onOrganismDied?.(this);
     }
 
     updateGrid(): void {

@@ -77,6 +77,7 @@ interface EnvControllerEnvLike {
     markRadiationChanged?(): void;
     changeCell(c: number, r: number, state: CellState, owner: BodyCell | null): void;
     addOrganism(organism: Organism): void;
+    followOrganism(org: Organism): void;
     meteorStrike(col: number, row: number, radius: number): void;
     releasePredator(def: PredatorSpecies, col: number, row: number, radius: number): number;
 }
@@ -277,6 +278,14 @@ class EnvironmentController extends CanvasController{
                all synchronously. A pointer event can only be dispatched on a
                later turn of the event loop, so this is always set by then. */
             this.control_panel!.setEditorOrganism(this.cur_org);
+            /* Persist the focus the hover state loses on the next mousemove:
+               the click also starts following this organism's lineage. The
+               editor gets a copy; the tracker keeps the live world organism.
+               cur_org is the base class's render-facing view of what the grid
+               stores, which is an Organism -- the same renarrowing this file's
+               grid_map.ownerAt documents -- so the cast records that rather
+               than changing the value. */
+            this.env.followOrganism(this.cur_org as Organism);
             /* Force an emit so the dock opens now rather than on the next
                throttled sim-loop emit. */
             if (this.env && this.env.engine) {

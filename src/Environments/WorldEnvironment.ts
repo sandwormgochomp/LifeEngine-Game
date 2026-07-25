@@ -13,6 +13,7 @@ import Notifier from '../Utils/Notifier';
 import Hyperparams from '../Hyperparameters.js';
 import FossilRecord from '../Stats/FossilRecord';
 import Narrator from '../Stats/Narrator';
+import LineageTracker from '../Stats/LineageTracker';
 import Perf from '../Stats/Perf';
 import WorldConfig from '../WorldConfig';
 import SerializeHelper from '../Utils/SerializeHelper';
@@ -313,6 +314,11 @@ class WorldEnvironment extends Environment{
     /* Assigned from outside by Engine right after it constructs this, so absent
        for the window in between -- setNightMode() guards on it. */
     engine?: Engine;
+    /* Follow-a-lineage state: which organism (and descendants) the player is
+       watching. An object, so serialize()'s copyNonObjects skips it -- tracking
+       is by live reference and cannot round-trip a save; reset() and loadRaw()
+       clear it instead. Fed by the onOrganismBorn/onOrganismDied hooks below. */
+    lineage: LineageTracker;
     /* Spatial index over living organisms for pheromone broadcasts, rebuilt
        lazily at most once per tick and only on ticks where something is
        damaged. Wrapped in one object on purpose: serialize() copies own
@@ -383,6 +389,7 @@ class WorldEnvironment extends Environment{
         this.day_timer = 0;
         this.is_night = false;
         this.pheromone_index = { tick: -1, bucket: 0, map: new Map() };
+        this.lineage = new LineageTracker();
         FossilRecord.setEnv(this);
     }
 
@@ -777,6 +784,32 @@ class WorldEnvironment extends Environment{
 
     canAddOrganism(): boolean {
         return this.organisms.length < Hyperparams.maxOrganisms || Hyperparams.maxOrganisms < 0;
+    }
+
+    /* The OrganismEnv lineage hooks. Only this environment defines them, which
+       is what keeps the editor's and the Lab preview's reproduce()/die() calls
+       out of the tracker (see the comment on OrganismEnv). */
+    onOrganismBorn(parent: Organism, child: Organism): void {
+        this.lineage.onBirth(parent, child, this.total_ticks);
+    }
+
+    onOrganismDied(org: Organism): void {
+        this.lineage.onDeath(org, this.total_ticks);
+    }
+
+    /* Start (or switch) the followed lineage. The deco flag repaints the
+       highlight now rather than on the next world mutation, and the forced
+       emit shows the card immediately even while paused. */
+    followOrganism(org: Organism): void {
+        this.lineage.follow(org, this.total_ticks);
+        this.deco_dirty = true;
+        this.engine?.emitChange(true);
+    }
+
+    stopFollowing(): void {
+        this.lineage.unfollow();
+        this.deco_dirty = true;
+        this.engine?.emitChange(true);
     }
 
     averageMutability(): number {
@@ -1501,6 +1534,9 @@ class WorldEnvironment extends Environment{
         // Drop the narration baseline so the reseeded world isn't announced as
         // brand-new drama on the next sample.
         Narrator.reset();
+        // Every organism the tracker was watching is gone with the world;
+        // clearing silently beats announcing a lineage "ended" that was wiped.
+        this.lineage.reset();
         if (reset_life)
             this.OriginOfLife();
         return true;
@@ -1644,6 +1680,8 @@ class WorldEnvironment extends Environment{
         // Re-seed narration silently against the loaded world, so a load doesn't
         // announce every species it just restored.
         Narrator.reset();
+        // Tracking is by live organism reference, which a save cannot carry.
+        this.lineage.reset();
         SerializeHelper.overwriteNonObjects(raw, this as unknown as Record<string, unknown>);
         /* The camera belongs to the world that was on screen, not to this one:
            pan is in screen px and the canvas is re-sized to the incoming grid,

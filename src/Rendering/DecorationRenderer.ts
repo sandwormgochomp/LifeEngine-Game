@@ -66,6 +66,14 @@ interface DecoEnvLike {
        the selection was invisible on any organism large enough to have a
        sprite -- the tint has to be applied here, to the sprite itself. */
     highlighted_org?: DecoOrganismLike | null;
+    /* Follow-a-lineage membership (WorldEnvironment.lineage). Absent on the
+       editor, which draws through this same pass; tracked organisms get the
+       same silhouette tint as the hover target, in the lineage colour. The
+       parameter is `object` rather than DecoOrganismLike: the tracker types
+       its own view of an organism, and neither view satisfies the other --
+       method bivariance over `object` is what lets the real LineageTracker
+       (whose membership test is identity anyway) slot in here. */
+    lineage?: { isTracked(org: object): boolean } | null;
 }
 
 const shade_cache = new Map<string, string>();
@@ -590,6 +598,9 @@ export function renderOrganismSprite(
 // it lands on bare cells or on a sprite.
 const HIGHLIGHT_COLOR = 'yellow';
 const HIGHLIGHT_ALPHA = 0.5;
+// Followed-lineage tint. Cyan on purpose: it matches the lineage card's frame
+// and can't be mistaken for the yellow hover/selection wash.
+const LINEAGE_COLOR = '#00d9ff';
 
 /* Reused across frames; only one organism is ever highlighted at a time.
    Created lazily so importing this module stays safe without a DOM. */
@@ -600,7 +611,7 @@ var tint_scratch: HTMLCanvasElement | null = null;
    outline and connective tissue that spill outside the cell boxes -- instead
    of painting the sprite's transparent bounding box. Assigning canvas.width
    both sizes and clears the scratch, and resets its context state. */
-function drawHighlightedSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvasElement, x: number, y: number): void {
+function drawHighlightedSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvasElement, x: number, y: number, color: string = HIGHLIGHT_COLOR): void {
     if (!tint_scratch) tint_scratch = document.createElement('canvas');
     var scratch = tint_scratch;
     scratch.width = sprite.width;
@@ -613,7 +624,7 @@ function drawHighlightedSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvas
     sctx.drawImage(sprite, 0, 0);
     sctx.globalCompositeOperation = 'source-atop';
     sctx.globalAlpha = HIGHLIGHT_ALPHA;
-    sctx.fillStyle = HIGHLIGHT_COLOR;
+    sctx.fillStyle = color;
     sctx.fillRect(0, 0, scratch.width, scratch.height);
     ctx.drawImage(scratch, x, y);
 }
@@ -666,6 +677,8 @@ function drawOrganismDecorations(ctx: CanvasRenderingContext2D, env: DecoEnvLike
             var drawY = Math.floor(org.r + cache.minRow) * sz - cache.padding;
             if (org === env.highlighted_org)
                 drawHighlightedSprite(ctx, cache.canvas, drawX, drawY);
+            else if (env.lineage && env.lineage.isTracked(org))
+                drawHighlightedSprite(ctx, cache.canvas, drawX, drawY, LINEAGE_COLOR);
             else
                 ctx.drawImage(cache.canvas, drawX, drawY);
         }
