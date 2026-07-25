@@ -22,14 +22,20 @@
 }
 
 /* Amber rather than the HUD's green: this is the one picker whose entries are
-   released into the world to eat it, and the colour is the warning. */
-/* Doubled selector: this overrides a property set by kit Surface.modal, and the
-   bundler emits the kit after this file, so equal specificity would lose. */
+   released into the world to eat it, and the colour is the warning.
+
+   No `composes: pixel` here — the element already carries kit Surface.modal,
+   which composes the border for it. All this does is repaint it, by overriding
+   the three colour variables that modal set. Doubled selector for exactly the
+   reason a colour override needs it: custom properties cascade like any other
+   declaration, so the kit's green would win the tie on emission order. */
 .predatorModal.predatorModal {
   width: min(760px, 94vw);
-  box-shadow:
-    0 -2px 0 0 rgba(255, 176, 60, 0.5), 0 2px 0 0 rgba(255, 176, 60, 0.5), -2px 0 0 0 rgba(255, 176, 60, 0.5), 2px 0 0 0 rgba(255, 176, 60, 0.5),
-    inset 0 0 10px rgba(255, 176, 60, 0.05), 0 0 24px rgba(255, 140, 40, 0.2);
+  --edge: rgba(255, 176, 60, 0.5);
+  --inner: rgba(255, 176, 60, 0.05);
+  --inner-blur: 10px;
+  --glow: rgba(255, 140, 40, 0.2);
+  --glow-blur: 24px;
 }
 
 /* The header, title and close button are the shared green ones; tint them so

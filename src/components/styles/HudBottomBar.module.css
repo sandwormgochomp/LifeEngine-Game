@@ -20,6 +20,7 @@
 }
 
 .gameHintBar {
+  composes: pixel from './kit/Border.module.css';
   font-family: 'VT323', monospace;
   font-size: 15px;
   color: #00FF41;
@@ -27,9 +28,8 @@
   border: none;
   padding: 3px 14px;
   white-space: nowrap;
-  box-shadow:
-    0 -2px 0 0 rgba(0, 255, 65, 0.4), 0 2px 0 0 rgba(0, 255, 65, 0.4), -2px 0 0 0 rgba(0, 255, 65, 0.4), 2px 0 0 0 rgba(0, 255, 65, 0.4),
-    0 0 8px rgba(0, 255, 65, 0.12);
+  --edge: rgba(0, 255, 65, 0.4);
+  --glow: rgba(0, 255, 65, 0.12);
   text-shadow: 0 0 4px rgba(0, 255, 65, 0.4);
 }
 
@@ -41,12 +41,14 @@
 }
 
 .toolbar {
+  composes: pixel from './kit/Border.module.css';
   background: rgba(0, 0, 0, 0.85);
   padding: 6px 12px;
   border: none;
-  box-shadow:
-    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
-    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 12px rgba(0, 255, 65, 0.15);
+  --edge: rgba(0, 255, 65, 0.5);
+  --inner: rgba(0, 255, 65, 0.08);
+  --glow: rgba(0, 255, 65, 0.15);
+  --glow-blur: 12px;
   display: flex;
   gap: 2px;
   align-items: stretch;

@@ -5,6 +5,7 @@
 /* Sits under the top-right speed/zoom bar; a readout, not a modal, so it can
    coexist with the stats panel, the editor dock and headless mode. */
 .perfPanel {
+  composes: pixel from './kit/Border.module.css';
   position: fixed;
   top: 60px;
   right: 12px;
@@ -13,9 +14,9 @@
   background: rgba(0, 0, 0, 0.82);
   padding: 8px 12px 10px;
   min-width: 250px;
-  box-shadow:
-    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
-    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 8px rgba(0, 255, 65, 0.12);
+  --edge: rgba(0, 255, 65, 0.5);
+  --inner: rgba(0, 255, 65, 0.08);
+  --glow: rgba(0, 255, 65, 0.12);
   font-family: 'VT323', monospace;
   color: #00FF41;
 }

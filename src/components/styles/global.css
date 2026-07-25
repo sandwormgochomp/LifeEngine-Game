@@ -1,18 +1,9 @@
-/* Global styles: page reset and the always-mounted canvases.
-   Everything HUD-related lives in the CSS modules. */
+/* Page-level styles: the reset, the always-mounted canvas stack, and the two
+   places the app renders HTML it does not own (native range inputs, uPlot's
+   legend) and so cannot reach with a CSS module.
 
-:root {
-    /* CRT palette: matrix green for data, cyan accent for chrome (concept art) */
-    --crt-green: #00FF41;
-    --crt-cyan: #43e8e0;
-    /* Chamfered corners shared by HUD surfaces for the pixel-art look */
-    --pixel-corners: polygon(
-        0 6px, 6px 6px, 6px 0,
-        calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
-        100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
-        6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
-    );
-}
+   Palette values live in tokens.css. Everything HUD-shaped lives in a component
+   module or in kit/. */
 
 body{
     margin: 0;

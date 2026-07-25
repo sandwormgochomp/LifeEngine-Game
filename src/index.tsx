@@ -6,7 +6,8 @@ import App from './components/App';
 import '@fontsource/press-start-2p';
 import '@fontsource/vt323';
 import '@fortawesome/fontawesome-free/css/all.min.css';
-import './components/styles/index.css';
+import './components/styles/tokens.css';
+import './components/styles/global.css';
 
 const container = document.getElementById('root');
 if (container) {

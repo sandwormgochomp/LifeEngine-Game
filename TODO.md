@@ -318,7 +318,7 @@ border, `.dockBody`'s padding-top, `.dockTitle`'s font-size, the lifeform
 highlight glow, `.worldsFooter`'s gap, `.deckNote`'s margin) — none of which
 failed a test, because the visual snapshots allow a 5% pixel diff. Each is fixed
 by doubling the component's selector (`.thing.thing`). `python3
-scripts/css-kit-conflicts.py` finds them and exits non-zero; it is currently
+scripts/check-css.py` finds them and exits non-zero; it is currently
 clean. Import order does *not* fix this — importing the kits first in
 `index.tsx` was tried and Rollup ignores it.
 - [x] ~~**Carve the leaf components out.**~~ — done. `FirstRunHints`,
@@ -343,33 +343,44 @@ clean. Import order does *not* fix this — importing the kits first in
       states against a pre-refactor build: identical apart from keyframe name
       hashes (file-scoped, same definitions) and two playback buttons whose
       in-flight transition also differs run-to-run on an unchanged build.
-- [ ] **Widen `kit/Bar` or fold it into a `Surface` primitive.** That
-      six-segment `box-shadow` pixel border is copy-pasted across `.toolPalette`,
-      `.panelOverlay`, `Surface.modal`, the dock and both bars. `Bar` now owns
-      one copy; the others are still literal duplicates. Worth one primitive
-      once more of the sections have moved and the real variants are visible.
-- [ ] **`PixelDial` imports `EvolutionConsole.module.css`.** Same anti-pattern
-      at small scale; give it `PixelDial.module.css`.
-- [ ] **Split `index.css` into `tokens.css` + `global.css`.** Tokens are the one
-      thing that should be globally shared; today they sit in a file that also
-      owns the canvas stack and the uPlot theming. The kits still hardcode
-      `#00FF41` / `rgba(0, 255, 65, …)` — point them at the tokens once the
-      tokens have a file of their own.
-- [ ] **Add the guardrail.** A lint rule or a `CLAUDE.md` line: a `.tsx` may
-      import at most one non-`kit/` module, and that module must share its
-      basename. Without it the shared file grows back — appending to
-      `Hud.module.css` was always the path of least resistance, which is how it
-      reached 2498 lines and how `pickerName`/`ctrlFooter` ended up filed under
-      sections that neither used them. Pair it with
-      `scripts/css-kit-conflicts.py` in the same check.
-- [ ] **Give the style dump a permanent home.** The computed-style diff that
-      caught the seven cascade regressions was a throwaway spec run against a
-      worktree of the previous commit. The visual snapshots cannot catch this
-      class of bug (5% pixel tolerance, and a modal losing 140px of width sits
-      under it). Worth keeping as a script: dump N UI states, diff against a
-      built baseline. Note the worktree needs `server.fs.allow` widened or the
-      fonts 403 and every text metric shifts, which looks like a regression and
-      is not.
+- [x] ~~**One primitive for the pixel border.**~~ — done, once all twelve uses
+      were visible: bars, modals, panels, the tool palette, the dock, the perf
+      readout. They varied on three axes (edge colour, inner bloom, outer glow),
+      so `kit/Border.module.css` takes them as custom properties rather than
+      trying to enumerate variants. That choice also sidesteps the cascade trap
+      — a consumer sets `--edge` instead of redeclaring `box-shadow`, so there
+      is no specificity tie to lose. `PredatorModal` is the exception that
+      proves it: it repaints the shared border by overriding `--edge`, and needs
+      the doubled selector, because custom properties cascade like anything
+      else. One knowing difference: `.gameHintBar` was the only surface with no
+      inner bloom and now carries a transparent inset segment. Alpha 0, so
+      nothing renders, but the computed box-shadow string differs.
+- [x] ~~**`PixelDial` imports `EvolutionConsole.module.css`.**~~ — done. The
+      sixteen `.dial*` blocks are `PixelDial.module.css` now; `.dials`, the
+      container that lays them out, stayed with the console that owns it.
+- [x] ~~**Split `index.css` into `tokens.css` + `global.css`.**~~ — done, and
+      the kits now reference the tokens (66 literals replaced). The new
+      `--crt-green-rgb: 0 255 65` is what made that possible: the HUD is mostly
+      one hue at a dozen alphas, so `rgb(var(--crt-green-rgb) / 0.4)` covers
+      what a single `--crt-green` could not. The component modules still hold
+      literals — worth doing, but it is ~28 files and wants its own pass.
+- [x] ~~**Add the guardrail.**~~ — done. `scripts/check-css.py` runs both
+      checks: one component may import at most its own module plus `kit/`, and
+      no component override may lose to the kit on source order. Verified to
+      fail on an injected violation, not merely to pass. The rule is written
+      down in `CLAUDE.md`, which did not exist before.
+- [x] ~~**Give the style dump a permanent home.**~~ — done:
+      `scripts/css-style-diff.sh [ref]` plus `tests/style-dump.spec.js`, which
+      skips itself unless `DUMP_OUT` is set. It builds the baseline worktree,
+      widens `server.fs.allow` (without which the fonts 403, every text metric
+      shifts, and ~130 phantom differences appear), and diffs 952 elements
+      across five UI states. Animations and transitions are disabled during the
+      dump — the playback buttons pulse, so without that the same build differs
+      from itself between two runs.
+- [ ] **Point the component modules at the tokens too.** The kits use
+      `var(--crt-green…)`; the other ~28 modules still hardcode `#00FF41` and
+      `rgba(0, 255, 65, …)`. Mechanical, and `scripts/css-style-diff.sh` makes
+      it safe to verify, but large enough to want its own commit.
 
 ## Group 2 — One concept, one name
 

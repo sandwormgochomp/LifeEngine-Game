@@ -54,6 +54,7 @@
    its cards in -- a running era looks like the card that started it. Colours
    come from --tick, set per suit below. */
 .eventTicker {
+  composes: pixel from './kit/Border.module.css';
   display: flex;
   gap: 10px;
   align-items: center;
@@ -66,10 +67,9 @@
   white-space: nowrap;
   color: var(--tick);
   text-shadow: 0 0 4px color-mix(in srgb, var(--tick) 55%, transparent);
-  box-shadow:
-    0 -2px 0 0 color-mix(in srgb, var(--tick) 55%, transparent), 0 2px 0 0 color-mix(in srgb, var(--tick) 55%, transparent),
-    -2px 0 0 0 color-mix(in srgb, var(--tick) 55%, transparent), 2px 0 0 0 color-mix(in srgb, var(--tick) 55%, transparent),
-    inset 0 0 6px color-mix(in srgb, var(--tick) 12%, transparent), 0 0 8px color-mix(in srgb, var(--tick) 18%, transparent);
+  --edge: color-mix(in srgb, var(--tick) 55%, transparent);
+  --inner: color-mix(in srgb, var(--tick) 12%, transparent);
+  --glow: color-mix(in srgb, var(--tick) 18%, transparent);
 }
 
 .cold { --tick: #aad7ff; }

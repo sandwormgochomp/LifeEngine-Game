@@ -1,0 +1,40 @@
+/* ======================================
+   KIT: Border — the HUD's pixel frame
+   ======================================
+   Every bordered surface in the HUD draws its frame the same way: four hard
+   2px box-shadow offsets rather than a `border`, so the corners stay square and
+   crisp at any zoom, plus an inner bloom and an outer glow. Twelve surfaces drew
+   it by hand before this existed — bars, modals, panels, the tool palette, the
+   dock, the perf readout.
+
+   Consumers set the three colours rather than redeclaring the shadow:
+
+     .toolPalette {
+       composes: pixel from './kit/Border.module.css';
+       --edge:  rgb(var(--crt-green-rgb) / 0.5);
+       --inner: rgb(var(--crt-green-rgb) / 0.08);
+       --glow:  rgb(var(--crt-green-rgb) / 0.12);
+     }
+
+   --inner-blur and --glow-blur default to the common 6px/8px. Because a
+   consumer sets variables instead of overriding box-shadow, this one is immune
+   to the emission-order trap the other kits warn about: there is nothing here
+   for a component rule to lose a specificity tie against.
+
+   `border` is deliberately not set — a consumer that also wants a real border
+   (the cyan logo row) would otherwise have to fight this file for it.
+
+   One knowing difference from the hand-written shadows this replaced:
+   .gameHintBar was the only surface with no inner bloom, and it now carries an
+   `inset 0 0 6px transparent` segment it did not have before. At alpha 0 it
+   paints nothing, so the rendering is unchanged, but scripts/css-style-diff.sh
+   will report its computed box-shadow as differing from any revision before
+   this. That one is expected; anything else is not. */
+
+.pixel {
+  box-shadow:
+    0 -2px 0 0 var(--edge), 0 2px 0 0 var(--edge),
+    -2px 0 0 0 var(--edge), 2px 0 0 0 var(--edge),
+    inset 0 0 var(--inner-blur, 6px) var(--inner, transparent),
+    0 0 var(--glow-blur, 8px) var(--glow, transparent);
+}

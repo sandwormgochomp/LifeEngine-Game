@@ -1,0 +1,22 @@
+/* Design tokens. The one stylesheet that is legitimately global: everything
+   else — the canvas stack, the kit, each component module — is scoped to
+   something. Kept apart from global.css so that "shared" means these values and
+   nothing else.
+
+   --crt-green-rgb carries the channels unpacked so the same hue can be used at
+   any alpha: rgb(var(--crt-green-rgb) / 0.4) is the terminal green at 40%,
+   which is most of what the HUD is made of. */
+
+:root {
+    /* CRT palette: matrix green for data, cyan accent for chrome (concept art) */
+    --crt-green: #00FF41;
+    --crt-green-rgb: 0 255 65;
+    --crt-cyan: #43e8e0;
+    /* Chamfered corners shared by HUD surfaces for the pixel-art look */
+    --pixel-corners: polygon(
+        0 6px, 6px 6px, 6px 0,
+        calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
+        100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
+        6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
+    );
+}

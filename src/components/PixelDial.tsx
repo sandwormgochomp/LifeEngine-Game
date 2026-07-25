@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import styles from './styles/EvolutionConsole.module.css';
+import styles from './styles/PixelDial.module.css';
 
 /* The chunky pixel gauge from concepts/evolution-window-options.html, made into
    a real control. PixelSlider's sibling: same job — one number, themed — but a

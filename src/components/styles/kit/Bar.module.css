@@ -11,16 +11,16 @@
 
    Overriding one of these from a component? Double the component's class
    (.thing.thing) — the bundler emits this kit AFTER the component modules, so
-   an equal-specificity override silently loses. `python3 scripts/css-kit-conflicts.py`
-   finds these; the doubled rules in EditorDock/WorldsModal/PredatorModal are
+   an equal-specificity override silently loses. `python3 scripts/check-css.py` finds these; the doubled rules in EditorDock/WorldsModal/PredatorModal are
    why it currently exits clean. */
 
 .bar {
+  composes: pixel from './Border.module.css';
   background: rgba(0, 0, 0, 0.82);
   border: none;
-  box-shadow:
-    0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
-    inset 0 0 6px rgba(0, 255, 65, 0.08), 0 0 8px rgba(0, 255, 65, 0.12);
+  --edge: rgb(var(--crt-green-rgb) / 0.5);
+  --inner: rgb(var(--crt-green-rgb) / 0.08);
+  --glow: rgb(var(--crt-green-rgb) / 0.12);
   display: flex;
   align-items: center;
   white-space: nowrap;
@@ -28,7 +28,7 @@
 
 /* The dim vertical rule between readouts within a bar */
 .divider {
-  color: rgba(0, 255, 65, 0.3);
+  color: rgb(var(--crt-green-rgb) / 0.3);
   font-family: 'VT323', monospace;
   font-size: 18px;
   user-select: none;

@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Guardrail: find component CSS that silently loses to the shared kit.
+"""Guardrail for the component-CSS layout. Two checks, both cheap.
+
+1. OWNERSHIP. A .tsx may import at most one module from styles/ that is not in
+   styles/kit/, and that module must share its basename. This is what stops a
+   second Hud.module.css growing: appending to a file someone else already
+   imports was always the path of least resistance, which is how the original
+   reached 2498 lines with 24 importers and only ~10% of its classes shared.
+   Anything genuinely shared goes in kit/ and is pulled in with `composes`.
+
+2. CASCADE. Find component CSS that silently loses to the shared kit.
 
 Component modules in src/components/styles/ compose primitives from
 styles/kit/*.module.css. The bundler emits the kit AFTER the component modules,
@@ -10,7 +19,7 @@ wins on source order -- the component's override disappears with no error.
 The fix at each site is to double the component's selector (.thing.thing), which
 raises it to (0,2,0) and makes it win regardless of emission order.
 
-Run: python3 scripts/css-kit-conflicts.py   (exit 1 if any site needs bumping)
+Run: python3 scripts/check-css.py   (exit 1 if either check finds anything)
 
 Not reported: cases where the kit declaration is !important and the component's
 is not. Those are decided by weight, not order, so they behave the same however
@@ -122,5 +131,24 @@ for tsx in sorted(glob.glob('src/components/**/*.tsx', recursive=True)):
 for h in sorted(hits):
     print(f"  {h[0]:28s} .{h[1]:22s} overrides kit {h[2]:18s} {list(h[3])}")
 print(f"{len(hits)} site(s) needing a doubled selector"
-      if hits else "clean: no component override loses to the kit on source order")
-sys.exit(1 if hits else 0)
+      if hits else "cascade: no component override loses to the kit on source order")
+
+# ---- check 1: one module per component, named after it ----------------------
+owners = []
+for tsx in sorted(glob.glob('src/components/**/*.tsx', recursive=True)):
+    imports = re.findall(r"import \w+ from '(.+?\.module\.css)'",
+                         open(tsx).read())
+    own = [m for m in imports if '/kit/' not in m]
+    stem = os.path.basename(tsx)[:-4]
+    if len(own) > 1:
+        owners.append((tsx, f"imports {len(own)} non-kit modules: "
+                            f"{', '.join(os.path.basename(m) for m in own)}"))
+    elif own and os.path.basename(own[0]) != f'{stem}.module.css':
+        owners.append((tsx, f"imports {os.path.basename(own[0])}, "
+                            f"expected {stem}.module.css"))
+for tsx, why in owners:
+    print(f"  {tsx}: {why}")
+print(f"{len(owners)} ownership violation(s)" if owners
+      else "ownership: every component imports at most its own module, plus kit/")
+
+sys.exit(1 if hits or owners else 0)

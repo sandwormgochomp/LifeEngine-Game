@@ -13,15 +13,16 @@
 }
 
 .logoRow {
+  composes: pixel from './kit/Border.module.css';
   display: flex;
   align-items: baseline;
   gap: 6px;
   background: rgba(0, 0, 0, 0.82);
   padding: 6px 14px;
   border: none;
-  box-shadow:
-    0 -2px 0 0 rgba(67, 232, 224, 0.55), 0 2px 0 0 rgba(67, 232, 224, 0.55), -2px 0 0 0 rgba(67, 232, 224, 0.55), 2px 0 0 0 rgba(67, 232, 224, 0.55),
-    inset 0 0 6px rgba(67, 232, 224, 0.1), 0 0 8px rgba(67, 232, 224, 0.14);
+  --edge: rgba(67, 232, 224, 0.55);
+  --inner: rgba(67, 232, 224, 0.1);
+  --glow: rgba(67, 232, 224, 0.14);
 }
 
 .logoTitle {

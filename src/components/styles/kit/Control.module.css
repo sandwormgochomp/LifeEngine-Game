@@ -14,8 +14,7 @@
 
    Overriding one of these from a component? Double the component's class
    (.thing.thing) — the bundler emits this kit AFTER the component modules, so
-   an equal-specificity override silently loses. `python3 scripts/css-kit-conflicts.py`
-   finds these; the doubled rules in EditorDock/WorldsModal/PredatorModal are
+   an equal-specificity override silently loses. `python3 scripts/check-css.py` finds these; the doubled rules in EditorDock/WorldsModal/PredatorModal are
    why it currently exits clean. */
 
 /* A titled block of rows. break-inside keeps a group whole when the consuming
@@ -28,10 +27,10 @@
 .group h4 {
   font-family: 'Press Start 2P', monospace;
   font-size: 8px;
-  color: rgba(0, 255, 65, 0.7);
+  color: rgb(var(--crt-green-rgb) / 0.7);
   letter-spacing: 1px;
   margin: 8px 0 6px;
-  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+  border-bottom: 1px solid rgb(var(--crt-green-rgb) / 0.2);
   padding-bottom: 5px;
 }
 
@@ -44,7 +43,7 @@
   padding: 3px 0;
   font-family: 'VT323', monospace;
   font-size: 16px;
-  color: rgba(0, 255, 65, 0.85);
+  color: rgb(var(--crt-green-rgb) / 0.85);
   cursor: help;
 }
 
@@ -54,7 +53,7 @@
 }
 
 .row input[type="checkbox"] {
-  accent-color: #00FF41;
+  accent-color: var(--crt-green);
   width: 15px;
   height: 15px;
   cursor: pointer;
@@ -70,8 +69,8 @@
   width: 78px;
   flex-shrink: 0;
   background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(0, 255, 65, 0.4);
-  color: #00FF41;
+  border: 1px solid rgb(var(--crt-green-rgb) / 0.4);
+  color: var(--crt-green);
   font-family: 'VT323', monospace;
   font-size: 16px;
   padding: 2px 6px;
@@ -81,14 +80,14 @@
 }
 
 .number:focus {
-  border-color: #00FF41;
+  border-color: var(--crt-green);
 }
 
 /* Read-only readout of a slider's current value */
 .value {
   font-family: 'VT323', monospace;
   font-size: 15px;
-  color: rgba(0, 255, 65, 0.7);
+  color: rgb(var(--crt-green-rgb) / 0.7);
   min-width: 46px;
   text-align: right;
   flex-shrink: 0;
@@ -98,7 +97,7 @@
 .note {
   font-family: 'VT323', monospace;
   font-size: 15px;
-  color: rgba(0, 255, 65, 0.6);
+  color: rgb(var(--crt-green-rgb) / 0.6);
   margin: 4px 0 0;
 }
 
@@ -107,8 +106,8 @@
   width: 100%;
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(0, 255, 65, 0.4);
-  color: #00FF41;
+  border: 1px solid rgb(var(--crt-green-rgb) / 0.4);
+  color: var(--crt-green);
   font-family: 'VT323', monospace;
   font-size: 18px;
   padding: 3px 8px;
@@ -119,7 +118,7 @@
 }
 
 .textInput:focus {
-  border-color: #00FF41;
+  border-color: var(--crt-green);
 }
 
 /* Action bar closing a control modal (apply / cancel / file actions) */
@@ -127,13 +126,13 @@
   display: flex;
   gap: 6px;
   padding: 10px 16px;
-  border-top: 1px solid rgba(0, 255, 65, 0.2);
+  border-top: 1px solid rgb(var(--crt-green-rgb) / 0.2);
 }
 
 .footer button {
   background: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(0, 255, 65, 0.4);
-  color: #00FF41;
+  border: 2px solid rgb(var(--crt-green-rgb) / 0.4);
+  color: var(--crt-green);
   font-family: 'Press Start 2P', monospace;
   font-size: 8px;
   padding: 8px 12px;
@@ -146,6 +145,6 @@
 }
 
 .footer button:hover {
-  background: rgba(0, 255, 65, 0.15);
-  border-color: #00FF41;
+  background: rgb(var(--crt-green-rgb) / 0.15);
+  border-color: var(--crt-green);
 }
