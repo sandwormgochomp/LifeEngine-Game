@@ -24,13 +24,27 @@ test.describe('Cell type palette', () => {
     }
   });
 
-  test('Palette buttons show readable names and tooltips', async ({ page }) => {
+  // The buttons are swatch-only so the whole palette fits without scrolling;
+  // the name is carried by the accessible name and by the hover popover below,
+  // not by visible text.
+  test('Palette buttons are named and carry a tooltip', async ({ page }) => {
     await openEditor(page);
     for (const type of ['mouth', 'parasite', 'chameleon']) {
       const btn = page.locator(`.cell-type#${type}`);
-      await expect(btn).toContainText(type);
+      await expect(btn).toHaveAttribute('aria-label', type);
       await expect(btn).toHaveAttribute('title', /.+/);
+      await expect(btn.locator('canvas')).toBeVisible();
     }
+  });
+
+  test('The whole palette fits the rail without scrolling', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openEditor(page);
+    const overflow = await page.evaluate(() => {
+      const scroll = document.querySelector('[data-testid=editor-dock]').firstElementChild.lastElementChild;
+      return scroll.scrollHeight - scroll.clientHeight;
+    });
+    expect(overflow).toBe(0);
   });
 
   test('Hovering a cell type shows a live behaviour preview', async ({ page }) => {

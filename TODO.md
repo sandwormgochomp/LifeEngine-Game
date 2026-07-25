@@ -152,7 +152,16 @@ Notifier / FossilRecord / Floaties infrastructure.
 
 Organism Lab
 - [ ] Move name input to top-center
-- [ ] For each cell type, have a hover live preview that demonstrates how it excels (killer cell killing, armor cell protecting, poison cell poisoning, etc)
+- [ ] **The dock body still scrolls at short window heights.** The palette rail
+      no longer does — erase is pinned above a swatch-only cell list that fits
+      down to ~690px — but `.dockCanvasBox` is `aspect-ratio: 1 / 1` at the
+      dock's 348px width (`Hud.module.css:1103`), so it claims 348px of height
+      whatever is left over, and the Organism card below it gets cut off after
+      Move range on a 700-800px window. Cap it with a `max-height` that flexes
+      against the panel to hand ~100px back to the controls.
+- [ ] The rail is still 64px wide for 18px swatches. The two labelled tools
+      (erase, paint) set that width; narrowing the rail once they lose their
+      labels, or spending the slack on larger swatches, are both open.
 
 Preview environment — singleton workarounds (2026-07-24)
 The hover previews run a real mini-sim (`PreviewEnvironment`) beside the real

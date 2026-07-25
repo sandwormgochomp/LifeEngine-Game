@@ -268,53 +268,64 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
           anchor={hoveredCell.anchor}
         />
       )}
-      {/* Cell palette rail: every type visible at once, no scrolling */}
+      {/* Cell palette rail. Erase is pinned above the cell list so it stays
+          reachable at any window height -- as the last item of a scrolling
+          rail it was the first thing to drop below the fold. */}
       <div className={styles.dockRail}>
-        {CellStates.living.map((cellState: CellState<LivingCellName>) => (
+        <div className={styles.dockRailPinned}>
           <button
-            key={cellState.name}
-            id={cellState.name}
-            className={`cell-type ${styles.dockRailBtn} ${tool === Modes.Edit && cellTypeName === cellState.name ? styles.dockCellBtnActive : ''}`}
-            title={CELL_INFO[cellState.name] || cellState.name}
-            onClick={() => selectCellType(cellState)}
-            onMouseEnter={e => setHoveredCell({ name: cellState.name, anchor: e.currentTarget.getBoundingClientRect() })}
-            onMouseLeave={() => setHoveredCell(prev => (prev?.name === cellState.name ? null : prev))}
+            id="eraser-tool"
+            className={`${styles.dockRailBtn} ${tool === Modes.Eraser ? styles.dockCellBtnActive : ''}`}
+            title="Erase cells (the center cell is protected)"
+            onClick={() => setTool(Modes.Eraser)}
           >
-            <CellSwatch cellState={cellState} />
-            <span className={styles.dockCellName}>{cellState.name}</span>
+            {/* sized to line up with the 18px cell/paint swatches below it */}
+            <i className="fa-solid fa-eraser" style={{ color: 'rgba(0, 255, 65, 0.85)', fontSize: '14px', lineHeight: '18px' }} />
+            <span className={styles.dockCellName}>erase</span>
           </button>
-        ))}
-
-        {/* Paint lives with the cells: pick a color, click cells to recolor.
-            A div rather than a button so the color input nested inside stays
-            clickable; clicking either the swatch or the label arms Paint. */}
-        <div className={styles.dockRailSep} />
-        <div
-          id="paint-tool"
-          className={`${styles.dockRailBtn} ${tool === Modes.Paint ? styles.dockCellBtnActive : ''}`}
-          title="Recolor cells with the chosen color"
-          onClick={() => setTool(Modes.Paint)}
-        >
-          <input
-            type="color"
-            id="cell-color-picker"
-            className={styles.dockPaintSwatch}
-            title="Paint color"
-            value={paintColor}
-            onChange={handleColorChange}
-          />
-          <span className={styles.dockCellName}>paint</span>
+          <div className={styles.dockRailSep} />
         </div>
-        <button
-          id="eraser-tool"
-          className={`${styles.dockRailBtn} ${tool === Modes.Eraser ? styles.dockCellBtnActive : ''}`}
-          title="Erase cells (the center cell is protected)"
-          onClick={() => setTool(Modes.Eraser)}
-        >
-          {/* sized to line up with the 18px cell/paint swatches above it */}
-          <i className="fa-solid fa-eraser" style={{ color: 'rgba(0, 255, 65, 0.85)', fontSize: '14px', lineHeight: '18px' }} />
-          <span className={styles.dockCellName}>erase</span>
-        </button>
+
+        <div className={styles.dockRailScroll}>
+          {/* Swatch only, no label: the hover popover already names the cell and
+              shows what it does, and dropping 14 labels is what keeps the whole
+              palette on screen without scrolling. */}
+          {CellStates.living.map((cellState: CellState<LivingCellName>) => (
+            <button
+              key={cellState.name}
+              id={cellState.name}
+              className={`cell-type ${styles.dockRailBtn} ${styles.dockRailSwatchBtn} ${tool === Modes.Edit && cellTypeName === cellState.name ? styles.dockCellBtnActive : ''}`}
+              title={CELL_INFO[cellState.name] || cellState.name}
+              aria-label={cellState.name}
+              onClick={() => selectCellType(cellState)}
+              onMouseEnter={e => setHoveredCell({ name: cellState.name, anchor: e.currentTarget.getBoundingClientRect() })}
+              onMouseLeave={() => setHoveredCell(prev => (prev?.name === cellState.name ? null : prev))}
+            >
+              <CellSwatch cellState={cellState} />
+            </button>
+          ))}
+
+          {/* Paint lives with the cells: pick a color, click cells to recolor.
+              A div rather than a button so the color input nested inside stays
+              clickable; clicking either the swatch or the label arms Paint. */}
+          <div className={styles.dockRailSep} />
+          <div
+            id="paint-tool"
+            className={`${styles.dockRailBtn} ${tool === Modes.Paint ? styles.dockCellBtnActive : ''}`}
+            title="Recolor cells with the chosen color"
+            onClick={() => setTool(Modes.Paint)}
+          >
+            <input
+              type="color"
+              id="cell-color-picker"
+              className={styles.dockPaintSwatch}
+              title="Paint color"
+              value={paintColor}
+              onChange={handleColorChange}
+            />
+            <span className={styles.dockCellName}>paint</span>
+          </div>
+        </div>
       </div>
 
       <div className={styles.dock}>

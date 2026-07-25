@@ -947,20 +947,40 @@
   animation: dockSlideIn 0.18s ease-out;
 }
 
-/* Cell palette rail attached to the dock's left edge */
+/* Cell palette rail attached to the dock's left edge. The rail itself does not
+   scroll -- only the cell list inside it does, so the pinned tools above stay
+   put at every window height. */
 .dockRail {
   width: 64px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   padding: 6px 4px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.9);
   border: none;
   box-shadow:
     0 -2px 0 0 rgba(0, 255, 65, 0.5), 0 2px 0 0 rgba(0, 255, 65, 0.5), -2px 0 0 0 rgba(0, 255, 65, 0.5), 2px 0 0 0 rgba(0, 255, 65, 0.5),
     inset 0 0 10px rgba(0, 255, 65, 0.05), 0 0 20px rgba(0, 255, 65, 0.15);
+}
+
+/* Tools that must never scroll out of reach */
+.dockRailPinned {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* min-height:0 lets this shrink below its content so it actually scrolls
+   instead of pushing the pinned group off the rail */
+.dockRailScroll {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .dockRailBtn {
@@ -980,7 +1000,14 @@
   flex-shrink: 0;
 }
 
-/* Thin rule separating the cell types from the paint tool below them */
+/* Cell-type buttons carry no label, so they close up to just the swatch.
+   Erase and paint keep theirs -- naming the two tools is worth the height. */
+.dockRailSwatchBtn {
+  padding: 3px 1px;
+  gap: 0;
+}
+
+/* Thin rule separating the tool buttons from the cell types */
 .dockRailSep {
   flex-shrink: 0;
   height: 1px;
