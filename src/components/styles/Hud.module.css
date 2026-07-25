@@ -132,6 +132,10 @@
 .toolPaletteTab {
   position: relative;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
   padding: 4px 2px;
   margin: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -182,10 +186,35 @@
   box-shadow: 0 0 4px rgba(0, 255, 65, 0.9);
 }
 
+/* Fixed size so a taller glyph can't change the tab row's height. */
+.toolPaletteTabIcon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Overlays every tab's copy of a region in one grid cell: the stack is as tall
+   as the tallest copy, and the hidden ones still hold their space so nothing in
+   the bottom-anchored palette moves when you switch tabs. */
+.toolPaletteStack {
+  display: grid;
+}
+
+.toolPaletteStack > * {
+  grid-area: 1 / 1;
+}
+
+.toolPaletteStack > [data-hidden] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .toolPaletteGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
+  /* The stack stretches every grid to the tallest tab's height; pack the rows
+     at the top so a short tab's buttons keep their size instead of growing. */
+  align-content: start;
 }
 
 .toolPaletteBtn {
@@ -263,6 +292,10 @@
 }
 
 .toolPaletteAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
   padding: 5px 6px;
   margin: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -276,6 +309,16 @@
   line-height: 1;
   transition: background 0.12s, border-color 0.12s;
   min-width: unset;
+}
+
+/* A fixed width keeps every action label on the same left edge, and a glyph
+   shorter than the 14px text line leaves the row height alone. */
+.toolPaletteActionIcon {
+  font-size: 12px;
+  width: 14px;
+  text-align: center;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .toolPaletteAction:hover {

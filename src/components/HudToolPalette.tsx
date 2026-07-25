@@ -33,6 +33,7 @@ interface Tool {
 interface Action {
   id: string;
   label: string;
+  iconClass: string;
   title: string;
   run?: (engine: Engine) => void;
   opens?: 'predators';
@@ -42,6 +43,7 @@ interface Action {
 interface Tab {
   id: string;
   label: string;
+  iconClass: string;
   title: string;
   tools: Tool[];
   actions: Action[];
@@ -63,6 +65,7 @@ const TABS: Tab[] = [
   {
     id: 'terrain',
     label: 'Terrain',
+    iconClass: 'fa-mountain-sun',
     title: 'Shape the environment: food, walls, glass and radiation',
     tools: [
       { id: 'food', label: 'Food', iconClass: 'fa-drumstick-bite', mode: Modes.FoodDrop, title: 'Paint food onto the world; organisms eat it to survive and reproduce. Hotkey: F' },
@@ -72,14 +75,15 @@ const TABS: Tab[] = [
       { id: 'eraser', label: 'Erase', iconClass: 'fa-eraser', mode: Modes.Eraser, title: 'Erase food, walls, glass and radiation under the brush. Hotkey: E' },
     ],
     actions: [
-      { id: 'randomize-walls-btn', label: 'Random Walls', title: 'Generate organic wall shapes using Perlin noise', run: e => { e.env.controller.randomizeWalls(); Notifier.notify('Random walls generated'); } },
-      { id: 'clear-walls', label: 'Clear Walls', title: 'Remove every wall in the world (the petri dish stays). Hotkey: B', run: e => { e.env.clearWalls(); Notifier.notify('Walls cleared'); } },
-      { id: 'clear-radiation', label: 'Clear Radiation', title: 'Remove all radiation zones, and call off any storm still sweeping', run: e => { e.env.clearRadiation(); Notifier.notify('Radiation cleared'); } },
+      { id: 'randomize-walls-btn', label: 'Random Walls', iconClass: 'fa-shuffle', title: 'Generate organic wall shapes using Perlin noise', run: e => { e.env.controller.randomizeWalls(); Notifier.notify('Random walls generated'); } },
+      { id: 'clear-walls', label: 'Clear Walls', iconClass: 'fa-broom', title: 'Remove every wall in the world (the petri dish stays). Hotkey: B', run: e => { e.env.clearWalls(); Notifier.notify('Walls cleared'); } },
+      { id: 'clear-radiation', label: 'Clear Radiation', iconClass: 'fa-spray-can-sparkles', title: 'Remove all radiation zones, and call off any storm still sweeping', run: e => { e.env.clearRadiation(); Notifier.notify('Radiation cleared'); } },
     ],
   },
   {
     id: 'life',
     label: 'Life',
+    iconClass: 'fa-bacterium',
     title: 'Work with organisms: sample, seed and kill',
     tools: [
       { id: 'tool-select', label: 'Sample', iconClass: 'fa-eye-dropper', mode: Modes.Select, title: 'Take a sample — pick an organism from the world to examine it in the Organism Lab. Hotkey: Z' },
@@ -87,21 +91,22 @@ const TABS: Tab[] = [
       { id: 'kill', label: 'Kill', iconClass: 'fa-skull', mode: Modes.ClickKill, title: 'Kill organisms under the brush. Hotkey: G' },
     ],
     actions: [
-      { id: 'clear-life', label: 'Clear Life', title: 'Wipe every organism and start from an empty world (walls are kept)', run: clearLife },
+      { id: 'clear-life', label: 'Clear Life', iconClass: 'fa-skull-crossbones', title: 'Wipe every organism and start from an empty world (walls are kept)', run: clearLife },
     ],
   },
   {
     id: 'events',
     label: 'Events',
+    iconClass: 'fa-bolt-lightning',
     title: 'Punctuate the equilibrium: cataclysms, blooms and invasions',
     tools: [
       { id: 'event-meteor', label: 'Meteor', iconClass: 'fa-meteor', mode: Modes.MeteorStrike, title: 'Click the world to call down a meteor: it streaks in, and everything in the blast radius dies with the crater strewn with food. Brush sets the radius.' },
     ],
     actions: [
-      { id: 'event-bloom', label: 'Bloom', title: 'A burst of fertility: food production spikes worldwide for a while, then fades.', run: e => e.env.triggerBloom() },
-      { id: 'event-iceage', label: 'Ice Age', title: 'A long food crash that culls all but the most efficient forms. Cancels a bloom, and vice versa.', run: e => e.env.triggerIceAge() },
-      { id: 'event-radstorm', label: 'Rad Storm', title: 'A radiation front sweeps across the world: everything it passes over mutates hard while it is inside.', run: e => e.env.triggerRadStorm() },
-      { id: 'event-predator', label: 'Predator', title: 'Release an invasive hunter: pick one from the bestiary, then click the world to drop its founding pack.', opens: 'predators', armsMode: Modes.ReleasePredator },
+      { id: 'event-bloom', label: 'Bloom', iconClass: 'fa-leaf', title: 'A burst of fertility: food production spikes worldwide for a while, then fades.', run: e => e.env.triggerBloom() },
+      { id: 'event-iceage', label: 'Ice Age', iconClass: 'fa-snowflake', title: 'A long food crash that culls all but the most efficient forms. Cancels a bloom, and vice versa.', run: e => e.env.triggerIceAge() },
+      { id: 'event-radstorm', label: 'Rad Storm', iconClass: 'fa-tornado', title: 'A radiation front sweeps across the world: everything it passes over mutates hard while it is inside.', run: e => e.env.triggerRadStorm() },
+      { id: 'event-predator', label: 'Predator', iconClass: 'fa-paw', title: 'Release an invasive hunter: pick one from the bestiary, then click the world to drop its founding pack.', opens: 'predators', armsMode: Modes.ReleasePredator },
     ],
   },
 ];
@@ -113,8 +118,6 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // slider stays in sync with the hotkeys and the click-hint bar
   const brushSize = useEngineValue(engine, () => WorldConfig.brush_size, WorldConfig.brush_size);
-
-  const activeTab = TABS.find(t => t.id === activeTabId) ?? TABS[0];
 
   // Clicking a tool arms it; clicking the armed tool again puts it away.
   const toggleMode = (mode: number) => {
@@ -174,24 +177,38 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
             className={`${styles.toolPaletteTab} ${tab.id === activeTabId ? styles.toolPaletteTabActive : ''} ${tabHoldsActiveTool(tab) ? styles.toolPaletteTabArmed : ''}`}
             onClick={() => setActiveTabId(tab.id)}
           >
-            {tab.label}
+            <i className={`fa-solid ${tab.iconClass} ${styles.toolPaletteTabIcon}`} />
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
-      <div className={styles.toolPaletteGrid}>
-        {activeTab.tools.map(tool => (
-          <button
-            key={tool.id}
-            id={tool.id}
-            title={tool.title}
-            className={`env-mode-btn ${styles.toolPaletteBtn} ${activeMode === tool.mode ? styles.toolPaletteBtnActive : ''}`}
-            onClick={() => toggleMode(tool.mode)}
-          >
-            <i className={`fa-solid ${tool.iconClass} ${styles.toolPaletteIcon}`} />
-            <span className={styles.toolPaletteLabel}>{tool.label}</span>
-          </button>
-        ))}
+      {/* Every tab's tools are rendered into the same grid cell and the ones you
+          aren't looking at are hidden rather than unmounted. The palette is
+          pinned to the bottom of the screen, so if it changed height when you
+          switched tabs everything above would slide out from under the cursor;
+          overlaying the tabs makes the browser reserve the tallest one and the
+          tab row, the brush and the actions below all stay put. */}
+      <div className={styles.toolPaletteStack}>
+        {TABS.map(tab => {
+          const hidden = tab.id !== activeTabId;
+          return (
+            <div key={tab.id} className={styles.toolPaletteGrid} data-hidden={hidden || undefined} inert={hidden} aria-hidden={hidden}>
+              {tab.tools.map(tool => (
+                <button
+                  key={tool.id}
+                  id={tool.id}
+                  title={tool.title}
+                  className={`env-mode-btn ${styles.toolPaletteBtn} ${activeMode === tool.mode ? styles.toolPaletteBtnActive : ''}`}
+                  onClick={() => toggleMode(tool.mode)}
+                >
+                  <i className={`fa-solid ${tool.iconClass} ${styles.toolPaletteIcon}`} />
+                  <span className={styles.toolPaletteLabel}>{tool.label}</span>
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </div>
 
       <label className={styles.toolPaletteBrush} title="Size of the brush for food, walls, radiation, life, killing and the meteor blast">
@@ -206,21 +223,29 @@ const HudToolPalette: React.FC<HudToolPaletteProps> = ({ engine }) => {
         <span className={styles.toolPaletteBrushValue}>Radius: {brushSize}</span>
       </label>
 
-      {activeTab.actions.length > 0 && (
-        <div className={styles.toolPaletteActions}>
-          {activeTab.actions.map(action => (
-            <button
-              key={action.id}
-              id={action.id}
-              title={action.title}
-              className={`${styles.toolPaletteAction} ${action.armsMode !== undefined && action.armsMode === activeMode ? styles.toolPaletteActionArmed : ''}`}
-              onClick={() => runAction(action)}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Stacked for the same reason as the tool grid: the actions block is as
+          tall as the longest tab's, on every tab. */}
+      <div className={styles.toolPaletteStack}>
+        {TABS.map(tab => {
+          const hidden = tab.id !== activeTabId;
+          return (
+            <div key={tab.id} className={styles.toolPaletteActions} data-hidden={hidden || undefined} inert={hidden} aria-hidden={hidden}>
+              {tab.actions.map(action => (
+                <button
+                  key={action.id}
+                  id={action.id}
+                  title={action.title}
+                  className={`${styles.toolPaletteAction} ${action.armsMode !== undefined && action.armsMode === activeMode ? styles.toolPaletteActionArmed : ''}`}
+                  onClick={() => runAction(action)}
+                >
+                  <i className={`fa-solid ${action.iconClass} ${styles.toolPaletteActionIcon}`} />
+                  <span>{action.label}</span>
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
 
       {predatorsOpen && (
         <PredatorModal onClose={() => setPredatorsOpen(false)} onChoose={choosePredator} />
