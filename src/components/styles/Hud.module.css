@@ -2038,6 +2038,96 @@
   text-shadow: 0 0 8px rgba(0, 255, 65, 0.9);
 }
 
+/* ---- Follow-a-lineage card ---- */
+/* Small persistent readout on the followed line, hanging under the top-right
+   speed/zoom bar. Cyan where the HUD is terminal green: the same hue the
+   decoration pass tints tracked organisms with, so card and highlight read as
+   one selection. */
+.lineageCard {
+  position: fixed;
+  top: 64px;
+  right: 12px;
+  z-index: 250;
+  width: 190px;
+  pointer-events: auto;
+  padding: 8px 10px;
+  background: rgba(0, 6, 12, 0.85);
+  border: 1px solid rgba(0, 217, 255, 0.45);
+  box-shadow:
+    inset 0 0 8px rgba(0, 217, 255, 0.08), 0 0 10px rgba(0, 217, 255, 0.15);
+}
+
+/* Stepped left of the perf panel (right: 12px + its 250px min-width + a gap)
+   while that readout occupies the shared anchor. */
+.lineageCardShifted {
+  right: 286px;
+}
+
+.lineageCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.lineageCardTitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: rgba(0, 217, 255, 0.75);
+  text-shadow: 0 0 4px rgba(0, 217, 255, 0.4);
+}
+
+.lineageCardClose {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  line-height: 1;
+  color: rgba(0, 217, 255, 0.6);
+}
+
+.lineageCardClose:hover {
+  color: #ffffff;
+  text-shadow: 0 0 4px rgba(0, 217, 255, 0.8);
+}
+
+.lineageCardName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'VT323', monospace;
+  font-size: 19px;
+  line-height: 1.1;
+  color: #bdf1ff;
+  text-shadow: 0 0 4px rgba(0, 217, 255, 0.35);
+  margin-bottom: 6px;
+}
+
+.lineageCardStats {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  column-gap: 8px;
+  row-gap: 2px;
+  align-items: baseline;
+}
+
+.lineageCardLabel {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: rgba(0, 217, 255, 0.55);
+}
+
+.lineageCardValue {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #ffffff;
+  text-align: right;
+}
+
 /* ---- Toast notifications ---- */
 /* Rolling event log, pinned flush into the lower-right corner. A single bordered
    panel (not floating pills): lines stack with the newest at the bottom and roll

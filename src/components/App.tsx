@@ -21,6 +21,7 @@ import HudBottomBar from './HudBottomBar';
 import HudToolPalette from './HudToolPalette';
 import HudPanel from './HudPanel';
 import HudNotifications from './HudNotifications';
+import LineageCard from './LineageCard';
 import EditorDock from './EditorDock';
 import LifeformsModal from './LifeformsModal';
 import PresetsModal from './PresetsModal';
@@ -345,6 +346,7 @@ const App: React.FC = () => {
         onItemClick={handleToolbarClick}
       />
       <HudNotifications />
+      <LineageCard engine={engine} shiftForPerf={perfOpen} />
 
       {/* Mounting the perf panel enables the timing probes; unmounting turns
           them off and clears the buckets (see PerfPanel's mount effect). */}

@@ -67,9 +67,28 @@ Notifier / FossilRecord / Floaties infrastructure.
       covers the swap, the flag, the opt-out, hint anchoring in-viewport,
       reset-kills-hints, and the full sequence reaching the evolution hint
       (`?hintpace=fast` compresses timings 10x to fit the 15s test budget).
-- [ ] **Follow-a-lineage.** Clicking an organism tracks it and its descendants:
-      highlight the line, keep a small card on it, notify on reproduce/death.
-      Reuses the Select/sample plumbing, which currently doesn't persist focus.
+- [x] ~~**Follow-a-lineage.**~~ — done. The sample click (Select tool or unarmed
+      left-click) now persists focus: `env.followOrganism` hands the live world
+      organism to `env.lineage` (`src/Stats/LineageTracker.ts`, owned
+      per-environment, not a singleton). Tracking is by organism reference, not
+      species — a mutated child founds a new species but stays in the line,
+      which is the point of following one. Birth/death reach the tracker via
+      optional `OrganismEnv.onOrganismBorn/onOrganismDied` hooks that only
+      WorldEnvironment implements — the Narrator's preview-gating argument
+      applied at the env seam instead of the sampling cadence, because a birth
+      hook needs the parent and only `reproduce()` still knows it. The line is
+      tinted cyan by the decoration pass (`drawHighlightedSprite` grew the
+      colour param), `LineageCard.tsx` keeps the tally top-right (steps left of
+      the perf panel; stays up frozen after extinction until dismissed), and
+      toasts narrate births/deaths under coalescing keys throttled to one per
+      30 ticks — founder death and line-end always announce. Cleared silently
+      on reset/load: tracking is live references and cannot round-trip a save.
+      `tests/lineage.spec.js` covers the click→card path, descendant capture,
+      extinction, dismissal, silent reset, and the exact toast/throttle
+      sequence. Found while testing: the two editor-dock snapshots in
+      `tests/visual.spec.js` already fail on this branch before these changes
+      (font-rendering drift against the committed goldens), so they are not a
+      regression gate for this work.
 - [ ] **Close trust papercuts** (see also the interface-review section below):
       GEN→TICKS, collapse duplicated LIFEFORMS/Species labels, fix the
       magnifier that resets zoom, add +/− zoom controls.
