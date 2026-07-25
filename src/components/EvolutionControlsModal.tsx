@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/Hud.module.css';
 import type Engine from '../Engine';
 import Hyperparams from '../Hyperparameters';
@@ -7,6 +7,7 @@ import Notifier from '../Utils/Notifier';
 import EvolutionConsole from './EvolutionConsole';
 import FateDeck from './FateDeck';
 import EvolutionManualTab from './EvolutionManualTab';
+import useEngineValue from './useEngineValue';
 import { ALL_KEYS, snapshotParams } from './evolutionParams';
 import type { ParamKey, ParamMirror } from './evolutionParams';
 
@@ -40,12 +41,28 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
     engine?.emitChange(true);
   };
 
+  /* Anything that writes Hyperparams behind the window's back has to show up
+     here, or the window becomes a set of controls displaying numbers the engine
+     is no longer running on -- the exact failure tests/evolution_controls.spec.js
+     was written against. A Fate Deck era expiring is precisely that: it winds
+     its fields back from the tick loop, with no idea a window is open. Watching
+     a signature of the mirrored fields (rather than each one) keeps this to a
+     single subscription and one re-render per actual change. */
+  const paramSignature = useEngineValue(engine, () => ALL_KEYS.map(k => String(Hyperparams[k])).join('|'), '');
+  useEffect(() => { setParams(snapshotParams()); }, [paramSignature]);
+
   // Generic in the key so the value type is the one that key actually holds,
   // which is what makes the write to Hyperparams check instead of needing a
   // cast.
   const setParam = <K extends ParamKey>(key: K, value: HyperparamsSingleton[K]) => {
     Hyperparams[key] = value;
     setParams(prev => ({ ...prev, [key]: value }));
+    /* Editing a field a live era is holding takes it off that era, so its
+       expiry won't quietly throw this edit away. Said out loud, because an
+       era ending early is otherwise invisible from the tab you are on. */
+    if (engine?.env.releaseParamClaim(key)) {
+      Notifier.notify('The era gives up its hold on this control');
+    }
     engine?.emitChange(true);
   };
 

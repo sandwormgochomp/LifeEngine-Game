@@ -1085,8 +1085,15 @@ class WorldEnvironment extends Environment{
                     kind,
                     baselines,
                     ends_at: this.total_ticks + ticks,
+                    /* Iterated over the baselines rather than over `keys`,
+                       because releaseParamClaim() can take a field off this
+                       event mid-era; walking the original key list would write
+                       the deleted baseline's `undefined` straight into
+                       Hyperparams. */
                     restore: () => {
-                        for (const key of keys) Hyperparams[key] = ev.baselines[key] as never;
+                        for (const key of Object.keys(ev.baselines) as ShiftableParamKey[]) {
+                            Hyperparams[key] = ev.baselines[key] as never;
+                        }
                     },
                 };
                 this.active_events.push(ev);
@@ -1094,6 +1101,27 @@ class WorldEnvironment extends Environment{
         }
         Notifier.notify(message);
         if (this.engine) this.engine.emitChange(true);
+    }
+
+    /* Hand one field back to the player mid-era, so the era will not wind it
+       back when it ends. Returns whether anything was actually holding it.
+
+       This is the seam between the Fate Deck and the other two tabs of the
+       evolution window. A card holds its fields at shifted values and restores
+       the pre-card numbers on expiry -- which, without this, silently undoes any
+       edit the player made to those fields in the meantime: set lifespan by hand
+       during a Long Winter and the era's expiry throws the change away minutes
+       later, with nothing on screen having suggested it would. Taking the field
+       off the event is the honest reading of that edit: the player has taken
+       this parameter over, so the era no longer owns it. An era left holding
+       nothing is over -- there is nothing remaining for it to wind back. */
+    releaseParamClaim(key: ShiftableParamKey): boolean {
+        const holders = this.paramShiftsTouching([key]);
+        for (const ev of holders) {
+            delete ev.baselines[key];
+            if (Object.keys(ev.baselines).length === 0) this.endWorldEvent(ev.kind);
+        }
+        return holders.length > 0;
     }
 
     // Bloom and Ice Age (Events tab): the single-field case of the above.
