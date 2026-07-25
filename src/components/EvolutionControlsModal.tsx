@@ -109,7 +109,7 @@ const EvolutionControlsModal: React.FC<EvolutionControlsModalProps> = ({ engine,
           ))}
         </div>
 
-        {tab === 'console' && <EvolutionConsole params={params} setParam={setParam} />}
+        {tab === 'console' && <EvolutionConsole engine={engine} params={params} setParam={setParam} />}
         {tab === 'fate' && <FateDeck engine={engine} onParamsChanged={syncFromEngine} />}
         {tab === 'manual' && <EvolutionManualTab params={params} setParam={setParam} />}
 
