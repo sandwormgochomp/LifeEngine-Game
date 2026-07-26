@@ -143,7 +143,7 @@ Notifier / FossilRecord / Floaties infrastructure.
       `tests/visual.spec.js` already fail on this branch before these changes
       (font-rendering drift against the committed goldens), so they are not a
       regression gate for this work.
-- [ ] **The tree of life panel.** The record it needs now exists:
+- [x] ~~**The tree of life panel.**~~ — done. The record it needed exists:
       `src/Stats/Phylogeny.ts` (module singleton beside `FossilRecord`, sharing
       its `clear_record` lifecycle, exposed as `window.phylogeny`). Species
       carry a monotonic `id`, and `FossilRecord.addSpecies` delegates its map
@@ -158,13 +158,30 @@ Notifier / FossilRecord / Floaties infrastructure.
       that ruled for 50,000 ticks doesn't vanish when its last member dies.
       Measured at 531 extant species → 603 retained nodes; overhead is below
       the drift between two 2,000-tick windows of the same world.
-      What's left is the panel itself. Two things it must not do: pretend
-      compressed edges are direct descent (`collapsed` is there to be drawn),
-      and re-walk the tree per frame — `revision` is the number to compare.
-      `tests/lineage_tree.spec.js` has the synthetic harness to build shapes
-      against, including the 10,000-speciation bounded-growth test that caught
-      the one real leak (a demoted notable that was never pruned).
-      Also deferred: the tree is **not serialized**. `loadRaw` mints saved
+      The panel is `src/components/Tabs/LineageTab.tsx`, a `<canvas>` behind
+      `activePanel === 'lineage'` (so it inherits the Escape ladder and the
+      one-panel-at-a-time rule, and costs nothing while shut). Species are
+      horizontal runs on a tick axis, speciations are right-angle drops; extant
+      tips bright, dead branches dim, the followed line in the decoration
+      pass's own `#00d9ff`. Hover names the species with an `OrganismThumb`,
+      click opens it in the lab, shift-click walks the camera to a living
+      member through `applyFocus`. `HudPanel` grew a `wide` prop for it — 520px
+      is a column of readouts, and a tree wants the width for its time axis.
+      Both things it must not do are covered: `collapsed` is drawn on the edge
+      (`+n`) and in the tooltip rather than being passed off as direct descent,
+      and nothing re-walks per frame — `Phylogeny.revision` through
+      `useEngineValue`, floored to one relayout per 200ms.
+      The layout is a pure function in `src/Rendering/PhyloLayout.ts`, and the
+      interesting part of it is `SlotMemory`: rows are allocated once and held
+      for the life of the panel, so a node keeps its row no matter what happens
+      elsewhere in the tree, and only a node the record actually dropped gives
+      one back. A from-scratch in-order layout renumbers on nearly every edit,
+      which at this repaint cadence is a tree that reflows under the cursor. It
+      costs some tidiness as clades die and their rows are refilled; that is
+      the trade. `tests/lineage_panel.spec.js` asserts it directly (an
+      unrelated subtree changing must not move anything), plus the pre-order
+      first pass, reparenting, and a ~600-node relayout budget.
+      Still deferred: the tree is **not serialized**. `loadRaw` mints saved
       species as roots and `serialize()` deletes the id, which is unique only
       within its own session — saving ancestry needs a stable on-disk species
       id, a format change.

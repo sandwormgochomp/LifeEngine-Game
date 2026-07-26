@@ -13,6 +13,7 @@ import * as FirstRun from '../Utils/FirstRun';
 import WorldConfig from '../WorldConfig';
 import Hyperparams from '../Hyperparameters';
 import useEngineValue from './useEngineValue';
+import { layoutPhylogeny, SlotMemory } from '../Rendering/PhyloLayout';
 
 // HUD regions
 import HudTopLeft from './HudTopLeft';
@@ -38,6 +39,7 @@ import PerfPanel from './PerfPanel';
 import NewGameModal from './NewGameModal';
 import EvolutionControlsModal from './EvolutionControlsModal';
 import StatsTab from './Tabs/StatsTab';
+import LineageTab from './Tabs/LineageTab';
 import AboutTab from './Tabs/AboutTab';
 
 // Night is a presentation pass over the world canvases: a blue-shifted dim.
@@ -60,6 +62,11 @@ declare global {
     phylogeny?: typeof Phylogeny;
     // Pure body-plan -> name function, exposed for the naming test suite.
     generateOrganismName?: (cell_counts: CellCountMap) => string;
+    /* The lineage tree's geometry, likewise pure: nodes in, {x, y, w} slots
+       out. Exposed because the property that matters most about it -- a node
+       keeping its row across relayouts -- is invisible on the canvas that
+       draws it, and is a straight assertion on the returned slots. */
+    phyloLayout?: { layoutPhylogeny: typeof layoutPhylogeny; SlotMemory: typeof SlotMemory };
     // Timing instrumentation singleton, for the perf test suite and for
     // reading numbers from the console while profiling.
     perf?: typeof Perf;
@@ -78,7 +85,12 @@ declare global {
 const PANEL_TITLES: Record<string, string> = {
   about: 'ABOUT',
   stats: 'STATS',
+  lineage: 'LINEAGE',
 };
+
+// Panels whose content is a picture rather than a column of readouts, and so
+// want more than the panel's default 520px. See HudPanel's `wide`.
+const WIDE_PANELS = new Set(['lineage']);
 
 const App: React.FC = () => {
   const [engine, setEngine] = useState<Engine | null>(null);
@@ -123,6 +135,7 @@ const App: React.FC = () => {
     window.fossilRecord = FossilRecord;
     window.phylogeny = Phylogeny;
     window.generateOrganismName = generateOrganismName;
+    window.phyloLayout = { layoutPhylogeny, SlotMemory };
     window.perf = Perf;
     window.hyperparams = Hyperparams;
     window.narrator = Narrator;
@@ -328,6 +341,14 @@ const App: React.FC = () => {
     switch (activePanel) {
       case 'stats':
         return <StatsTab engine={engine} />;
+      case 'lineage':
+        return (
+          <LineageTab
+            engine={engine}
+            onOpenInLab={handleOpenInLab}
+            onOpenLifeforms={openLifeforms}
+          />
+        );
       case 'about':
         return <AboutTab />;
       default:
@@ -394,6 +415,7 @@ const App: React.FC = () => {
       {activePanel && (
         <HudPanel
           title={PANEL_TITLES[activePanel] || activePanel.toUpperCase()}
+          wide={WIDE_PANELS.has(activePanel)}
           onClose={() => setActivePanel(null)}
         >
           {renderPanelContent()}
