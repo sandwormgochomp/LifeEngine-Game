@@ -308,9 +308,36 @@ class Explosive extends CellState<'explosive'> {
         super('explosive');
     }
 }
+/* Scorched ground, for the couple of ticks a blast leaves it behind (see
+   EnvironmentEffects.detonate). Drawn as burning embers rather than the flat
+   yellow square it used to be: a checkerboard of hot and cooling pixels, keyed
+   to the cell grid so neighbouring cells interlock into one crackling field
+   instead of tiling identically. The same dither the dish glass and the
+   organism sprites use -- no gradients, nothing that needs alpha. */
 class Explosion extends CellState<'explosion'> {
+    // Cooling ember tone under the state's own hot yellow.
+    ember_color: string;
+
     constructor() {
         super('explosion');
+        this.ember_color = '#FF6B00';
+    }
+    render(ctx: CanvasRenderingContext2D, cell: RenderCellLike, size: number): void {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(cell.x, cell.y, size, size);
+        if (size < 3) return;
+        var px = Math.max(1, Math.floor(size / 3));
+        var steps = Math.floor(size / px);
+        // Parity carries the cell's own grid position, so the checker runs
+        // unbroken across a whole blast rather than restarting per cell.
+        var parity = ((cell.col || 0) + (cell.row || 0)) & 1;
+        ctx.fillStyle = this.ember_color;
+        for (var i = 0; i < steps; i++) {
+            for (var j = 0; j < steps; j++) {
+                if (((i + j + parity) & 1) === 0) continue;
+                ctx.fillRect(cell.x + i * px, cell.y + j * px, px, px);
+            }
+        }
     }
 }
 class InvincibleWall extends CellState<'invincible_wall'> {

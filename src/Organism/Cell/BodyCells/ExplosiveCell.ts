@@ -1,5 +1,6 @@
 import CellStates from "../CellStates";
 import BodyCell from "./BodyCell";
+import { makeBlast } from "../../../Rendering/ExplosionFx";
 import type { BodyCellOrganism } from "./BodyCell";
 
 class ExplosiveCell extends BodyCell {
@@ -7,10 +8,16 @@ class ExplosiveCell extends BodyCell {
         super(CellStates.explosive, org, loc_col, loc_row);
     }
 
-    explode(): void {
-        var env = this.org.env;
-        var center_c = this.getRealCol();
-        var center_r = this.getRealRow();
+    /* Light the fuse. The charge no longer goes off inside die(): it is armed
+       here and lands FUSE_TICKS later, when EnvironmentEffects.stepBlasts()
+       calls detonate() on it -- which is what buys the telegraph its beat of
+       anticipation, and what makes the blast something a neighbour can be
+       caught walking into.
+
+       `body` is the dying organism's footprint, passed in by die() so that
+       every charge in one body shares a single array (a predator bomber carries
+       three); it is what the telegraph blinks. */
+    arm(body: number[]): void {
         /* Hyperparams.explosionRadius is seeded as a number by setDefaults, but
            loadJsonObj/the settings UI can write a string into it, which is why
            this parses. The cast reflects that wider runtime reality rather than
@@ -19,42 +26,7 @@ class ExplosiveCell extends BodyCell {
         if (isNaN(radius)) {
             radius = 2;
         }
-
-        for (var c_offset = -radius; c_offset <= radius; c_offset++) {
-            for (var r_offset = -radius; r_offset <= radius; r_offset++) {
-                if (c_offset * c_offset + r_offset * r_offset <= radius * radius) {
-                    var target_c = center_c + c_offset;
-                    var target_r = center_r + r_offset;
-                    var idx = env.grid_map.indexAt(target_c, target_r);
-                    if (idx < 0) continue;
-                    var owner = env.grid_map.ownerOf(idx);
-
-                    // If it is another organism cell, harm it
-                    if (owner != null && owner !== this.org && owner.living) {
-                        owner.harm();
-                    }
-
-                    // Deal 10 damage to walls, or immediately convert independent/our own cells to explosions
-                    if (env.grid_map.stateOf(idx) === CellStates.wall) {
-                        /* Every cell carries a durability now (0 off a wall),
-                           so the undefined-durability branch this used to
-                           carry is gone -- see KillerCell.killNeighbor. */
-                        if (env.grid_map.damageWall(idx, 10)) {
-                            env.changeCell(target_c, target_r, CellStates.explosion, null);
-                            env.active_explosions.push({col: target_c, row: target_r, ticks: 3});
-                        }
-                    /* Re-read rather than reusing `owner`: the harm() above can
-                       have killed that organism, which turns its cells to food
-                       and clears their owner -- and this branch has to see the
-                       cell as it is now, exactly as the live cell object it
-                       replaces did. */
-                    } else if (env.grid_map.ownerOf(idx) == null || env.grid_map.ownerOf(idx) === this.org) {
-                        env.changeCell(target_c, target_r, CellStates.explosion, null);
-                        env.active_explosions.push({col: target_c, row: target_r, ticks: 3});
-                    }
-                }
-            }
-        }
+        this.org.env.active_blasts.push(makeBlast(this.getRealCol(), this.getRealRow(), radius, body));
     }
 }
 
