@@ -11,6 +11,7 @@ interface HudBottomBarProps {
   editorOpen: boolean;
   rulesOpen: boolean;
   worldsOpen: boolean;
+  tutorialOpen: boolean;
   onItemClick: (item: string) => void;
 }
 
@@ -22,6 +23,7 @@ const toolbarItems = [
   { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats', title: 'Population, species, and evolution charts over time' },
   { id: 'tool-lineage', iconClass: 'fa-sitemap', label: 'LINEAGE', item: 'lineage', title: 'The species family tree: who branched off whom, and when' },
   { id: 'tool-about', iconClass: 'fa-circle-info', label: 'ABOUT', item: 'about', title: 'What the cells do, the hotkeys, and project links' },
+  { id: 'tool-tutorial', iconClass: 'fa-graduation-cap', label: 'TUTORIAL', item: 'tutorial', title: 'Replay the guided walkthrough: the game in eight chapters' },
 ];
 
 const MouseLeftIcon: React.FC = () => (
@@ -116,7 +118,7 @@ function renderClickHint(mode: number, brushSize: number) {
   }
 }
 
-const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editorOpen, rulesOpen, worldsOpen, onItemClick }) => {
+const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editorOpen, rulesOpen, worldsOpen, tutorialOpen, onItemClick }) => {
   const envMode = useEngineValue(engine, e => e.env.controller.mode, Modes.None);
   // brush size lives on WorldConfig; re-read it on every engine change so the
   // hint bar tracks the slider
@@ -128,6 +130,7 @@ const HudBottomBar: React.FC<HudBottomBarProps> = ({ engine, activePanel, editor
     if (item === 'edit') return editorOpen;
     if (item === 'rules') return rulesOpen;
     if (item === 'save') return worldsOpen;
+    if (item === 'tutorial') return tutorialOpen;
     return activePanel === item;
   };
 

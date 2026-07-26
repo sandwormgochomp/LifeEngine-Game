@@ -14,9 +14,14 @@ const { test, expect } = require('./helpers/fixtures');
 
 const DONE_KEY = 'life_engine.first_run_done';
 
+/* ?tutorial=off throughout: on a genuine first visit the walkthrough opens
+   first and the hints arm only when it closes (App's mount effect), so opting
+   the tutorial out is what puts these tests back on the un-sequenced path they
+   were written for -- hints, immediately. tests/tutorial.spec.js covers the
+   sequencing itself. */
 async function firstVisit(page, params = '') {
   await page.evaluate(() => localStorage.clear());
-  await page.goto(`/?floaties=static${params}`);
+  await page.goto(`/?floaties=static&tutorial=off${params}`);
   await page.waitForSelector('div[data-engine-ready="true"]');
 }
 
