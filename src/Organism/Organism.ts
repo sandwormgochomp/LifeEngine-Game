@@ -20,6 +20,7 @@ import type ExplosiveCell from "./Cell/BodyCells/ExplosiveCell";
    threshold. No new cycle -- Anatomy already pulls every body cell in through
    BodyCellFactory, so this edge exists at runtime either way. */
 import { WALL_BRAIN_CELLS } from "./Cell/BodyCells/BrainCell";
+import { SHOT_COST } from "./Cell/BodyCells/ShooterCell";
 import type Species from "../Stats/Species";
 import type { OrganismSpriteSet } from "../Rendering/DecorationRenderer";
 import type { Blast } from "../Rendering/ExplosionFx";
@@ -569,10 +570,15 @@ class Organism {
         }
     }
 
-    shoot(): void {
-        if (this.food_collected >= 2) {
-            this.food_collected -= 2;
-            var dir = Directions.scalars[this.direction];
+    /* Fire one projectile. `direction` defaults to the movement heading, which
+       is what the brain's `shoot` action has always used; ShooterCell passes
+       the direction it actually found a target in instead, so a stationary
+       body can cover all four sides without its heading -- and therefore its
+       movement -- being steered by its guns. */
+    shoot(direction: number = this.direction): void {
+        if (this.food_collected >= SHOT_COST) {
+            this.food_collected -= SHOT_COST;
+            var dir = Directions.scalars[direction];
             var spawn_c = this.c + dir[0];
             var spawn_r = this.r + dir[1];
 

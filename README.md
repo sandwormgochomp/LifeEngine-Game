@@ -60,7 +60,7 @@ Each color does one job:
 - **Common** — plain structural cell.
 - **Parasite** — steals food from adjacent organisms.
 - **Chameleon** — invisible to eyes.
-- **Shooter** — fires at targets the organism sees.
+- **Shooter** — fires at targets in line of sight, 2 food a shot and 5 damage a hit. Each shooter cell aims on its own along the four cardinal directions, out to the look range (halved at night, like an eye's), and holds fire on its own species and on anything hidden by a chameleon. A `shoot` brain action fires one as well, along the organism's heading.
 - **Brain** — does nothing on its own. Ten of them in one body let it build walls (the `build wall` brain action, 5 food per wall). The only cell whose effect is a quantity rather than a behaviour: one is pure upkeep, so wall-building is something a lineage has to commit to rather than stumble into.
 
 ## Organisms
