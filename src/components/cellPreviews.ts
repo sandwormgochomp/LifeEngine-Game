@@ -1,7 +1,9 @@
 import CellStates from '../Organism/Cell/CellStates';
 import Directions from '../Organism/Directions';
 import type { LivingCellName } from '../Organism/Cell/CellStates';
+import { WALL_BRAIN_CELLS } from '../Organism/Cell/BodyCells/BrainCell';
 import type PreviewEnvironment from '../Environments/PreviewEnvironment';
+import type { PreviewCellDef } from '../Environments/PreviewEnvironment';
 
 /* Scenarios for the Organism Lab's live hover previews. Each one seeds a small
    scene into a real PreviewEnvironment and lets the actual simulation play it
@@ -271,6 +273,40 @@ export const PREVIEW_SCENARIOS: Record<LivingCellName, PreviewScenario> = {
                     shooter.direction = Directions.right;
                     shooter.shoot();
                 }
+            }
+        },
+    },
+
+    /* Nothing alone, everything at ten: two builders walk the same line, and
+       only the one carrying WALL_BRAIN_CELLS leaves a wall behind it. The
+       stunted one below it is the whole point of the cell -- it is trying just
+       as hard, on the same food, through the same buildWall(). */
+    brain: {
+        loopTicks: 190,
+        setup(env) {
+            // Ten brain cells in a 5x2 block behind a mover, which is what a
+            // body actually has to spend to earn the behaviour.
+            const smart: PreviewCellDef[] = [{ name: 'mover', dc: 0, dr: 0 }];
+            for (let i = 0; i < WALL_BRAIN_CELLS; i++) {
+                smart.push({ name: 'brain', dc: 1 + (i % 5), dr: i < 5 ? 0 : 1 });
+            }
+            env.spawn(smart, 3, CY - 3, { food: 1e9 }).direction = Directions.right;
+
+            // The control: same mover, same food, two brain cells short of it.
+            env.spawn([
+                { name: 'mover', dc: 0, dr: 0 },
+                { name: 'brain', dc: 1, dr: 0 },
+                { name: 'brain', dc: 2, dr: 0 },
+            ], 3, CY + 3, { food: 1e9 }).direction = Directions.right;
+        },
+        onTick(env) {
+            /* Held on course and topped up, so the only difference left between
+               the two is how much nerve tissue each is carrying. buildWall()
+               itself is the real one -- the gate is inside it. */
+            for (const org of env.organisms) {
+                org.food_collected = 1e9;
+                org.direction = Directions.right;
+                org.buildWall();
             }
         },
     },

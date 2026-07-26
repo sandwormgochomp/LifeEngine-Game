@@ -3,6 +3,8 @@ import styles from './styles/BrainModal.module.css';
 import type Engine from '../Engine';
 import CellStates from '../Organism/Cell/CellStates';
 import type { CellName } from '../Organism/Cell/CellStates';
+import type Anatomy from '../Organism/Anatomy';
+import { WALL_BRAIN_CELLS } from '../Organism/Cell/BodyCells/BrainCell';
 import Notifier from '../Utils/Notifier';
 import PixelSlider from './PixelSlider';
 
@@ -14,22 +16,31 @@ interface BrainModalProps {
 // Cell types an eye can observe and therefore react to
 const OBSERVABLE: CellName[] = ['food', 'wall', ...CellStates.living.map(c => c.name)];
 
-/* `requires` names the Anatomy flag that has to be set for the action to do
-   anything; typing it means a badge for a flag Anatomy does not have fails to
-   compile. */
+/* `met` asks the anatomy whether the action can do anything at all, and `lack`
+   is what the option says when it cannot. A predicate rather than the flag name
+   this used to hold: building a wall needs a *count* of brain cells
+   (WALL_BRAIN_CELLS), not a boolean, and the badge should say how many. Reading
+   the field inside the predicate keeps the property the flag name had -- a
+   badge for something Anatomy does not carry still fails to compile. */
 interface BrainActionOption {
   value: string;
   label: string;
-  requires?: 'has_explosive' | 'has_healer' | 'has_shooter';
+  met?: (anatomy: Anatomy) => boolean;
+  lack?: string;
 }
 
 const ACTIONS: BrainActionOption[] = [
   { value: '', label: 'no action' },
-  { value: 'explode', label: 'explode', requires: 'has_explosive' },
-  { value: 'heal', label: 'heal', requires: 'has_healer' },
-  { value: 'shoot', label: 'shoot', requires: 'has_shooter' },
+  { value: 'explode', label: 'explode', met: a => a.has_explosive, lack: 'needs cell' },
+  { value: 'heal', label: 'heal', met: a => a.has_healer, lack: 'needs cell' },
+  { value: 'shoot', label: 'shoot', met: a => a.has_shooter, lack: 'needs cell' },
   { value: 'hibernate', label: 'hibernate' },
-  { value: 'build', label: 'build wall' },
+  {
+    value: 'build',
+    label: 'build wall',
+    met: a => a.brain_cells >= WALL_BRAIN_CELLS,
+    lack: `needs ${WALL_BRAIN_CELLS} brain`,
+  },
 ];
 
 const CONDITIONS = ['Health', 'Food', 'Always'];
@@ -246,7 +257,7 @@ const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
               >
                 {ACTIONS.map(a => (
                   <option key={a.value} value={a.value}>
-                    {a.requires && !anatomy?.[a.requires] ? `${a.label} (needs cell)` : a.label}
+                    {a.met && !(anatomy && a.met(anatomy)) ? `${a.label} (${a.lack})` : a.label}
                   </option>
                 ))}
               </select>

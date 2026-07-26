@@ -1,4 +1,5 @@
 import type { LivingCellName } from '../Organism/Cell/CellStates';
+import { WALL_BRAIN_CELLS } from '../Organism/Cell/BodyCells/BrainCell';
 
 // What each cell type does. Shared by the Organism Lab palette tooltips and
 // the About panel's legend.
@@ -21,4 +22,7 @@ export const CELL_INFO: Record<LivingCellName, string> = {
   parasite: 'Steals food from adjacent organisms',
   chameleon: 'Invisible to eyes',
   shooter: 'Fires at targets the organism sees',
+  // Quoted from the constant rather than written out, so the palette can never
+  // advertise a threshold the simulation does not enforce.
+  brain: `Does nothing alone; ${WALL_BRAIN_CELLS} in one body let it build walls`,
 };

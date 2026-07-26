@@ -12,6 +12,7 @@ import CommonCell from "./CommonCell";
 import ParasiteCell from "./ParasiteCell";
 import ChameleonCell from "./ChameleonCell";
 import ShooterCell from "./ShooterCell";
+import BrainCell from "./BrainCell";
 import CellStates from "../CellStates";
 import type { CellState, LivingCellName } from "../CellStates";
 import type BodyCell from "./BodyCell";
@@ -51,6 +52,7 @@ const BodyCellFactory: BodyCellFactorySingleton = {
         type_map[CellStates.parasite.name] = ParasiteCell;
         type_map[CellStates.chameleon.name] = ChameleonCell;
         type_map[CellStates.shooter.name] = ShooterCell;
+        type_map[CellStates.brain.name] = BrainCell;
         this.type_map = type_map;
     },
 

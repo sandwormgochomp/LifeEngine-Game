@@ -4,6 +4,7 @@ const { test, expect, openEditor, pauseEngine, clickEditorCell, expectCellCount,
 const cellTypes = [
   'mouth', 'producer', 'mover', 'killer', 'armor', 'eye', 'healer',
   'explosive', 'poison', 'pheromone', 'common', 'parasite', 'chameleon', 'shooter',
+  'brain',
 ];
 
 test.describe('Cell type palette', () => {

@@ -108,6 +108,11 @@ class Brain {
             decs[CellStates.explosive.name] = this.getRandomWeight();
             if (decs[CellStates.poison.name] !== undefined)
                 decs[CellStates.poison.name] = this.getRandomWeight();
+            /* Guarded like poison above: a brain from a save that predates the
+               cell type arrives without the key, and writing one in here would
+               invent a reaction the organism never evolved. */
+            if (decs[CellStates.brain.name] !== undefined)
+                decs[CellStates.brain.name] = this.getRandomWeight();
         }
     }
 

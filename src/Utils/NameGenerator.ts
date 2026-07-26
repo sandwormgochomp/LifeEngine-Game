@@ -20,6 +20,9 @@ import type { CellCountMap } from "../Stats/Species";
 // outrank passive bulk tissue.
 const PRIORITY: string[] = [
     'killer', 'parasite', 'explosive', 'shooter', 'poison', 'chameleon',
+    /* Rare and expensive -- ten of them is the price of building walls, so a
+       body carrying any is defined more by them than by its bulk tissue. */
+    'brain',
     'healer', 'mover', 'eye', 'producer', 'mouth', 'armor', 'pheromone', 'common',
 ];
 
@@ -30,6 +33,7 @@ const PREFIXES: Record<string, string[]> = {
     shooter:   ['Zap', 'Dart', 'Bolt', 'Sling'],
     poison:    ['Venom', 'Toxi', 'Blight', 'Murk'],
     chameleon: ['Shade', 'Phantom', 'Ghost', 'Wisp'],
+    brain:     ['Cogni', 'Mind', 'Noggin', 'Cortex'],
     healer:    ['Balm', 'Mend', 'Sooth', 'Vital'],
     mover:     ['Skitter', 'Dash', 'Flit', 'Zoom'],
     eye:       ['Peep', 'Gaze', 'Watch', 'Ogle'],
@@ -47,6 +51,7 @@ const SUFFIXES: Record<string, string[]> = {
     shooter:   ['shot', 'gunner', 'dart', 'slinger'],
     poison:    ['toad', 'wort', 'spine', 'fume'],
     chameleon: ['wraith', 'shade', 'ghost', 'phantom'],
+    brain:     ['thinker', 'mind', 'wit', 'skull'],
     healer:    ['nurse', 'tender', 'medic', 'mender'],
     mover:     ['stalker', 'runner', 'dasher', 'skimmer'],
     eye:       ['watcher', 'seer', 'gazer', 'peeper'],

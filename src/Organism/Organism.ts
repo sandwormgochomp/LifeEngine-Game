@@ -16,6 +16,10 @@ import SerializeHelper from "../Utils/SerializeHelper";
 import Observation from "./Perception/Observation";
 import type BodyCell from "./Cell/BodyCells/BodyCell";
 import type ExplosiveCell from "./Cell/BodyCells/ExplosiveCell";
+/* A value import, unlike the two type-only ones above: buildWall reads the
+   threshold. No new cycle -- Anatomy already pulls every body cell in through
+   BodyCellFactory, so this edge exists at runtime either way. */
+import { WALL_BRAIN_CELLS } from "./Cell/BodyCells/BrainCell";
 import type Species from "../Stats/Species";
 import type { OrganismSpriteSet } from "../Rendering/DecorationRenderer";
 import type { Blast } from "../Rendering/ExplosionFx";
@@ -586,7 +590,18 @@ class Organism {
         }
     }
 
+    /* Lay a wall cell behind the organism, if it has the nerve tissue to.
+
+       The brain-cell gate lives here rather than in Brain.decide because this
+       is the only path to a built wall: decide() sets `should_build` off a
+       brain action, but the editor, a preset and a saved organism all reach
+       buildWall the same way. Gating at the single choke point is also why the
+       food is spent *after* the check -- a body that cannot build must not be
+       charged for trying. */
     buildWall(): void {
+        if (this.anatomy.brain_cells < WALL_BRAIN_CELLS) {
+            return;
+        }
         if (this.food_collected >= 5) {
             this.food_collected -= 5;
             // Opposite direction

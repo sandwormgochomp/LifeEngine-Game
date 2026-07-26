@@ -121,6 +121,40 @@ Notifier / FossilRecord / Floaties infrastructure.
       wall-clock timings 10x to fit the 15s test budget; the tick budget is
       bought with `setSpeedIndex` instead). The outlives-its-anchor test was
       checked against a deliberately broken re-anchor and fails on it.
+- [x] ~~**Brain cell: the first cell whose effect is a quantity.**~~ — done.
+      `src/Organism/Cell/BodyCells/BrainCell.ts` has no `performFunction` at
+      all; it is counted, not run. Ten in one body (`WALL_BRAIN_CELLS`) is what
+      lets that body build walls, and one is pure upkeep — lifespan and the
+      food to reproduce both scale with cell count — so wall-building is
+      something a lineage commits to rather than stumbles into by one lucky
+      mutation. That is the whole design: every other cell type pays off one
+      cell at a time.
+      The gate lives in `Organism.buildWall()`, not in `Brain.decide()`, because
+      buildWall is the single choke point — the `build` action, the editor and a
+      loaded organism all arrive there. It sits *above* the food check, so a
+      body that cannot build is not charged 5 food for trying.
+      `Anatomy.brain_cells` is a count where every neighbour is a flag, which is
+      also what forced `BrainModal`'s `requires` (an anatomy flag name) to become
+      a `met` predicate plus a `lack` label — a boolean cannot say "you have
+      three of the ten you need". Reading the field inside the predicate keeps
+      the compile-time guarantee the flag name had.
+      Adding a cell type touches ten registries, and the type system catches
+      most but not all of them: `CellName`/`LivingCellName`, the `CellState`
+      subclass, `CellStatesRegistry`, the literal, `defineLists()` (both `all`
+      and `living`), `BodyCellFactory.type_map`, `CELL_INFO`, and
+      `PREVIEW_SCENARIOS` are all total and fail to compile if missed.
+      **`src/Rendering/palette.json` is the one that does not** — it is JSON
+      typed as `Record<CellName, string>`, so a missing entry is `undefined` at
+      runtime and the cell renders black once ColorScheme loads. `NameGenerator`
+      is the other soft one: its tables are `Record<string, string[]>`, so a
+      cell type absent from `PRIORITY` is silently invisible to naming and a
+      body made only of it falls back to "Blobling".
+      Colour is a desaturated rose (`#D98CB3`), deliberately unlike the killer's
+      hot pink at one-pixel zoom. `tests/brain_cell.spec.js` covers the count,
+      the threshold from both sides, that a `build` brain action cannot route
+      around it, that a failed build is not billed, the save round trip, and the
+      editor's "needs 10 brain" badge — verified to fail (3 of 7) with the gate
+      deliberately removed.
 - [x] ~~**A guided tutorial, which the entry above deliberately was not.**~~ —
       done, and it does not replace the hints; the two are **sequenced**.
       `src/components/Tutorial.tsx` is eight chapters of story down the left

@@ -6,7 +6,8 @@
 export type CellName =
     | 'empty' | 'food' | 'wall' | 'mouth' | 'producer' | 'mover' | 'killer'
     | 'armor' | 'eye' | 'healer' | 'explosive' | 'explosion' | 'invincible_wall'
-    | 'poison' | 'pheromone' | 'common' | 'parasite' | 'chameleon' | 'shooter';
+    | 'poison' | 'pheromone' | 'common' | 'parasite' | 'chameleon' | 'shooter'
+    | 'brain';
 
 /* The subset an organism can actually be built from: everything except the
    environmental states (empty/food/wall/explosion/invincible_wall). Only these
@@ -15,7 +16,7 @@ export type CellName =
 export type LivingCellName =
     | 'mouth' | 'producer' | 'mover' | 'killer' | 'armor' | 'eye' | 'healer'
     | 'explosive' | 'poison' | 'pheromone' | 'common' | 'parasite'
-    | 'chameleon' | 'shooter';
+    | 'chameleon' | 'shooter' | 'brain';
 
 /* Structural shapes for what render() reaches through, rather than importing
    GridCell / BodyCell / Organism. Those sit above this file in the dependency
@@ -500,6 +501,24 @@ class Shooter extends CellState<'shooter'> {
     }
 }
 
+/* Nervous tissue: inert on its own, and the only cell whose effect is a
+   *quantity* rather than a behaviour. One does nothing; WALL_BRAIN_CELLS of
+   them in the same body is what lets it build walls (see BrainCell and
+   Organism.buildWall).
+
+   Not to be confused with Perception/Brain, which is the state machine an eye
+   drives. Nothing in this file imports that, and this class is named for its
+   cell the way every other one here is, but they are unrelated: a body can
+   carry brain cells with no eyes and never run a decision, or run one with no
+   brain cells at all. */
+class Brain extends CellState<'brain'> {
+    constructor() {
+        super('brain');
+        this.color = '#d98cb3'; // Muted rose -- desaturated, so it never reads
+                                // as the killer's hot pink at one-pixel zoom
+    }
+}
+
 export interface CellStatesRegistry {
     empty: Empty;
     food: Food;
@@ -520,6 +539,7 @@ export interface CellStatesRegistry {
     parasite: Parasite;
     chameleon: Chameleon;
     shooter: Shooter;
+    brain: Brain;
     all: CellState[];
     living: CellState<LivingCellName>[];
     defineLists(): void;
@@ -547,6 +567,7 @@ const CellStates: CellStatesRegistry = {
     parasite: new Parasite(),
     chameleon: new Chameleon(),
     shooter: new Shooter(),
+    brain: new Brain(),
     /* Seeded empty and filled by defineLists() immediately below. They were
        previously absent until that call; declaring them here is what lets the
        literal satisfy CellStatesRegistry, and nothing can observe the empty
@@ -554,8 +575,8 @@ const CellStates: CellStatesRegistry = {
     all: [],
     living: [],
     defineLists() {
-        this.all = [this.empty, this.food, this.wall, this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.healer, this.explosive, this.explosion, this.invincible_wall, this.poison, this.pheromone, this.common, this.parasite, this.chameleon, this.shooter]
-        this.living = [this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.healer, this.explosive, this.poison, this.pheromone, this.common, this.parasite, this.chameleon, this.shooter];
+        this.all = [this.empty, this.food, this.wall, this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.healer, this.explosive, this.explosion, this.invincible_wall, this.poison, this.pheromone, this.common, this.parasite, this.chameleon, this.shooter, this.brain]
+        this.living = [this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.healer, this.explosive, this.poison, this.pheromone, this.common, this.parasite, this.chameleon, this.shooter, this.brain];
         /* `all` doubles as the grid's id -> state table (GridMap stores the id).
            `empty` first is load-bearing: a zeroed Uint8Array must read as an
            empty grid. Nothing persists an id, so the order is free to change
