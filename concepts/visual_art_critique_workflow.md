@@ -6,8 +6,10 @@ This document outlines the standard workflow for iterating on pixel art and UI a
 
 ## 🧭 The Core Principle
 To protect the codebase from unintended side-effects and maintain clean separation of concerns:
-1. **The Art Critic Subagent** is strictly read-only, has NO codebase context or code write permissions, and analyzes snapshots purely from an aesthetic standpoint (colors, lines, shading, curves, perspective).
-2. **The Parent Developer Agent** translates the critic's visual/geometric feedback into mathematical code, manages file replacements, and runs screenshot/test commands.
+1. **The Pixel Art Critic Subagent** is strictly read-only, has NO codebase context or code write permissions, and analyzes snapshots purely from an aesthetic standpoint (colors, lines, shading, curves, perspective).
+2. **The Parent Developer Agent** translates the critic's visual/geometric feedback into mathematical code, manages file replacements, and runs screenshot/test commands. It does not ever run the full test suite during this loop.
+
+IMPORTANT: This flow iterates until the art critic agent is happy with the result. If the art critic agent is unhappy with the result for any reason, the iterations continue.
 
 ---
 

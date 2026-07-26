@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tools Window — Pixel-Art Overhaul · Interactive Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-title: 'Press Start 2P', monospace;
+  --font-mono: 'VT323', monospace;
+  --page-bg: #10131a;
+  --page-fg: #b9c6d6;
+  --page-dim: #6d7c90;
+  --page-accent: #7ed6ee;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 32px 24px 96px;
+  background: var(--page-bg);
+  color: var(--page-fg);
+  font-family: var(--font-mono);
+  font-size: 17px;
+}
+
+.wrap { max-width: 1240px; margin: 0 auto; }
+
+h1 {
+  font-family: var(--font-title);
+  font-size: 17px;
+  letter-spacing: 1px;
+  color: #eaf4ff;
+  margin: 0 0 10px;
+}
+h2 {
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--page-accent);
+  margin: 0 0 12px;
+}
+.sub { color: var(--page-dim); max-width: 860px; margin: 0 0 4px; }
+.sub a { color: var(--page-accent); }
+code { font-family: var(--font-mono); color: var(--page-accent); }
+
+/* ---------------------------------------------------------------- controls */
+.controls {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding: 14px 16px;
+  margin: 22px 0 30px;
+  background: #171c25;
+  border: 1px solid #2b3444;
+}
+.ctl { display: flex; flex-direction: column; gap: 5px; }
+.ctl > span {
+  font-family: var(--font-title);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--page-dim);
+}
+.ctl .row { display: flex; gap: 0; }
+.ctl button {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1;
+  padding: 6px 11px;
+  background: #10141b;
+  color: var(--page-dim);
+  border: 1px solid #2b3444;
+  margin-left: -1px;
+  cursor: pointer;
+}
+.ctl button:first-child { margin-left: 0; }
+.ctl button:hover { color: #eaf4ff; }
+.ctl button[aria-pressed="true"] {
+  background: var(--page-accent);
+  color: #0b1016;
+  border-color: var(--page-accent);
+  position: relative;
+}
+.ctl .note { font-size: 14px; color: #55617322; }
+
+/* ------------------------------------------------------------------ stage */
+.stage {
+  scroll-margin-top: 150px;   /* keep the sticky control bar off the window */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+  align-items: flex-start;
+}
+.stageCol > h2 { margin-bottom: 14px; }
+.refShot { image-rendering: pixelated; width: 340px; border: 1px solid #2b3444; }
+.caption { color: var(--page-dim); font-size: 15px; max-width: 340px; margin: 10px 0 0; }
+
+/* =========================================================================
+   THE WINDOW
+   Every bevel below is a `border-image` cut from the reference itself, not a
+   box-shadow that approximates it. scripts/slice-crt-frame.py recovers the
+   art's native 200x200 canvas out of the 5.12x JPEG upscale, reads each
+   frame's rings off it, and re-emits them as minimal 9-slice atlases in
+   crt_console_assets/frame/; run it with --probe to see every value it took
+   and where from.
+
+   So the light model is not a rule this file follows -- it is whatever the
+   reference draws, pixel for pixel. Worth knowing anyway, because the art uses
+   two of them. Plates and recesses take the obvious one, light edge top-left
+   and dark bottom-right. The case and the tabs do not: they put a bright
+   chamfer on the *inner* edge of all four sides and carry the light direction
+   in the rim's face instead, #9ec0da along the top down to #273a57 along the
+   bottom. Slicing means never having to pick.
+
+   Sizes are the art's: a 6px case, a 4px screen surround, a 3px plate bevel
+   over a 1px well. Slice widths are declared in px and never scale, so the
+   whole panel wants an integer `zoom`.
+   ========================================================================= */
+.win {
+  /* The chrome palette, all 12 values read off the reference. */
+  --frame:            #000000;
+  --bezel:            #536e92;   /* also the well, and the active tab's face */
+  --screen:           #090c1a;
+  --rule:             #425a7a;
+  --edge-mid:         #6687a9;
+  --edge-lo:          #273a57;
+  --plate:            #536e92;
+  --plate-hi:         #9ec0da;
+  --text:             #f0fefe;
+  --text-engraved:    #7c9dbf;
+  /* Not in the reference at all -- it has no LEDs, and its tube is glass. */
+  --led-green:        #34fb0b;
+  --led-red:          #f71815;
+  --fluid:            #079f33;
+  --fluid-hi:         #a1f469;
+  --bulb-core:        #fffdbe;
+  --bulb-rim:         #bf5911;
+
+  --slice-case:       url(crt_console_assets/frame/case.png);
+  --slice-tab:        url(crt_console_assets/frame/tab.png);
+  --slice-tab-on:     url(crt_console_assets/frame/tab-active.png);
+  --slice-screen:     url(crt_console_assets/frame/screen.png);
+  --slice-plate:      url(crt_console_assets/frame/plate.png);
+  --slice-plate-in:   url(crt_console_assets/frame/plate-pressed.png);
+  --slice-well:       url(crt_console_assets/frame/well.png);
+  --slice-well-in:    url(crt_console_assets/frame/well-pressed.png);
+  --dither-well:      url(crt_console_assets/frame/well-dither.png);
+  --dither-bezel:     url(crt_console_assets/frame/bezel-dither.png);
+
+  width: 200px;
+  border: 6px solid transparent;
+  border-image: var(--slice-case) 6 / 6px stretch;
+  /* The bezel's own dither: a 2x2 checkerboard that ramps in over the bottom
+     52px of the panel, 12.5% -> 25% -> 50%, exactly as the art ramps it. It is
+     bottom-anchored because that is where the art anchors it, so it survives
+     the panel changing height between tabs. Painted as a background rather
+     than through `fill` on the case, because border-image paints over the
+     background and would bury it. */
+  background: var(--dither-bezel) left bottom / 2px 52px repeat-x,
+              var(--bezel);
+  background-clip: padding-box;  /* or the fill leaks past the chamfered corners */
+  font-family: var(--font-mono);
+  image-rendering: pixelated;
+  user-select: none;
+  zoom: 2;
+}
+
+/* Option B from the spec: green-phosphor chrome, full-colour icons kept.
+   The slices carry their colours in the pixels now, so this swaps the whole
+   set for a luminance-remapped copy rather than redefining four variables.
+   That ramp is the one this mockup already used for phosphor -- the reference
+   is slate only, and nothing green here was sampled from it. */
+.win.green {
+  --bezel:            #0a1c12;
+  --screen:           #050d08;
+  --rule:             #1f8f47;
+  --edge-mid:         #1f8f47;
+  --edge-lo:          #06170e;
+  --plate:            #14522b;
+  --plate-hi:         #2fa85e;
+  --text:             #ccffe0;
+  --text-engraved:    #1f8f47;
+
+  --slice-case:       url(crt_console_assets/frame/case-green.png);
+  --slice-tab:        url(crt_console_assets/frame/tab-green.png);
+  --slice-tab-on:     url(crt_console_assets/frame/tab-active-green.png);
+  --slice-screen:     url(crt_console_assets/frame/screen-green.png);
+  --slice-plate:      url(crt_console_assets/frame/plate-green.png);
+  --slice-plate-in:   url(crt_console_assets/frame/plate-pressed-green.png);
+  --slice-well:       url(crt_console_assets/frame/well-green.png);
+  --slice-well-in:    url(crt_console_assets/frame/well-pressed-green.png);
+  --dither-well:      url(crt_console_assets/frame/well-dither-green.png);
+  --dither-bezel:     url(crt_console_assets/frame/bezel-dither-green.png);
+}
+
+/* ------------------------------------------------------------- tab row
+   Tabs sit above the bezel and overlap it: the active tab's bottom edge is
+   open into the panel body, so tab and panel are one continuous surface. */
+.tabs { display: flex; gap: 1px; padding: 2px 4px 0; margin-bottom: -1px; }
+.tab {
+  flex: 1;
+  height: 16px;                  /* the art's tab height */
+  padding: 0;
+  color: var(--text);
+  /* 1px outline, 2px of bevel, and a 1px shadow row along the bottom where the
+     tab meets the panel. `fill` paints the face, so there is no background. */
+  border: solid transparent;
+  border-width: 4px 4px 1px 3px;
+  border-image: var(--slice-tab) 4 4 1 3 fill / 4px 4px 1px 3px stretch;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  position: relative;
+}
+.tab:hover { filter: brightness(1.18); }
+.tab[aria-selected="true"] {
+  /* The selected tab has no bottom edge in the art: its face runs straight
+     into the panel, so the two read as one surface. */
+  border-width: 4px 3px 1px 3px;
+  border-image: var(--slice-tab-on) 4 3 1 3 fill / 4px 3px 1px 3px stretch;
+  z-index: 2;
+}
+/* armed-tool marker: an armed tool stays discoverable from another tab */
+.tab .armDot {
+  position: absolute; top: 2px; right: 2px;
+  width: 3px; height: 3px; background: var(--led-green); display: none;
+}
+.tab.hasArmed .armDot { display: block; }
+/* the dot exists so an armed tool stays findable from another tab; on the tab
+   you are already looking at, the pressed button says it better */
+.tab[aria-selected="true"] .armDot { display: none; }
+
+/* --------------------------------------------------------- bezel bands */
+.band {
+  height: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  gap: 4px;
+}
+.screw {
+  width: 4px; height: 4px;
+  background: var(--plate);
+  box-shadow: inset 1px 1px 0 var(--plate-hi), inset -1px -1px 0 var(--edge-lo);
+}
+.leds { margin-left: auto; display: flex; gap: 4px; }
+.led {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #1b2436;
+  box-shadow: inset -1px -1px 0 rgba(0,0,0,.5);
+}
+.led.on.g { background: var(--led-green); box-shadow: 0 0 3px var(--led-green); }
+.led.on.r { background: var(--led-red);   box-shadow: 0 0 3px var(--led-red); }
+.leds[data-mode="off"] { display: none; }
+
+/* ------------------------------------------------------------- screen */
+/* 8px in from the case on both sides, which is what the art leaves. The
+   surround is 2px of rail over 2px of outline -- 1px of outline along the top,
+   where the art skips a row. */
+.screen {
+  margin: 0 8px;
+  padding: 6px 6px 8px;
+  border: solid transparent;
+  border-width: 3px 4px 4px;
+  border-image: var(--slice-screen) 3 4 4 fill / 3px 4px 4px stretch;
+}
+.title {
+  color: var(--text);
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-align: center;
+  height: 10px;
+  line-height: 10px;
+  margin-bottom: 5px;
+}
+.screen[data-title="off"] .title { display: none; }
+
+/* --------------------------------------------------------------- grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 48px);
+  gap: 4px 6px;
+  justify-content: center;
+}
+.grid[data-cols="2"] { grid-template-columns: repeat(2, 48px); }
+.cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cell.wide { grid-column: span 2; }
+/* "centre" orphan mode: the short last row is its own centred flex row, because
+   2 cells cannot be centred on a 3-column 48px grid without a half-pixel */
+.orphanRow { grid-column: 1 / -1; display: flex; gap: 6px; justify-content: center; }
+.cell.widest { grid-column: span 3; }
+
+/* The plate is only its bevel: 1px outline and 3px of face, with the well
+   filling everything inside. So the slice's right and bottom stop 1px short --
+   that pixel is the well's own bevel, and belongs to the well. */
+.btn {
+  width: 48px; height: 48px;
+  padding: 0;
+  background: none;
+  border: solid transparent;
+  border-width: 4px 3px 3px 4px;
+  border-image: var(--slice-plate) 4 3 3 4 / 4px 3px 3px 4px stretch;
+  cursor: pointer;
+  display: block;
+}
+.cell.wide .btn  { width: 102px; }
+.cell.widest .btn { width: 156px; }
+.btn:hover { filter: brightness(1.12); }
+
+/* The icon well: recessed by 1px, and NOT flat -- the reference dithers its
+   lower quarter against #273a57, which is the cheapest thing on the whole
+   panel that makes it look hand-made rather than CSS-generated. */
+.well {
+  position: relative;
+  width: 100%; height: 100%;
+  border: 1px solid transparent;
+  border-image: var(--slice-well) 1 fill / 1px stretch;
+  display: flex; align-items: center; justify-content: center;
+}
+.well::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 11px;              /* the art's 6 rows of 22, at this well's size */
+  background: var(--dither-well) left bottom repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.well img { width: 32px; height: 32px; image-rendering: pixelated; position: relative; z-index: 1; }
+.cell.wide .well, .cell.widest .well { justify-content: flex-start; padding-left: 6px; }
+.cell.wide .well img, .cell.widest .well img { margin-left: 4px; }
+/* the inline label only exists on a stretched cell; a square one labels below */
+.wideLbl { display: none; }
+.cell.wide .wideLbl, .cell.widest .wideLbl {
+  display: block;
+  color: var(--text); font-size: 13px; line-height: 1; letter-spacing: 1px;
+  margin-left: 6px; padding-right: 4px; position: relative; z-index: 1;
+}
+.cell.wide .lbl, .cell.widest .lbl { display: none; }
+
+/* ARMED: invert the bevel so the plate reads as pressed in, and shift the icon
+   1px down/right. Depth rather than brightness -- the one channel a
+   full-colour icon set cannot fight with. The reference has no pressed button
+   to slice, so the pressed atlases are the raised ones turned 180 degrees,
+   which swaps top for bottom and left for right and is exactly what pressing a
+   bevel in does. Nothing is recoloured; the slice widths swap with it. */
+.btn[aria-pressed="true"] {
+  border-width: 3px 4px 4px 3px;
+  border-image: var(--slice-plate-in) 3 4 4 3 / 3px 4px 4px 3px stretch;
+}
+.btn[aria-pressed="true"] .well {
+  border-image: var(--slice-well-in) 1 fill / 1px stretch;
+}
+.btn[aria-pressed="true"] img { transform: translate(1px, 1px); }
+
+.btn:disabled { border-image: none; background: var(--bezel); cursor: default; }
+.btn:disabled .well { border-image: none; background: var(--bezel); }
+.btn:disabled img { opacity: .45; }
+.btn:disabled .well::after { display: none; }
+
+.lbl {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 9px;
+  height: 9px;
+  letter-spacing: 1px;
+}
+
+/* ------------------------------------------------------------ divider */
+.rule { height: 1px; background: var(--rule); margin: 7px 0; }
+
+/* -------------------------------------------------------------- brush
+   The reference's tube: glass, green fluid as the fill, a tick scale, and a
+   thumb. Bulb vs ferrule is one of the spec's open questions. */
+.brushCap {
+  display: flex; justify-content: space-between;
+  color: var(--text-engraved); font-size: 13px; letter-spacing: 1px;
+  height: 9px; line-height: 9px; margin-bottom: 3px;
+}
+.brushCap b { color: var(--text); font-weight: normal; }
+.tube {
+  position: relative;
+  height: 14px;
+  background: #0d1526;
+  border-radius: 3px;
+  box-shadow: inset 1px 1px 0 var(--edge-lo), inset -1px -1px 0 var(--edge-mid);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.fluid {
+  position: absolute; left: 1px; top: 2px; bottom: 2px;
+  background: var(--fluid);
+  border-top: 1px solid var(--fluid-hi);
+  border-radius: 2px 0 0 2px;
+}
+.ticks {
+  position: absolute; inset: 2px 4px 2px 0;
+  background-image: repeating-linear-gradient(90deg,
+    rgba(245,254,255,.45) 0 1px, transparent 1px 7px);
+  pointer-events: none;
+}
+.thumb { position: absolute; top: 50%; pointer-events: none; }
+.thumb.ferrule {
+  width: 8px; height: 18px; margin: -9px 0 0 -4px;
+  background: var(--plate);
+  box-shadow: inset 1px 1px 0 var(--plate-hi), inset -1px -1px 0 var(--frame);
+  background-image: repeating-linear-gradient(90deg,
+    rgba(0,0,0,.28) 0 1px, transparent 1px 3px);
+}
+.thumb.bulb {
+  width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+  background: var(--bulb-rim);
+  box-shadow: inset 2px 2px 0 var(--bulb-core), 0 0 6px rgba(255,176,0,.75);
+}
+
+/* ------------------------------------------------------------ actions
+   Not in the reference at all -- it has six uniform buttons and nothing else.
+   Engraved into the bezel rather than raised out of it, because a raised plate
+   means "this is a mode you can arm" and these fire once. */
+.actions { display: flex; flex-direction: column; gap: 1px; margin-top: 6px; }
+.action {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 3px;
+  background: none; border: 0;
+  color: var(--text-engraved);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: 1px;
+  text-align: left;
+  cursor: pointer;
+}
+.action img { width: 16px; height: 16px; image-rendering: pixelated; opacity: .75; }
+.action:hover { color: var(--text); }
+.action:hover img { opacity: 1; }
+.action:active { transform: translate(1px, 1px); }
+.action.fired { color: var(--text); }
+
+/* Predator is the one action that arms a mode rather than firing once, so it
+   gets the raised plate back -- and that difference now carries meaning. */
+.action.armsMode {
+  border: solid transparent;
+  border-width: 4px 3px 3px 4px;
+  border-image: var(--slice-plate) 4 3 3 4 fill / 4px 3px 3px 4px stretch;
+  color: var(--screen);
+  padding: 0 2px;
+  margin-top: 3px;
+}
+.win.green .action.armsMode { color: var(--text); }
+.action.armsMode:hover { filter: brightness(1.12); }
+.action.armsMode[aria-pressed="true"] {
+  border-width: 3px 4px 4px 3px;
+  border-image: var(--slice-plate-in) 3 4 4 3 fill / 3px 4px 4px 3px stretch;
+}
+.action.armsMode img { opacity: 1; }
+
+/* --------------------------------------------------------------- notes */
+.notes { margin-top: 64px; border-top: 1px solid #2b3444; padding-top: 22px; }
+.notes table { border-collapse: collapse; font-size: 16px; }
+.notes td, .notes th { text-align: left; padding: 5px 22px 5px 0; vertical-align: top; }
+.notes th { color: var(--page-accent); font-size: 14px; font-family: var(--font-title); }
+.notes td:first-child { color: #eaf4ff; white-space: nowrap; }
+.notes .q { color: var(--page-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Tools Window — Pixel-Art Overhaul</h1>
+  <p class="sub">
+    Interactive mockup of the style specified in
+    <a href="tool_window_pixel_overhaul.md">tool_window_pixel_overhaul.md</a>,
+    built from the real tool set and the real 32&times;32 icons in
+    <code>crt_console_assets/</code>. Reference:
+    <a href="tool_window_crt_console.jpg">tool_window_crt_console.jpg</a>.
+  </p>
+  <p class="sub">
+    Every frame &mdash; the case, the tabs, the screen recess, the tool plates,
+    the wells and both dithers &mdash; is a <code>border-image</code> sliced out
+    of that reference by <code>scripts/slice-crt-frame.py</code>, which recovers
+    its native 200&times;200 canvas from the 5.12&times; JPEG upscale first. So
+    the bevels here are the art's own pixels rather than a box-shadow that
+    approximates them. See &sect;1.4 of the spec for the inventory.
+  </p>
+  <p class="sub">
+    Every control below is one of the spec's open questions, so they can be
+    judged by looking rather than by reading. Tabs switch, tools arm and disarm,
+    the brush drags, actions hover and fire.
+  </p>
+
+  <div class="controls">
+    <div class="ctl"><span>Chrome hue</span><div class="row" id="cHue">
+      <button data-v="slate" aria-pressed="true">Slate (A)</button>
+      <button data-v="green" aria-pressed="false">Phosphor (B)</button>
+    </div></div>
+
+    <div class="ctl"><span>Brush thumb</span><div class="row" id="cThumb">
+      <button data-v="ferrule" aria-pressed="true">Ferrule</button>
+      <button data-v="bulb" aria-pressed="false">Amber bulb</button>
+    </div></div>
+
+    <div class="ctl"><span>Status LEDs</span><div class="row" id="cLed">
+      <button data-v="bound" aria-pressed="true">Bound to state</button>
+      <button data-v="decor" aria-pressed="false">Decorative</button>
+      <button data-v="off" aria-pressed="false">None</button>
+    </div></div>
+
+    <div class="ctl"><span>Panel title</span><div class="row" id="cTitle">
+      <button data-v="off" aria-pressed="true">Dropped</button>
+      <button data-v="on" aria-pressed="false">Kept</button>
+    </div></div>
+
+    <div class="ctl"><span>Orphan row</span><div class="row" id="cOrphan">
+      <button data-v="stretch" aria-pressed="true">Stretch last</button>
+      <button data-v="centre" aria-pressed="false">Centre</button>
+      <button data-v="two" aria-pressed="false">2-wide grid</button>
+    </div></div>
+
+    <div class="ctl"><span>Sim state</span><div class="row" id="cRun">
+      <button data-v="run" aria-pressed="true">Running</button>
+      <button data-v="pause" aria-pressed="false">Paused</button>
+    </div></div>
+
+    <div class="ctl"><span>Zoom</span><div class="row" id="cZoom">
+      <button data-v="1" aria-pressed="false">1&times;</button>
+      <button data-v="2" aria-pressed="true">2&times;</button>
+      <button data-v="3" aria-pressed="false">3&times;</button>
+    </div></div>
+  </div>
+
+  <div class="stage">
+    <div class="stageCol">
+      <h2>Proposed</h2>
+      <div class="win" id="win">
+        <div class="tabs" id="tabs"></div>
+        <div class="band">
+          <div class="screw"></div>
+          <div class="leds" id="ledsTop" data-mode="bound">
+            <div class="led g on"></div><div class="led r"></div>
+          </div>
+          <div class="screw"></div>
+        </div>
+        <div class="screen" id="screen" data-title="off">
+          <div class="title" id="title">TERRAIN</div>
+          <div class="grid" id="grid"></div>
+          <div class="rule"></div>
+          <div class="brushCap"><span>BRUSH</span><b id="bval">R:2</b></div>
+          <div class="tube" id="tube">
+            <div class="fluid" id="fluid"></div>
+            <div class="ticks"></div>
+            <div class="thumb ferrule" id="thumb"></div>
+          </div>
+          <div class="actions" id="actions"></div>
+        </div>
+        <div class="band">
+          <div class="screw"></div>
+          <div class="leds" id="ledsBot" data-mode="bound">
+            <div class="led g on"></div><div class="led r"></div>
+          </div>
+          <div class="screw"></div>
+        </div>
+      </div>
+      <p class="caption">
+        200px wide at 1&times;, derived from the icon rather than copied from the
+        mockup: 32px icon &rarr; 40px well &rarr; 48px plate. Integer zoom only.
+      </p>
+    </div>
+
+    <div class="stageCol">
+      <h2>Reference</h2>
+      <img class="refShot" src="tool_window_crt_console.jpg" alt="CRT console mockup">
+      <p class="caption">
+        A 200&times;200 art canvas upscaled 5.12&times;. Its six-button grid shows
+        an invented tool set &mdash; WATER, GENE and PLANT do not exist &mdash;
+        so only its materials transfer, not its layout.
+      </p>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h2>What each control decides</h2>
+    <table>
+      <tr><th>Control</th><th>Spec</th><th>What to look for</th></tr>
+      <tr><td>Chrome hue</td><td>&sect;0</td>
+        <td class="q">The blocking one. Slate matches the icons exactly and orphans the rest of the green HUD; phosphor keeps the HUD consistent and makes the icons the only chromatic thing on the panel.</td></tr>
+      <tr><td>Brush thumb</td><td>&sect;2.7</td>
+        <td class="q">The bulb introduces a fifth hue family for a control carrying one number, and glows next to the icons. Toggle it while looking at the grid, not at the tube.</td></tr>
+      <tr><td>Status LEDs</td><td>&sect;2.8</td>
+        <td class="q">Switch Sim state with LEDs bound: if the movement reads as meaningful, keep them. If not, decorative status lights on a real simulator are the detail that reads as sloppy.</td></tr>
+      <tr><td>Panel title</td><td>&sect;2.3</td>
+        <td class="q">Kept, it repeats the active tab's name. Dropped, it reclaims a row.</td></tr>
+      <tr><td>Orphan row</td><td>&sect;4.1</td>
+        <td class="q">Terrain has 5 tools and Events has 1 in a 3-wide grid. Check both tabs &mdash; stretching works well for Erase and badly for Meteor.</td></tr>
+    </table>
+
+    <h2 style="margin-top:34px">Where this departs from the reference</h2>
+    <p class="sub">
+      The chrome is not a reading of the reference any more, it is the
+      reference: every frame is a <code>border-image</code> cut from the art's
+      own pixels by <code>scripts/slice-crt-frame.py</code>. Three things still
+      differ, all of them deliberate.
+    </p>
+    <p class="sub">
+      <b>The tab trough.</b> The reference sinks its tabs into a recessed strip
+      16px tall, so their tops touch the outer black line. Here they float on
+      the bezel, which lets the case close up into one even 6px ring — the ring
+      the sides and bottom already draw. It is the one place the panel is built
+      out of two pieces of the art rather than one.
+      <b>The dither band in a well</b> is 11px rather than 6, because this
+      well is 41px where the art's is 22; the art's <i>proportion</i> is kept,
+      not its pixel count.
+      <b>The brush tube</b> is not sliced at all — it is glass with 3px rounded
+      caps, the one place the square-corner rule genuinely breaks, and the
+      spec's open question anyway.
+    </p>
+    <p class="sub">
+      Still missing: colour tab glyphs for <code>terrain</code>,
+      <code>life</code> and <code>events</code>. Slice widths are declared in
+      px and do not scale, so the panel uses CSS <code>zoom</code> for integer
+      scaling and wants a current browser.
+    </p>
+  </div>
+
+</div>
+
+<script>
+const TABS = [
+  { id: 'terrain', label: 'TERRAIN',
+    tools: [
+      { id: 'food',            label: 'FOOD',  icon: 'food.png' },
+      { id: 'wall',            label: 'WALL',  icon: 'struct.png' },
+      { id: 'invincible-wall', label: 'GLASS', icon: 'invincible-wall.png' },
+      { id: 'radiation-drop',  label: 'RAD',   icon: 'toxic.png' },
+      { id: 'eraser',          label: 'ERASE', icon: 'eraser.png' },
+    ],
+    actions: [
+      { id: 'randomize-walls-btn', label: 'Random Walls',    icon: 'randomize-walls-btn.png' },
+      { id: 'clear-walls',         label: 'Clear Walls',     icon: 'clear-walls.png' },
+      { id: 'clear-radiation',     label: 'Clear Radiation', icon: 'clear-radiation.png' },
+    ] },
+  { id: 'life', label: 'LIFE',
+    tools: [
+      { id: 'tool-select', label: 'SAMPLE', icon: 'tool-select.png' },
+      { id: 'seed-life',   label: 'SEED',   icon: 'seed-life.png' },
+      { id: 'kill',        label: 'KILL',   icon: 'kill.png' },
+    ],
+    actions: [
+      { id: 'clear-life', label: 'Clear Life', icon: 'clear-life.png' },
+    ] },
+  { id: 'events', label: 'EVENTS',
+    tools: [
+      { id: 'event-meteor', label: 'METEOR', icon: 'event-meteor.png' },
+    ],
+    actions: [
+      { id: 'event-bloom',    label: 'Bloom',    icon: 'event-bloom.png' },
+      { id: 'event-iceage',   label: 'Ice Age',  icon: 'event-iceage.png' },
+      { id: 'event-radstorm', label: 'Rad Storm', icon: 'event-radstorm.png' },
+      { id: 'event-predator', label: 'Predator', icon: 'event-predator.png', arms: true },
+    ] },
+];
+const ICONS = 'crt_console_assets/';
+
+const state = { tab: 'terrain', armed: null, brush: 2, orphan: 'stretch' };
+const el = id => document.getElementById(id);
+
+/* ------------------------------------------------------------------ tabs */
+function drawTabs() {
+  el('tabs').innerHTML = TABS.map(t => {
+    const armedHere = state.armed && [...t.tools, ...t.actions]
+      .some(x => x.id === state.armed);
+    return `<button class="tab${armedHere ? ' hasArmed' : ''}" role="tab"
+              aria-selected="${t.id === state.tab}" data-tab="${t.id}"
+            >${t.label}<span class="armDot"></span></button>`;
+  }).join('');
+  el('tabs').querySelectorAll('.tab').forEach(b =>
+    b.onclick = () => { state.tab = b.dataset.tab; draw(); });
+}
+
+/* ------------------------------------------------------------------ grid
+   The orphan-row question: a 3-wide grid leaves Terrain with a 2-cell row and
+   Events with a single button in a 3-wide field. */
+function drawGrid() {
+  const tab = TABS.find(t => t.id === state.tab);
+  const grid = el('grid');
+  const n = tab.tools.length;
+  const cols = state.orphan === 'two' ? 2 : 3;
+  grid.dataset.cols = cols;
+  const rem = n % cols;
+  const firstOrphan = n - rem;
+
+  const cellHtml = (tool, cls) => `<div class="cell${cls}">
+      <button class="btn" data-tool="${tool.id}"
+        aria-pressed="${state.armed === tool.id}" title="${tool.label}">
+        <span class="well"><img src="${ICONS}${tool.icon}" alt="">
+          <span class="wideLbl">${tool.label}</span></span>
+      </button>
+      <span class="lbl">${tool.label}</span>
+    </div>`;
+
+  let html = '';
+  tab.tools.forEach((tool, i) => {
+    let cls = '';
+    if (state.orphan === 'stretch' && rem && i === n - 1) {
+      const span = cols - rem + 1;               // eat the rest of the row
+      cls = span === 3 ? ' widest' : (span === 2 ? ' wide' : '');
+    }
+    if (state.orphan === 'centre' && rem && i === firstOrphan) html += '<div class="orphanRow">';
+    html += cellHtml(tool, cls);
+    if (state.orphan === 'centre' && rem && i === n - 1) html += '</div>';
+  });
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.btn').forEach(b => b.onclick = () => {
+    state.armed = state.armed === b.dataset.tool ? null : b.dataset.tool;
+    draw();
+  });
+}
+
+/* --------------------------------------------------------------- actions */
+function drawActions() {
+  const tab = TABS.find(t => t.id === state.tab);
+  el('actions').innerHTML = tab.actions.map(a => `
+    <button class="action${a.arms ? ' armsMode' : ''}" data-act="${a.id}"
+      ${a.arms ? `aria-pressed="${state.armed === a.id}"` : ''}>
+      <img src="${ICONS}${a.icon}" alt=""><span>${a.label}</span>
+    </button>`).join('');
+  el('actions').querySelectorAll('.action').forEach(b => b.onclick = () => {
+    const a = tab.actions.find(x => x.id === b.dataset.act);
+    if (a.arms) { state.armed = state.armed === a.id ? null : a.id; draw(); }
+    else { b.classList.add('fired'); setTimeout(() => b.classList.remove('fired'), 220); }
+  });
+}
+
+/* ----------------------------------------------------------------- brush */
+function drawBrush() {
+  const pct = (state.brush - 1) / 19;
+  el('fluid').style.width = `calc(${pct * 100}% - 2px)`;
+  el('thumb').style.left = `calc(${pct * 100}% - ${pct * 8 - 4}px)`;
+  el('bval').textContent = 'R:' + state.brush;
+}
+(function bindTube() {
+  const tube = el('tube');
+  const set = e => {
+    const r = tube.getBoundingClientRect();
+    const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    state.brush = Math.round(1 + f * 19);
+    drawBrush();
+  };
+  tube.addEventListener('pointerdown', e => {
+    tube.setPointerCapture(e.pointerId); set(e);
+  });
+  tube.addEventListener('pointermove', e => {
+    if (tube.hasPointerCapture(e.pointerId)) set(e);
+  });
+})();
+
+/* --------------------------------------------------------------- toggles */
+function group(id, fn) {
+  el(id).querySelectorAll('button').forEach(b => b.onclick = () => {
+    el(id).querySelectorAll('button')
+      .forEach(x => x.setAttribute('aria-pressed', x === b));
+    fn(b.dataset.v);
+  });
+}
+group('cHue',   v => el('win').classList.toggle('green', v === 'green'));
+group('cThumb', v => { el('thumb').className = 'thumb ' + v; drawBrush(); });
+group('cLed',   v => { el('ledsTop').dataset.mode = v; el('ledsBot').dataset.mode = v; setLeds(); });
+group('cTitle', v => el('screen').dataset.title = v);
+group('cOrphan', v => { state.orphan = v; draw(); });
+group('cRun',   v => { state.run = v === 'run'; setLeds(); });
+group('cZoom',  v => el('win').style.zoom = v);
+
+state.run = true;
+function setLeds() {
+  const mode = el('ledsTop').dataset.mode;
+  document.querySelectorAll('.leds').forEach(l => {
+    const [g, r] = l.children;
+    if (mode === 'decor') { g.classList.add('on'); r.classList.remove('on'); }
+    else { g.classList.toggle('on', state.run); r.classList.toggle('on', !state.run); }
+  });
+}
+
+function draw() {
+  el('title').textContent = TABS.find(t => t.id === state.tab).label;
+  drawTabs(); drawGrid(); drawActions(); drawBrush(); setLeds();
+}
+draw();
+</script>
+</body>
+</html>
