@@ -33,6 +33,11 @@ export interface SerializedAnatomy {
     has_parasite: boolean;
     has_chameleon: boolean;
     has_shooter: boolean;
+    /* A count, not a flag: wall-building keys off how many there are (see
+       BrainCell.WALL_BRAIN_CELLS), which is the one cell type where one is not
+       the same as ten. Written by copyNonObjects like the flags around it, and
+       recomputed by checkTypeChange() on load either way. */
+    brain_cells: number;
     [key: string]: unknown;
 }
 
@@ -54,6 +59,9 @@ class Anatomy {
     has_parasite!: boolean;
     has_chameleon!: boolean;
     has_shooter!: boolean;
+    // How many brain cells the body carries. See SerializedAnatomy on why this
+    // one is a count where every neighbour above is a flag.
+    brain_cells!: number;
 
     constructor(owner: Organism) {
         this.owner = owner;
@@ -72,6 +80,7 @@ class Anatomy {
         this.has_parasite = false;
         this.has_chameleon = false;
         this.has_shooter = false;
+        this.brain_cells = 0;
     }
 
     canAddCellAt(c: number, r: number): boolean {
@@ -154,6 +163,7 @@ class Anatomy {
         this.has_parasite = false;
         this.has_chameleon = false;
         this.has_shooter = false;
+        this.brain_cells = 0;
         for (var cell of this.cells) {
             if (cell.state == CellStates.producer)
                 this.is_producer = true;
@@ -173,6 +183,9 @@ class Anatomy {
                 this.has_chameleon = true;
             if (cell.state == CellStates.shooter)
                 this.has_shooter = true;
+            // Counted rather than flagged: buildWall needs the number.
+            if (cell.state == CellStates.brain)
+                this.brain_cells++;
         }
     }
 
