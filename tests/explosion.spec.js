@@ -156,6 +156,67 @@ test.describe('Explosions', () => {
     ).toBe(1);
   });
 
+  /* An `explode` action is the one thing a brain can do that kills its own
+     organism mid-update -- Brain.decide calls die() outright, which is how a
+     Cinderpod detonates when it is wounded. update() went on regardless, and
+     the next thing it does is reproduce(): the corpse bred, and the child's
+     addPop() landed on the species die() had just fossilized. What that left
+     behind was a species flagged extinct, deleted from the extant registry, and
+     carrying a living member -- so the species count, the most-populous lookup
+     and the lineage tree all disagreed with the world.
+
+     Only the observation is injected here; it stands in for the eye seeing prey
+     a tick earlier, and everything downstream of it is the real path. */
+  test('an organism that explodes on its own action does not then breed', async ({ page }) => {
+    await pauseEngine(page);
+    const out = await page.evaluate(() => {
+      const env = window.engine.env;
+      const org = env.organisms[0];
+      // A minimal Cinderpod: an eye and a mover so the brain runs at all, an
+      // explosive to go off, and a mouth for the brain to react to.
+      org.anatomy.loadRaw({ cells: [
+        { state: { name: 'eye' },       loc_col: 0, loc_row: -1 },
+        { state: { name: 'mover' },     loc_col: 0, loc_row: 0 },
+        { state: { name: 'explosive' }, loc_col: 0, loc_row: 1 },
+        { state: { name: 'mouth' },     loc_col: 1, loc_row: 0 },
+      ] });
+      org.updateGrid();
+      org.brain.load({ states: [{
+        name: 'Critical',
+        decisions: { mouth: 10 },
+        actions: { mouth: 'explode' },
+        transitions: [],
+      }] });
+      // Fed enough to reproduce, which is the whole point: a corpse with no
+      // food would not have reached reproduce() either way.
+      org.food_collected = org.foodNeeded() + 5;
+      org.brain.observe({ state: { name: 'mouth' }, owner: null, distance: 1, direction: 0 });
+
+      const species = org.species;
+      const before = env.organisms.length;
+      org.update();
+      return {
+        living: org.living,
+        before,
+        after: env.organisms.length,
+        blasts: env.active_blasts.length,
+        population: species.population,
+        extinct: species.extinct,
+        in_extant_registry: !!window.fossilRecord.extant_species[species.name],
+      };
+    });
+
+    // It really did detonate -- the charge is armed and the organism is dead.
+    expect(out.living, 'the explode action kills it').toBe(false);
+    expect(out.blasts, 'and arms its charge').toBe(1);
+
+    expect(out.after, 'a corpse does not reproduce').toBe(out.before);
+    // And the species accounting agrees with the world it describes.
+    expect(out.population).toBe(0);
+    expect(out.extinct).toBe(true);
+    expect(out.in_extant_registry).toBe(false);
+  });
+
   /* The regression this scenario was rebuilt for: the preview used to sit a
      killer next to a single explosive cell, which killed it on the first tick,
      so the popover opened on the aftermath and the organism was never really
