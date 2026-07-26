@@ -121,6 +121,41 @@ Notifier / FossilRecord / Floaties infrastructure.
       wall-clock timings 10x to fit the 15s test budget; the tick budget is
       bought with `setSpeedIndex` instead). The outlives-its-anchor test was
       checked against a deliberately broken re-anchor and fails on it.
+- [x] ~~**A guided tutorial, which the entry above deliberately was not.**~~ —
+      done, and it does not replace the hints; the two are **sequenced**.
+      `src/components/Tutorial.tsx` is eight chapters of story down the left
+      edge: the dish and where it came from, speed, click a lifeform, the lab,
+      change a body plan, the evolution rules, the tree, and "now leave it
+      alone". Two entry points, both running the same eight beats — it opens
+      itself on a browser's first visit (`src/Utils/Tutorial.ts`, its own
+      localStorage key and its own `?tutorial=off`, separate from FirstRun's)
+      and from a TUTORIAL button in the bottom bar. A replay always restarts at
+      chapter one: resuming half a story is worse than re-reading it.
+      **Six of the eight advance on the player doing the thing**, not on Next —
+      a walkthrough you can read end to end without touching the game teaches
+      the button. Each names a piece of state (playback speed, `lineage.
+      following`, the dock being open, the editor's cell count, which window is
+      up) and one 150ms poll watches it; the ones asking for a *change* re-take
+      a baseline on entry, so arriving with it already true does not skip the
+      chapter. The rule that keeps that from being a cage: **Next is live on
+      every chapter**, ✕ ends it, and nothing blocks input or dims the world.
+      Two placement facts, both learned from a screenshot rather than reasoned
+      out. The card must sit **above** `--layer-modal` (a new `--layer-tutorial`
+      at 260) because chapter 6 sends you into the evolution window and the card
+      has to survive being sent there. And it must stay **vertically centered** —
+      the first cut pinned it to the top on windows ≤720px, which put it exactly
+      over the speed ladder that chapter 2 tells you to reach for. It overlaps
+      the tool palette instead, which is the one surface no chapter ever asks
+      for. Amber, the same amber as FirstRunHints, because they are one voice.
+      Sequencing: on a genuine first visit the walkthrough opens and the hints
+      arm only when it closes, so a new player is never narrated at from two
+      places at once. Each flag governs its own feature — the first cut nested
+      the tutorial inside `FirstRun.shouldRun()`, which made `?firstrun=off`
+      silently disable the tutorial too. `tests/tutorial.spec.js` covers both
+      entry points, the flag, the opt-out, the restart-on-replay, all six
+      watched chapters driven through the real UI, the hand-off to the hints,
+      that a replay does *not* hand off, and that Next is live while waiting.
+      The fixtures navigate with `?tutorial=off` alongside `?firstrun=off`.
 - [x] ~~**Follow-a-lineage.**~~ — done. The sample click (Select tool or unarmed
       left-click) now persists focus: `env.followOrganism` hands the live world
       organism to `env.lineage` (`src/Stats/LineageTracker.ts`, owned

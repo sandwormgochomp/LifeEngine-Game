@@ -10,6 +10,7 @@ import type { CellCountMap } from '../Stats/Species';
 import Modes from '../Controllers/ControlModes';
 import Notifier from '../Utils/Notifier';
 import * as FirstRun from '../Utils/FirstRun';
+import * as TutorialFlag from '../Utils/Tutorial';
 import WorldConfig from '../WorldConfig';
 import Hyperparams from '../Hyperparameters';
 import useEngineValue from './useEngineValue';
@@ -30,6 +31,7 @@ import BrainModal from './BrainModal';
 import WorldsModal from './WorldsModal';
 import Floaties from './Floaties';
 import FirstRunHints from './FirstRunHints';
+import Tutorial from './Tutorial';
 import RadiationSmoke from './RadiationSmoke';
 import FrostOverlay from './FrostOverlay';
 import MicroscopeOverlay from './MicroscopeOverlay';
@@ -115,6 +117,11 @@ const App: React.FC = () => {
   const [lifeformsHighlight, setLifeformsHighlight] = useState<string | null>(null);
   // Armed on the first visit ever, for the origin world (see mount effect)
   const [firstRunHints, setFirstRunHints] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  /* Set only for the automatic first-visit walkthrough, and only when the
+     world hints were due as well. Closing that one hands the world over to
+     them; closing a replay opened from the TUTORIAL button must not. */
+  const handOffToHints = useRef(false);
   const envRef = useRef<HTMLDivElement>(null);
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
   const decoCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -144,9 +151,26 @@ const App: React.FC = () => {
     setEngine(newEngine);
 
     /* The very first visit narrates the world the engine just built -- the
-       origin organism in its dish. Nothing is loaded, replaced or resized. */
-    if (FirstRun.shouldRun()) {
-      FirstRun.markDone();
+       origin organism in its dish. Nothing is loaded, replaced or resized.
+
+       Two narrators, sequenced rather than stacked. The walkthrough goes first
+       and the world hints arm only once it closes, because a new player being
+       talked at from a card and from three floating labels at the same time
+       reads as neither. With the tutorial opted out by URL (?tutorial=off, as
+       the fixtures and bench do) the hints arm immediately, exactly as before
+       this existed. */
+    const wants_hints = FirstRun.shouldRun();
+    const wants_tutorial = TutorialFlag.shouldRun();
+    if (wants_hints) FirstRun.markDone();
+    if (wants_tutorial) {
+      TutorialFlag.markDone();
+      /* Hand the world to the hints on close only if they were due anyway.
+         Each flag governs its own feature: ?firstrun=off must not silently
+         take the walkthrough with it, and ?tutorial=off must leave the hints
+         exactly as they were before any of this existed. */
+      handOffToHints.current = wants_hints;
+      setTutorialOpen(true);
+    } else if (wants_hints) {
       setFirstRunHints(true);
     }
 
@@ -178,11 +202,17 @@ const App: React.FC = () => {
         setActivePanel(null);
       } else if (editorOpen) {
         setEditorOpen(false);
+      } else if (tutorialOpen) {
+        /* Last rung, though it draws above everything: the walkthrough is not
+           a modal, and Escape should back out of whatever it sent you to
+           before it puts the guide itself away. */
+        closeTutorial();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, brainOpen, worldsOpen, newGameOpen, perfOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine, activePanel, editorOpen, lifeformsOpen, presetsOpen, rulesOpen, brainOpen, worldsOpen, newGameOpen, perfOpen, tutorialOpen]);
 
   // Headless skips all drawing so the simulation runs far faster; repaint
   // everything on the way back so the canvas isn't left stale.
@@ -301,6 +331,17 @@ const App: React.FC = () => {
     setActivePanel(null);
   };
 
+  /* Closing the automatic first-visit walkthrough is what arms the world
+     hints -- see the mount effect. Closing a replay opened from the button
+     must not, since that browser is long past its first visit. */
+  const closeTutorial = () => {
+    setTutorialOpen(false);
+    if (handOffToHints.current) {
+      handOffToHints.current = false;
+      setFirstRunHints(true);
+    }
+  };
+
   const handleToolbarClick = (item: string) => {
     if (item === 'new') {
       handleNewGame();
@@ -317,6 +358,15 @@ const App: React.FC = () => {
       closeModals();
       setWorldsOpen(next);
       setActivePanel(null);
+    } else if (item === 'tutorial') {
+      /* Deliberately does not closeModals(): the walkthrough sits above the
+         windows it sends you to and has to survive being sent there. */
+      if (tutorialOpen) {
+        closeTutorial();
+      } else {
+        handOffToHints.current = false;
+        setTutorialOpen(true);
+      }
     } else {
       setActivePanel(prev => prev === item ? null : item);
     }
@@ -379,6 +429,12 @@ const App: React.FC = () => {
       <Floaties engine={engine} />
       <MicroscopeOverlay engine={engine} />
       <FirstRunHints engine={engine} active={firstRunHints} />
+      <Tutorial
+        engine={engine}
+        open={tutorialOpen}
+        onClose={closeTutorial}
+        ui={{ editorOpen, rulesOpen, activePanel }}
+      />
 
       {/* HUD Regions */}
       <HudTopLeft engine={engine} headless={headless} onToggleHeadless={toggleHeadless} />
@@ -391,6 +447,7 @@ const App: React.FC = () => {
         editorOpen={editorOpen}
         rulesOpen={rulesOpen}
         worldsOpen={worldsOpen}
+        tutorialOpen={tutorialOpen}
         onItemClick={handleToolbarClick}
       />
       <HudNotifications

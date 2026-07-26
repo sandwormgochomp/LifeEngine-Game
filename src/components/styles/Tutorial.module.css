@@ -1,0 +1,201 @@
+/* The guided walkthrough card. Owned by Tutorial.tsx.
+
+   Amber rather than terminal green, and the same amber as FirstRunHints: both
+   are the interface talking to a new player, as opposed to the world reporting
+   what it did (green) or the followed lineage (cyan). Reusing that hue is what
+   makes the two read as one voice arriving in two forms.
+
+   Anchored down the left edge and vertically centered. That column is not
+   empty -- the tool palette is bottom-left and a tall card will overlap it --
+   but the palette is the one surface no chapter ever asks for, so it is the
+   right thing to sit on. What the chapters *do* point at is the speed ladder
+   (top-left), the bottom toolbar, the lab dock (right) and the world itself,
+   and centering keeps every one of them clear.
+
+   Which is why there is no "pin it to the top on short windows" rule here.
+   There was one, and it put the card straight over the speed ladder on a
+   720px-tall window -- covering the exact control chapter 2 tells you to
+   reach for. Staying centered and giving up height instead is what keeps that
+   from happening at any window size.
+
+   The frame comes from kit/Border by setting its three colours rather than
+   redeclaring box-shadow, so there is no specificity tie with the kit to lose
+   on source order -- see the note in Border.module.css. */
+
+.tutorial {
+  composes: pixel from './kit/Border.module.css';
+  position: fixed;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: var(--layer-tutorial);
+  pointer-events: auto;
+  width: 300px;
+  max-height: 72vh;
+  overflow-y: auto;
+  padding: 12px 14px 10px;
+  background: rgba(0, 0, 0, 0.92);
+  font-family: 'VT323', monospace;
+  color: #ffd24a;
+  --edge: rgba(255, 210, 74, 0.45);
+  --inner: rgba(255, 210, 74, 0.05);
+  --inner-blur: 10px;
+  --glow: rgba(255, 210, 74, 0.16);
+  --glow-blur: 20px;
+  animation: tutorialIn 0.2s ease-out;
+}
+
+/* One beat of applause when a chapter advanced because the player did the
+   thing, so that case does not look identical to clicking Next. */
+.tutorialAdvanced {
+  animation: tutorialAdvanced 0.45s ease-out;
+}
+
+.tutorialHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.tutorialCount {
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 210, 74, 0.6);
+}
+
+.tutorialClose {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  line-height: 1;
+  color: rgba(255, 210, 74, 0.55);
+}
+
+.tutorialClose:hover {
+  color: #ffd24a;
+  text-shadow: 0 0 6px rgba(255, 210, 74, 0.6);
+}
+
+/* The story's own heading, above the practical one. */
+.tutorialChapter {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 210, 74, 0.55);
+}
+
+.tutorialTitle {
+  margin: 2px 0 8px;
+  font-size: 23px;
+  font-weight: normal;
+  line-height: 1.1;
+  color: #ffd24a;
+  text-shadow: 0 0 8px rgba(255, 210, 74, 0.35);
+}
+
+.tutorialBody {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  color: rgba(255, 236, 190, 0.88);
+}
+
+/* The one line of instruction, set off from the narration around it: a player
+   skimming for "what do I actually do" must be able to find it at a glance. */
+.tutorialAsk {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 6px 8px;
+  font-size: 18px;
+  line-height: 1.2;
+  color: #ffd24a;
+  background: rgba(255, 210, 74, 0.08);
+  border-left: 2px solid rgba(255, 210, 74, 0.5);
+}
+
+.tutorialAskMark {
+  animation: tutorialNudge 1.2s ease-in-out infinite;
+}
+
+.tutorialPips {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0 10px;
+}
+
+.tutorialPip {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 210, 74, 0.18);
+}
+
+.tutorialPipOn {
+  background: rgba(255, 210, 74, 0.75);
+}
+
+.tutorialFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.tutorialBtn {
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  line-height: 1;
+  color: rgba(255, 210, 74, 0.8);
+  background: rgba(255, 210, 74, 0.06);
+  border: 1px solid rgba(255, 210, 74, 0.35);
+}
+
+.tutorialBtn:hover:not(:disabled) {
+  color: #000;
+  background: #ffd24a;
+}
+
+.tutorialBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tutorialBtnGo {
+  color: #ffd24a;
+  border-color: rgba(255, 210, 74, 0.7);
+}
+
+@keyframes tutorialIn {
+  from { opacity: 0; transform: translate(-8px, -50%); }
+  to { opacity: 1; transform: translate(0, -50%); }
+}
+
+/* Flashes the frame without moving the card -- a nudge of the border colour,
+   since the transform is already spoken for by the vertical centering. */
+@keyframes tutorialAdvanced {
+  0% { --edge: rgba(255, 210, 74, 1); --glow: rgba(255, 210, 74, 0.5); }
+  100% { --edge: rgba(255, 210, 74, 0.45); --glow: rgba(255, 210, 74, 0.16); }
+}
+
+@keyframes tutorialNudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+
+/* Short windows give up height, never the centering -- see the header note.
+   72vh already clears the top-left readouts at every size the game is
+   playable at; this only tightens it further when there is genuinely no room,
+   and the card scrolls inside whatever it is given. */
+@media (max-height: 620px) {
+  .tutorial {
+    max-height: 82vh;
+    font-size: 15px;
+  }
+}

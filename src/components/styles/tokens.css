@@ -30,6 +30,12 @@
     --layer-hud: 100;            /* the permanent chrome: bars, palette, perf */
     --layer-modal: 200;          /* modal backdrop + the surface it centers */
     --layer-world-hint: 250;     /* first-run labels pinned to live organisms */
+    /* Above the modal layer on purpose, and the one thing that is: the
+       tutorial asks the player to open the evolution window and the worlds
+       picker, so it has to stay readable over the surface it just sent them
+       to. It never covers one -- it is a card down the left edge, clear of
+       the palette, the toolbar and the event log. */
+    --layer-tutorial: 260;       /* the guided walkthrough card */
 
     /* CRT palette: matrix green for data, cyan accent for chrome (concept art) */
     --crt-green: #00FF41;

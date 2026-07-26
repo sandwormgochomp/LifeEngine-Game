@@ -11,7 +11,9 @@ const test = base.test.extend({
     // zero-tolerance visual snapshots don't flake on drifting motes.
     // ?firstrun=off keeps the blank origin world: test contexts are always
     // fresh, so without it every test would open on the first-run demo world.
-    await page.goto('/?floaties=static&firstrun=off');
+    // ?tutorial=off for the same reason -- the walkthrough auto-opens on a
+    // fresh profile and its card would sit over the left of every screenshot.
+    await page.goto('/?floaties=static&firstrun=off&tutorial=off');
     await page.waitForSelector('div[data-engine-ready="true"]');
     await use(page);
   },
