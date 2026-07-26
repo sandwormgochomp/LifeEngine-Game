@@ -92,6 +92,45 @@ test.describe('Explosions', () => {
     expect((await blastState(page)).blasts).toBe(0);
   });
 
+  /* The dish glass is the world's boundary, not a wall inside it, and every
+     other force in the game already knows that: a projectile stops on it
+     without damaging it, a killer cell returns off it, Clear Walls refuses to
+     clear it. detonate() was the one that did not -- an invincible wall is
+     unowned and is not `wall`, so it fell through to the branch that burns
+     whatever nobody owns, became an explosion cell, and reverted to empty three
+     ticks later. A charge going off near the rim left a permanent hole. */
+  test('a blast leaves the petri dish glass alone', async ({ page }) => {
+    const { col, row } = await dropBomb(page);
+
+    // Stamp a cell of the dish's own glass two cells from the charge, which is
+    // inside the default blast radius of 2. The state is taken off the real
+    // rim rather than named, since the tests have no handle on CellStates.
+    const before = await page.evaluate(([col, row]) => {
+      const env = window.engine.env;
+      const glass = env.grid_map.stateAt(0, 0); // the dish's outer void
+      env.changeCell(col + 2, row, glass, null);
+      return {
+        corner: glass.name,
+        target: env.grid_map.stateAt(col + 2, row).name,
+      };
+    }, [col, row]);
+    expect(before.corner, 'the origin world is a petri dish').toBe('invincible_wall');
+    expect(before.target).toBe('invincible_wall');
+
+    await page.evaluate(() => window.engine.env.organisms[0].die());
+    const fuse = (await blastState(page)).fuse;
+    for (let i = 0; i < fuse; i++) await tick(page);
+
+    // The charge really did go off -- otherwise the assertion below passes for
+    // the wrong reason.
+    expect((await blastState(page)).explosion_cells).toBeGreaterThan(0);
+    expect(
+      await page.evaluate(([col, row]) =>
+        window.engine.env.grid_map.stateAt(col + 2, row).name, [col, row]),
+      'the glass is still standing where the fireball washed over it',
+    ).toBe('invincible_wall');
+  });
+
   test('a blast harms what is standing in it when it lands, not when it is armed', async ({ page }) => {
     const { col, row } = await dropBomb(page);
     // A second plain bystander, this one two cells away: inside the default
