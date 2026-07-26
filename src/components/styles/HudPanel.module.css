@@ -23,7 +23,7 @@
   bottom: 112px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 99;
+  z-index: var(--layer-popover);
   pointer-events: auto;
   max-width: 520px;
   width: 90vw;

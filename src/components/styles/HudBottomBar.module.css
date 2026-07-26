@@ -3,9 +3,9 @@
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-  /* below .modalBackdrop (200): the toolbar must never cover modal content,
+  /* below the modal backdrop: the toolbar must never cover modal content,
      and clicking through the backdrop closes the modal anyway */
-  z-index: 100;
+  z-index: var(--layer-hud);
   /* The container spans the width of its widest child; keep the empty parts
      click-transparent so it can't shadow the editor dock's cell rail. */
   pointer-events: none;

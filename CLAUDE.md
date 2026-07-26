@@ -10,7 +10,9 @@ importing another component's module.
 
 The kit today: `Surface` (modal/panel chrome), `Picker` (choose-one card grids),
 `Control` (labelled setting rows), `Bar` (top-corner readout strips), `Border`
-(the four-offset pixel frame). `tokens.css` holds the palette; `global.css` holds
+(the four-offset pixel frame). `tokens.css` holds the palette and the
+`--layer-*` stacking scale every fixed overlay names its z-index from — passive
+output (the event log) sits under anything the player can work in; `global.css` holds
 the page reset, the canvas stack, and the two places the app renders HTML it does
 not own (native range inputs, uPlot's legend).
 

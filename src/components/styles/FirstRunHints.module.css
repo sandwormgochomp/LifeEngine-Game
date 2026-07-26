@@ -5,7 +5,7 @@
    the interface talking, not the world's own event log. */
 .worldHint {
   position: fixed;
-  z-index: 250;
+  z-index: var(--layer-world-hint);
   /* Mounts unpositioned; the per-frame positioner reveals it in place */
   visibility: hidden;
   transform: translate(0, -50%);
