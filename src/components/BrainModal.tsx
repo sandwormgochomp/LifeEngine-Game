@@ -14,7 +14,23 @@ interface BrainModalProps {
 }
 
 // Cell types an eye can observe and therefore react to
-const OBSERVABLE: CellName[] = ['food', 'wall', ...CellStates.living.map(c => c.name)];
+/* What an organism can be given a reaction to. Both wall types are here: the
+   terrain palette paints two of them (Wall and Glass), an eye reports whichever
+   one its ray lands on, and Brain.decide looks the weight up by state name --
+   so the simulation has always been able to tell them apart. Only this list
+   could not, which left the Glass tool painting something no creature could be
+   taught to avoid. */
+const OBSERVABLE: CellName[] = ['food', 'wall', 'invincible_wall', ...CellStates.living.map(c => c.name)];
+
+/* Row labels, for the observables whose state name is not what the player
+   calls them. `invincible_wall` is "glass" on the tool that paints it and in
+   the dish rim it builds, and a row spelling out the internal name would read
+   as a third kind of wall rather than the one they just used. The slider id
+   and `data-cell` stay the state name -- that is the key into the decision
+   map, and what the tests address. */
+const OBSERVABLE_LABEL: Partial<Record<CellName, string>> = {
+  invincible_wall: 'glass',
+};
 
 /* `met` asks the anatomy whether the action can do anything at all, and `lack`
    is what the option says when it cannot. A predicate rather than the flag name
@@ -232,7 +248,7 @@ const BrainModal: React.FC<BrainModalProps> = ({ engine, onClose }) => {
           {OBSERVABLE.map(name => (
             <div key={name} className={`brain-row ${styles.brainRow}`} data-cell={name}>
               <span className={styles.brainSwatch} style={{ backgroundColor: cellColor(name) }}></span>
-              <span className={styles.brainCellName}>{name}</span>
+              <span className={styles.brainCellName}>{OBSERVABLE_LABEL[name] ?? name}</span>
               <PixelSlider
                 className={styles.brainSlider}
                 id={`weight-${name}`}

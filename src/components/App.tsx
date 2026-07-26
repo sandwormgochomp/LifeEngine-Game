@@ -8,6 +8,7 @@ import Perf from '../Stats/Perf';
 import { generateOrganismName } from '../Utils/NameGenerator';
 import type { CellCountMap } from '../Stats/Species';
 import Modes from '../Controllers/ControlModes';
+import CellStates from '../Organism/Cell/CellStates';
 import Notifier from '../Utils/Notifier';
 import * as FirstRun from '../Utils/FirstRun';
 import * as TutorialFlag from '../Utils/Tutorial';
@@ -81,6 +82,12 @@ declare global {
     // so the narration suite can drive sample()/reset() and spy on the toasts.
     narrator?: typeof Narrator;
     notifier?: typeof Notifier;
+    /* The cell-state registry. A module singleton like the two above, exposed
+       for the same reason: a test that paints terrain or reads what an eye saw
+       needs the actual CellState object, and the only other way to get one is
+       to find a cell of that type already on the grid -- which makes the test
+       depend on what the world happened to generate. */
+    cellStates?: typeof CellStates;
   }
 }
 
@@ -147,6 +154,7 @@ const App: React.FC = () => {
     window.hyperparams = Hyperparams;
     window.narrator = Narrator;
     window.notifier = Notifier;
+    window.cellStates = CellStates;
     newEngine.start();
     setEngine(newEngine);
 

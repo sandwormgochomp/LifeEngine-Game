@@ -121,6 +121,57 @@ Notifier / FossilRecord / Floaties infrastructure.
       wall-clock timings 10x to fit the 15s test budget; the tick budget is
       bought with `setSpeedIndex` instead). The outlives-its-anchor test was
       checked against a deliberately broken re-anchor and fails on it.
+- [x] ~~**The shooter cell did nothing when you placed it.**~~ — fixed, by
+      giving it a `performFunction` instead of the no-op it carried. It was the
+      only cell type in the game that needed setup before it did anything: a
+      mover, an eye and a hand-authored `shoot` brain action, none of which the
+      interface mentioned while the palette and the README both promised "fires
+      at targets the organism sees". Verified before changing anything that the
+      brain-driven path *did* work (3 projectiles, target killed) — the cell was
+      not broken, it was inert.
+      The evolutionary argument is the one that settled it: a cell that confers
+      no benefit unless a human edits its brain can never be selected *for*, so
+      a mutation growing one is pure upkeep and shooters could only ever be bred
+      out of a world left running. In a simulation about natural selection that
+      is a defect rather than a design.
+      Each shooter cell now scans the four cardinal directions and fires down
+      the first with a target, which also settles the bestiary note that "only
+      `has_shooter` matters, so extra shooter cells buy nothing" — they now buy
+      shots. `Organism.shoot()` grew an optional direction so a stationary
+      turret can cover all four sides *without* its guns steering its movement
+      heading (a non-mover never changes `direction`, so firing along it would
+      have covered exactly one side). The scan matches `EyeCell.look` exactly —
+      same range, same night clamp, same chameleon skip — because the cell is
+      answering "can the organism see a target that way" and it would be a lie
+      for it to see further, or through different things, than its eyes. It
+      holds fire on its own body plan, `KillerCell`'s existing rule.
+      Guarded on `food_collected >= SHOT_COST` *before* the scan, the same shape
+      as MouthCell's food_adj early-out: a body that cannot pay does not pay to
+      search. The `shoot` brain action is untouched and still fires along the
+      heading, which is what the Voidlance predator relies on.
+      Two traps in writing `tests/shooter.spec.js`, both of which produced
+      contradictory results first time: a well-fed 2-cell turret **breeds every
+      tick** and its children ring it — all same-species, all unshootable, so
+      the ray never reaches the target (hence a 5-cell body held at 4 food, one
+      short of breeding); and the ray starts at the *shooter cell*, so a shooter
+      placed off-centre fires down a different row than targets are placed on.
+      Verified to fail (3 of 7) against the restored no-op.
+- [x] ~~**Only one of the two wall types could be reacted to.**~~ — fixed. The
+      terrain palette paints Wall and Glass, `EyeCell.look` reports whichever
+      the ray lands on, and `Brain.decide` looks the weight up by state name —
+      so the simulation could always tell them apart. `BrainModal`'s
+      `OBSERVABLE` list was the only thing that could not, which left the Glass
+      tool painting something no creature could be taught to avoid. One entry,
+      plus an `OBSERVABLE_LABEL` map so the row reads "glass" (what the tool
+      that paints it is called) while the slider id and `data-cell` stay the
+      state name, which is the key into the decision map. `CellStates` is now on
+      `window` alongside the other singletons, so a test can paint terrain with
+      the real state object instead of hunting the grid for one.
+      `tests/wall_reactions.spec.js` drives a real eye and a real decision: the
+      two walls take independent weights, a negative weight on glass turns the
+      organism away from it, and a `wall` weight says nothing about glass. The
+      three simulation tests pass with or without the fix — correctly, since the
+      engine never had the bug — and the two editor tests fail without it.
 - [x] ~~**Brain cell: the first cell whose effect is a quantity.**~~ — done.
       `src/Organism/Cell/BodyCells/BrainCell.ts` has no `performFunction` at
       all; it is counted, not run. Ten in one body (`WALL_BRAIN_CELLS`) is what
