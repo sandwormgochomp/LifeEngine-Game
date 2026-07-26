@@ -40,6 +40,16 @@
   animation: panelSlideUp 0.18s ease-out;
 }
 
+/* The wide variant, for a panel whose content is a picture: the lineage tree
+   spends width on its time axis, and at 520px it has room for a couple of
+   thousand ticks before everything overlaps. Declared after .panelOverlay so it
+   wins the max-width tie inside this file; it composes nothing from the kit, so
+   the emission-order trap does not apply. */
+.panelOverlayWide {
+  max-width: min(1120px, 94vw);
+  width: 94vw;
+}
+
 @keyframes panelSlideUp {
   from {
     opacity: 0;

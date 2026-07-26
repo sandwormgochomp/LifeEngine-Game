@@ -1,0 +1,218 @@
+/* The lineage tree panel. Owned by Tabs/LineageTab.tsx.
+
+   Almost nothing here is decoration: the tree is a canvas, so this file's real
+   job is to give that canvas a frame with a definite size (a canvas with no
+   height collapses to 150px and the layout has nothing to fit to), and to
+   dress the legend, the tooltip and the footnote around it.
+
+   The frame composes kit/Border like every other bordered surface in the HUD,
+   and sets the three colours rather than redeclaring the shadow -- which is
+   also why it is immune to the emission-order trap: there is no box-shadow
+   here for the kit to win a specificity tie against. */
+
+.lineageTab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* --- legend row --- */
+
+.lineageLegend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: rgb(var(--crt-green-rgb) / 0.6);
+}
+
+.lineageCount {
+  color: var(--crt-green);
+  margin-right: auto;
+}
+
+.lineageKeyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Square, unrounded swatches: the same 1px runs the canvas draws. */
+.lineageSwatchLive,
+.lineageSwatchDead,
+.lineageSwatchFollow {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+}
+
+.lineageSwatchLive {
+  background: #00ff41;
+}
+
+.lineageSwatchDead {
+  background: rgba(0, 255, 65, 0.34);
+}
+
+/* The cyan the decoration pass tints the followed line in, so the lineage card
+   and this panel visibly name the same thing. */
+.lineageSwatchFollow {
+  background: #00d9ff;
+}
+
+.lineageReset {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  padding: 4px 7px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgb(var(--crt-green-rgb) / 0.35);
+  color: rgb(var(--crt-green-rgb) / 0.75);
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: unset;
+}
+
+.lineageReset:hover {
+  color: var(--crt-green);
+  border-color: var(--crt-green);
+  background: rgb(var(--crt-green-rgb) / 0.15);
+}
+
+/* --- the tree itself --- */
+
+.lineageBox {
+  composes: pixel from './kit/Border.module.css';
+  position: relative;
+  height: min(52vh, 460px);
+  min-height: 220px;
+  background: rgba(0, 6, 2, 0.88);
+  overflow: hidden;
+  --edge: rgb(var(--crt-green-rgb) / 0.3);
+  --inner: rgb(var(--crt-green-rgb) / 0.06);
+  --inner-blur: 14px;
+  --glow: rgb(var(--crt-green-rgb) / 0.08);
+}
+
+.lineageCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  /* The canvas owns the wheel and the drag; the panel behind it must not
+     scroll or the tree slides out from under the pointer mid-pan. */
+  touch-action: none;
+}
+
+.lineageEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: rgb(var(--crt-green-rgb) / 0.45);
+  pointer-events: none;
+}
+
+/* --- hover tooltip --- */
+
+/* Anchored to the node rather than the cursor: at a one-pixel row pitch a
+   tooltip that chases the pointer is unreadable. */
+.lineageTip {
+  position: absolute;
+  z-index: 2;
+  width: 196px;
+  padding: 6px 8px;
+  margin: 6px 0 0 6px;
+  background: rgba(0, 0, 0, 0.94);
+  outline: 1px solid rgb(var(--crt-green-rgb) / 0.4);
+  pointer-events: none;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1.15;
+  color: rgb(var(--crt-green-rgb) / 0.8);
+}
+
+.lineageTipHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.lineageTipName {
+  color: var(--crt-green);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineageTipNameFollowed {
+  color: #00d9ff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A retained ancestor with no body plan to draw: the record keeps snapshots
+   only for extinct nodes it retained on their own merit, and an extant one
+   resolves live off the fossil record -- which a renamed or replaced species
+   can miss. */
+.lineageTipUnknown {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgb(var(--crt-green-rgb) / 0.35);
+  outline: 1px solid rgb(var(--crt-green-rgb) / 0.2);
+}
+
+.lineageTipRows {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 8px;
+}
+
+.lineageTipRows span {
+  color: rgb(var(--crt-green-rgb) / 0.5);
+}
+
+.lineageTipRows b {
+  color: var(--crt-green);
+  font-weight: normal;
+  text-align: right;
+}
+
+.lineageTipHint {
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid rgb(var(--crt-green-rgb) / 0.18);
+  color: rgb(var(--crt-green-rgb) / 0.45);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* --- footnote --- */
+
+.lineageFoot {
+  margin: 0;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1.25;
+  color: rgb(var(--crt-green-rgb) / 0.45);
+}
+
+.lineageFoot b {
+  color: rgb(var(--crt-green-rgb) / 0.75);
+  font-weight: normal;
+}

@@ -20,6 +20,7 @@ const toolbarItems = [
   { id: 'tool-edit', iconClass: 'fa-flask', label: 'LAB', item: 'edit', title: 'Open the Organism Lab: design, edit, and deploy life forms' },
   { id: 'tool-rules', iconClass: 'fa-dna', label: 'EVOLUTION', item: 'rules', title: 'Tune the evolution rules (mutation, lifespan, energy)' },
   { id: 'tool-stats', iconClass: 'fa-chart-bar', label: 'STATS', item: 'stats', title: 'Population, species, and evolution charts over time' },
+  { id: 'tool-lineage', iconClass: 'fa-sitemap', label: 'LINEAGE', item: 'lineage', title: 'The species family tree: who branched off whom, and when' },
   { id: 'tool-about', iconClass: 'fa-circle-info', label: 'ABOUT', item: 'about', title: 'What the cells do, the hotkeys, and project links' },
 ];
 
