@@ -1,6 +1,7 @@
 import CellStates from "../Organism/Cell/CellStates";
 import SerializeHelper from "../Utils/SerializeHelper";
 import Species from "./Species";
+import Phylogeny from "./Phylogeny";
 import type { CellCountMap } from "./Species";
 /* Both type-only, and that is load-bearing rather than stylistic. Organism and
    WorldEnvironment each import this module for its *value* (addSpecies,
@@ -28,6 +29,9 @@ export interface SerializedFossilRecordSeries {
    the enclosing map. */
 export interface SerializedSpecies {
     name?: string;
+    /* Never written: serialize() deletes it. Declared so that delete is
+       type-checked, and so a reader knows the omission is deliberate. */
+    id?: number;
     population?: number;
     cumulative_pop?: number;
     start_tick?: number;
@@ -64,7 +68,7 @@ export interface FossilRecordType {
     init(): void;
     setEnv(env: WorldEnvironment): void;
     addSpecies(org: Organism, ancestor: Species | null): Species;
-    addSpeciesObj(species: Species): Species | undefined;
+    addSpeciesObj(species: Species, parent?: Species | null): Species | undefined;
     uniqueSpeciesName(base: string): string;
     changeSpeciesName(species: Species, new_name: string): void;
     numExtantSpecies(): number;
@@ -104,23 +108,35 @@ const FossilRecord: FossilRecordType = {
         this.setData();
     },
 
+    /* Speciation on a mutated birth -- the only edge in the tree that is not a
+       root. Everything else that mints a species (the origin organism, a
+       predator release, an editor drop, a load) goes to addSpeciesObj with no
+       parent, because it genuinely has none. */
     addSpecies: function(this: FossilRecordType, org: Organism, ancestor: Species | null): Species {
         var new_species = new Species(org.anatomy, ancestor, this.env.total_ticks);
         /* Generated names describe the body plan, so different lineages with the
            same anatomy collide. This map is keyed by name, so a collision would
            silently overwrite the earlier species -- disambiguate before insert. */
         new_species.name = this.uniqueSpeciesName(new_species.name);
-        this.extant_species[new_species.name] = new_species;
+        this.addSpeciesObj(new_species, ancestor);
         org.species = new_species;
         return new_species;
     },
 
-    addSpeciesObj: function(this: FossilRecordType, species: Species): Species | undefined {
+    /* The one place a species enters the world. addSpecies delegates here
+       rather than writing the map itself, so the ancestry record has exactly
+       one hook to sit on -- and so a future creation site cannot slip past it.
+       `parent` is the species this one mutated from, or null for a root. */
+    addSpeciesObj: function(this: FossilRecordType, species: Species, parent: Species | null = null): Species | undefined {
         if (this.extant_species[species.name]) {
             console.warn('Tried to add already existing species. Add failed.');
             return;
         }
         this.extant_species[species.name] = species;
+        /* The species' own start_tick, not env.total_ticks: loadRaw registers
+           saved species before it restores the world clock, and every other
+           caller sets start_tick from that same clock anyway. */
+        Phylogeny.record(species, parent, species.start_tick);
         return species;
     },
 
@@ -149,6 +165,9 @@ const FossilRecord: FossilRecordType = {
         delete this.extant_species[species.name];
         species.name = new_name;
         this.extant_species[new_name] = species;
+        // The ancestry record keys on id but displays the name, so a rename has
+        // to reach it or the tree keeps showing the old one forever.
+        Phylogeny.rename(species.id, new_name);
     },
 
     numExtantSpecies(this: FossilRecordType): number {return Object.values(this.extant_species).length},
@@ -161,6 +180,12 @@ const FossilRecord: FossilRecordType = {
             return false;
         }
         species.end_tick = this.env.total_ticks;
+        /* Before the ancestor pointer goes, and it must: the record is the only
+           thing that outlives it. The anatomy is handed over here rather than
+           held all along because Phylogeny discards the overwhelming majority
+           of nodes at this exact moment -- it snapshots only if this one
+           survives, so an ephemeral mutant's extinction allocates nothing. */
+        Phylogeny.onExtinct(species.id, species.end_tick, species.anatomy?.cells);
         species.ancestor = undefined; // garbage collect ancestors
         delete this.extant_species[species.name];
         if (species.cumulative_pop >= this.min_discard) {
@@ -184,6 +209,9 @@ const FossilRecord: FossilRecordType = {
             species.extinct = false;
             this.extant_species[species.name] = species;
             delete this.extinct_species[species.name];
+            // Its node may have been pruned when it died; re-seat it as a root
+            // rather than let a live species be missing from the record.
+            Phylogeny.resurrect(species, this.env.total_ticks);
         }
     },
 
@@ -275,6 +303,11 @@ const FossilRecord: FossilRecordType = {
         // accept string properties too.
         this.extant_species = {};
         this.extinct_species = {};
+        /* Shares this lifecycle exactly. Both WorldEnvironment.reset() and
+           WorldEnvironment.loadRaw() wipe the record through here, so neither
+           needs its own call -- and an ancestry surviving a world wipe would
+           attach the new world's roots to the old world's tree. */
+        Phylogeny.clear();
         this.setData();
     },
 
@@ -295,6 +328,13 @@ const FossilRecord: FossilRecordType = {
         for (let s of Object.values(this.extant_species)) {
             species[s.name] = SerializeHelper.copyNonObjects(s as unknown as Record<string, unknown>) as SerializedSpecies;
             delete species[s.name].name; // the name will be used as the key, so remove it from the value
+            /* And the id, for a sharper reason: it is only unique within the
+               session that minted it, so loading it back would let a saved
+               species collide with a live one and graft two lineages together.
+               loadRaw's `new Species(...)` already assigned a fresh one --
+               leaving this in would let overwriteNonObjects clobber it. See the
+               NOT SERIALIZED note in Phylogeny.ts. */
+            delete species[s.name].id;
         }
         record.species = species;
         return record;
