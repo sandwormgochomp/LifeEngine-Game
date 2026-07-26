@@ -670,6 +670,16 @@ class Organism {
         if (this.anatomy.is_mover && this.ignore_brain_for == 0 && this.anatomy.has_eyes) {
             this.brain.updateState();
             changed_dir = this.brain.decide();
+            /* decide() is the one call in this method that can kill its own
+               organism: an `explode` action runs die() outright (Brain.decide),
+               which is how a Cinderpod detonates. Without this guard the corpse
+               fell straight through to reproduce() below and bred -- calling
+               addPop() on the species die() had just fossilized, which left a
+               species flagged extinct, absent from FossilRecord.extant_species,
+               and carrying a living member. It also let the first cell in the
+               loop further down run its function post mortem; that loop's own
+               guard is checked after the call, not before it. */
+            if (!this.living) return false;
         }
 
         if (this.hibernating) {

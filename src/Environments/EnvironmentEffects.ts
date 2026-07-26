@@ -52,6 +52,15 @@ export function detonate(env: EffectsEnv, b: Blast): void {
             const target_r = b.row + r_offset;
             const idx = env.grid_map.indexAt(target_c, target_r);
             if (idx < 0) continue;
+            /* The petri dish's glass is the world's boundary, not a wall inside
+               it, and everything else already treats it that way: stepProjectiles
+               stops a shot on it without damaging it, KillerCell.killNeighbor
+               returns off it, and clearWalls refuses to clear it. Nothing here
+               did -- an invincible wall is unowned and is not `wall`, so it fell
+               through to the "burn what nobody owns" branch below, became an
+               explosion cell, and reverted to empty three ticks later. A charge
+               going off near the rim punched a permanent hole in the world. */
+            if (env.grid_map.stateOf(idx) === CellStates.invincible_wall) continue;
             const owner = env.grid_map.ownerOf(idx);
 
             // If it is another organism cell, harm it
