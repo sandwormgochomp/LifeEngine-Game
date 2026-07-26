@@ -8,6 +8,29 @@
    which is most of what the HUD is made of. */
 
 :root {
+    /* Stacking order. Every fixed overlay in the HUD names its layer here
+       instead of inventing a number, so the whole stack reads top to bottom in
+       one place and "does this go over that?" is answered by the list rather
+       than by escalating z-indexes. Ascending; the gaps are room to slot
+       something in without renumbering.
+
+       The rule the order encodes: passive output sits under anything you can
+       work in. The event log reports what the world did — it must never come
+       between the player and a surface they opened, so it lives below the dock,
+       the panels and the chrome, and the modal backdrop dims it like the rest
+       of the world.
+
+       Two literals stay outside the scale, both in App.module.css: the world
+       canvas at 0, which is the base of the stack rather than a layer over it,
+       and the headless notice at 90, which lands between the log and the dock. */
+    --layer-world-overlay: 5;    /* microscope tint/blur, over the canvas */
+    --layer-notifications: 80;   /* the rolling event log */
+    --layer-dock: 98;            /* the organism editor and its cell rail */
+    --layer-popover: 99;         /* transient popouts anchored to a surface */
+    --layer-hud: 100;            /* the permanent chrome: bars, palette, perf */
+    --layer-modal: 200;          /* modal backdrop + the surface it centers */
+    --layer-world-hint: 250;     /* first-run labels pinned to live organisms */
+
     /* CRT palette: matrix green for data, cyan accent for chrome (concept art) */
     --crt-green: #00FF41;
     --crt-green-rgb: 0 255 65;

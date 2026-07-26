@@ -1,4 +1,4 @@
-const { test, expect, pauseEngine } = require('./helpers/fixtures');
+const { test, expect, openEditor, pauseEngine } = require('./helpers/fixtures');
 
 /* Clickable notifications: a toast that names something is a way to get to it.
    The engine attaches a NotificationFocus describing *what to look for*, and
@@ -214,5 +214,55 @@ test.describe('The idle clear and the cursor', () => {
     // Leaving re-arms it, and it goes on its own
     await page.mouse.move(10, 10);
     await expect(log).toBeHidden({ timeout: 9000 });
+  });
+});
+
+/* The log shares the lower-right corner with the editor dock, and a busy world
+   fills it: five lines reach a good way up the dock's side. It used to win that
+   overlap, papering narration over the surface the player was working in and --
+   once the lines became buttons -- swallowing the clicks meant for it. It is
+   passive output, so it gives way instead (see the layer scale in tokens.css).
+
+   Hit-tested rather than read off a z-index, because what matters is which one
+   the pointer reaches. Actionable rows are the only part of the log that takes
+   pointer events at all, which is also the only part that could steal a click,
+   so the toasts here all carry a focus. */
+test.describe('The log under the surfaces it shares a corner with', () => {
+  test('The editor dock covers the log where the two overlap', async ({ page }) => {
+    await pauseEngine(page);
+    await openEditor(page);
+    await expect(page.getByTestId('editor-dock')).toBeVisible();
+
+    // A full log (MAX_ENTRIES) is what grows tall enough to reach the dock
+    await page.evaluate(() => {
+      for (let i = 0; i < 5; i++) {
+        window.notifier.notify(`Something happened out there (${i})`, {
+          focus: { kind: 'panel', panel: 'stats' },
+        });
+      }
+    });
+    const log = page.getByTestId('hud-notifications');
+    await expect(log.locator('button')).toHaveCount(5);
+
+    const [logBox, dockBox] = await Promise.all([
+      log.boundingBox(),
+      page.getByTestId('editor-dock').boundingBox(),
+    ]);
+    const left = Math.max(logBox.x, dockBox.x);
+    const right = Math.min(logBox.x + logBox.width, dockBox.x + dockBox.width);
+    const top = Math.max(logBox.y, dockBox.y);
+    const bottom = Math.min(logBox.y + logBox.height, dockBox.y + dockBox.height);
+    // The premise of the test: without an overlap it would prove nothing
+    expect(right - left).toBeGreaterThan(20);
+    expect(bottom - top).toBeGreaterThan(20);
+
+    const hit = await page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y);
+      return {
+        dock: !!el?.closest('[data-testid="editor-dock"]'),
+        log: !!el?.closest('[data-testid="hud-notifications"]'),
+      };
+    }, { x: (left + right) / 2, y: (top + bottom) / 2 });
+    expect(hit).toEqual({ dock: true, log: false });
   });
 });

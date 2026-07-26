@@ -19,11 +19,11 @@
    why it currently exits clean. */
 
 /* Dims the world and centers the surface; also the click target that closes
-   the modal, so it must stay above the bottom toolbar (z-index 100). */
+   the modal, so it must stay above the HUD chrome it dims. */
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--layer-modal);
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(1px);
   display: flex;

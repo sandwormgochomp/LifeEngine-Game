@@ -9,7 +9,7 @@
   position: fixed;
   top: 60px;
   right: 12px;
-  z-index: 100;
+  z-index: var(--layer-hud);
   pointer-events: auto;
   background: rgba(0, 0, 0, 0.82);
   padding: 8px 12px 10px;
