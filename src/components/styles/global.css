@@ -31,11 +31,15 @@ body{
     position: relative;
 }
 
-/* Organism glow and decoration overlays: sit exactly over the world canvas
-   and receive the same pan/zoom transform from the controller; never
-   intercept clicks */
+/* The overlay layers: organism glow, decorations, and the cursor/brush
+   reticle. Each is pinned over the world canvas and viewport-sized, with the
+   camera baked into what it paints (see WorldEnvironment), and none of them
+   ever intercepts clicks -- the world canvas underneath is what handles the
+   pointer. The cursor layer comes last in the DOM, so the brush and the clone
+   ghost draw over the life forms rather than into them. */
 #env-glow-canvas,
-#env-deco-canvas {
+#env-deco-canvas,
+#env-cursor-canvas {
     position: absolute;
     top: 0;
     left: 0;

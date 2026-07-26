@@ -117,6 +117,59 @@ test.describe('World tools palette', () => {
     expect(after.wall).toBe('empty');
   });
 
+  /* The brush reticle used to be painted straight onto the world canvas and
+     un-painted the next frame by re-rendering every cell it had covered. It
+     now has its own layer, so the life-form canvas must come out of a hover
+     bit-for-bit unchanged. */
+  test('The brush reticle paints its own layer, never the life-form canvas', async ({ page }) => {
+    await page.locator('#brush-slider').fill('6');
+    await page.locator('#wall').click();
+
+    // Open water, well clear of the origin organism at the middle of the world:
+    // a hovered organism highlights, which is a legitimate world-canvas write.
+    const pos = { x: 300, y: 200 };
+    /* Both layers are probed 20px off the pointer: inside the brush disc (6
+       cells of 5px), but away from the single hovered cell, which the
+       renderer's own hover highlight still paints onto the world canvas --
+       a separate mechanism from this overlay. */
+    const probe = { x: pos.x - 20, y: pos.y };
+
+    // Checksum of the world canvas where the reticle is about to land
+    const worldSample = () => page.evaluate(p => {
+      const world = document.getElementById('env-canvas');
+      const cr = world.getBoundingClientRect();
+      const x = Math.round(p.x * world.width / cr.width);
+      const y = Math.round(p.y * world.height / cr.height);
+      const data = world.getContext('2d').getImageData(x - 8, y - 8, 16, 16).data;
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum = (sum * 31 + data[i]) | 0;
+      return sum;
+    }, probe);
+
+    const before = await worldSample();
+    await page.locator('#env-canvas').hover({ position: pos });
+    // Two frames: the overlay is drawn by the render loop, not the event
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+
+    // The reticle is on its own layer...
+    const painted = await page.evaluate(p => {
+      const world = document.getElementById('env-canvas');
+      const cursor = document.getElementById('env-cursor-canvas');
+      const cr = world.getBoundingClientRect();
+      const ur = cursor.getBoundingClientRect();
+      const x = Math.round(cr.left + p.x - ur.left);
+      const y = Math.round(cr.top + p.y - ur.top);
+      const data = cursor.getContext('2d').getImageData(x - 8, y - 8, 16, 16).data;
+      let lit = 0;
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) lit++;
+      return lit;
+    }, probe);
+    expect(painted).toBeGreaterThan(0);
+
+    // ...and the layer underneath it never saw it.
+    expect(await worldSample()).toBe(before);
+  });
+
   test('Right-click cancels every world tool', async ({ page }) => {
     const canvas = page.locator('#env-canvas');
     const tools = [

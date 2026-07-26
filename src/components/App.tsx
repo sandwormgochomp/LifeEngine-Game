@@ -103,6 +103,7 @@ const App: React.FC = () => {
   const envCanvasRef = useRef<HTMLCanvasElement>(null);
   const decoCanvasRef = useRef<HTMLCanvasElement>(null);
   const glowCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     // Refs are populated by the time effects run, so the engine can take the
@@ -112,6 +113,7 @@ const App: React.FC = () => {
       env_container: envRef.current!,
       glow_canvas: glowCanvasRef.current!,
       deco_canvas: decoCanvasRef.current!,
+      cursor_canvas: cursorCanvasRef.current!,
     });
     window.engine = newEngine;
     window.fossilRecord = FossilRecord;
@@ -341,6 +343,10 @@ const App: React.FC = () => {
         <canvas id="env-canvas" ref={envCanvasRef} style={nightStyle}></canvas>
         <canvas id="env-deco-canvas" ref={decoCanvasRef} style={nightStyle}></canvas>
         <canvas id="env-glow-canvas" ref={glowCanvasRef} style={nightStyle}></canvas>
+        {/* Last in the stack: the pointer's own layer draws over the world,
+            never into it. Dimmed with the rest at night, as it was when it
+            shared the world canvas. */}
+        <canvas id="env-cursor-canvas" ref={cursorCanvasRef} style={nightStyle}></canvas>
       </div>
       <FrostOverlay engine={engine} />
       <RadiationSmoke engine={engine} />

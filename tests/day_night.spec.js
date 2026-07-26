@@ -28,7 +28,7 @@ test.describe('Day/Night', () => {
 
   test('every canvas layer dims and undims together', async ({ page }) => {
     await pauseEngine(page);
-    const layers = ['#env-canvas', '#env-deco-canvas', '#env-glow-canvas'];
+    const layers = ['#env-canvas', '#env-deco-canvas', '#env-glow-canvas', '#env-cursor-canvas'];
 
     await toggle(page).click();
     for (const sel of layers) {

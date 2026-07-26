@@ -13,6 +13,7 @@ export interface EngineCanvases {
     env_container: HTMLElement | null;
     glow_canvas: HTMLCanvasElement | null;
     deco_canvas: HTMLCanvasElement | null;
+    cursor_canvas: HTMLCanvasElement | null;
 }
 
 /* Notified on every emitChange(); the React HUD subscribes with a re-render. */
@@ -111,13 +112,15 @@ class Engine {
     // env_canvas/env_container: the world canvas and its containing element.
     // glow_canvas: overlay the world environment composites organism glow onto.
     // deco_canvas: overlay for organism decorations that overflow their cells.
+    // cursor_canvas: overlay the brush/clone-ghost footprint is drawn on, so
+    // the pointer never paints into the life-form layer.
     // The world canvas is always mounted; the editor canvas is attached later
     // via organism_editor.bindCanvas when its panel mounts.
-    constructor({env_canvas, env_container, glow_canvas, deco_canvas}: EngineCanvases){
+    constructor({env_canvas, env_container, glow_canvas, deco_canvas, cursor_canvas}: EngineCanvases){
         // Constructed stopped; App starts the loops once it has the engine.
         this.speed_index = 0;
         this.resume_index = DEFAULT_SPEED_INDEX;
-        this.env = new WorldEnvironment(5, env_canvas, env_container, glow_canvas, deco_canvas);
+        this.env = new WorldEnvironment(5, env_canvas, env_container, glow_canvas, deco_canvas, cursor_canvas);
         this.env.engine = this;
         this.organism_editor = new OrganismEditor();
         this.organism_editor.engine = this;

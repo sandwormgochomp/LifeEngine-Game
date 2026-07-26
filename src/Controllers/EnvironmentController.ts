@@ -66,6 +66,10 @@ interface EnvControllerEnvLike {
     /* Pan/zoom notification: the env owns the viewport-sized overlay
        canvases and re-aims their camera when the view moves. */
     onCameraMoved(): void;
+    /* The cursor overlay's own layer: cleared and set to world coordinates
+       by the env, null when there is nothing to paint on (no canvas mounted,
+       headless, or no camera yet). */
+    cursorLayer(): CanvasRenderingContext2D | null;
     /* Set by Engine after it builds the environment, so absent for the window
        between construction and that assignment -- performModeAction() guards on
        it explicitly. */
@@ -131,9 +135,6 @@ class EnvironmentController extends CanvasController{
     scale: number;
     pan_x: number;
     pan_y: number;
-    /* Cells painted by the cursor overlay on the previous frame, re-rendered at
-       the start of the next one so the overlay does not smear. */
-    overlay_cells: Set<number>;
     /* Assigned by setCanvas(), which the base constructor always calls, hence
        the definite assignment assertion rather than `| undefined`. */
     pointer_inside!: boolean;
@@ -147,7 +148,6 @@ class EnvironmentController extends CanvasController{
         this.scale = 1;
         this.pan_x = 0;
         this.pan_y = 0;
-        this.overlay_cells = new Set();
         this.defineZoomControls();
     }
 
@@ -466,40 +466,34 @@ class EnvironmentController extends CanvasController{
 
     // Immediate-mode cursor feedback, drawn every frame after the cell pass:
     // brush modes show their exact footprint, clone mode shows a ghost of the
-    // organism (red-tinted when the spot is blocked). Cells painted over are
-    // re-rendered at the start of the next pass, so nothing smears.
+    // organism (red-tinted when the spot is blocked). It paints its own layer
+    // (WorldEnvironment.cursorLayer), which the env clears before handing it
+    // over -- so nothing here touches the cells the life forms live on, and
+    // nothing has to be repainted behind the pointer.
     renderCursorOverlay(): void {
-        var renderer = this.env.renderer;
-        if (!renderer.ctx || WorldConfig.headless) return;
+        if (WorldConfig.headless) return;
         this.applyCursor();
-        for (var idx of this.overlay_cells)
-            renderer.renderCell(idx);
-        this.overlay_cells.clear();
+        var ctx = this.env.cursorLayer();
+        if (!ctx) return;
         if (!this.pointer_inside || this.mouse_c == null)
             return;
 
-        var ctx = renderer.ctx;
-        var cs = renderer.cell_size;
+        var cs = this.env.renderer.cell_size;
 
         if (BRUSH_MODES.includes(this.mode)) {
             // Destructive brushes ring in red; Meteor reads as a blast reticle.
             var is_kill = this.mode === Modes.ClickKill || this.mode === Modes.MeteorStrike || this.mode === Modes.Eraser;
             var b = WorldConfig.brush_size;
-            // Fill the disc (matches Neighbors.inRange), but sweep one cell wider
-            // for the clear set: the ring outline's line width and anti-aliasing
-            // spill into cells just outside the disc, and every touched cell must
-            // be repainted next frame or the ring smears a trail as the cursor moves.
+            // Fill the disc, matching Neighbors.inRange -- which is the
+            // footprint the tools actually stamp.
             var fill_limit = (b + 0.5) * (b + 0.5);
-            var clear_limit = (b + 1.5) * (b + 1.5);
             ctx.fillStyle = is_kill ? 'rgba(255, 60, 60, 0.22)' : 'rgba(0, 255, 65, 0.14)';
-            for (var i = -(b + 1); i <= b + 1; i++) {
-                for (var j = -(b + 1); j <= b + 1; j++) {
-                    var d = i * i + j * j;
-                    if (d > clear_limit) continue;
+            for (var i = -b; i <= b; i++) {
+                for (var j = -b; j <= b; j++) {
+                    if (i * i + j * j > fill_limit) continue;
                     var brush_idx = this.env.grid_map.indexAt(this.mouse_c + i, this.mouse_r + j);
                     if (brush_idx < 0) continue;
-                    if (d <= fill_limit) ctx.fillRect(this.env.grid_map.xOf(brush_idx), this.env.grid_map.yOf(brush_idx), cs, cs);
-                    this.overlay_cells.add(brush_idx);
+                    ctx.fillRect(this.env.grid_map.xOf(brush_idx), this.env.grid_map.yOf(brush_idx), cs, cs);
                 }
             }
             ctx.strokeStyle = is_kill ? 'rgba(255, 60, 60, 0.7)' : 'rgba(0, 255, 65, 0.55)';
@@ -534,7 +528,6 @@ class EnvironmentController extends CanvasController{
                     ctx.fillStyle = 'rgba(255, 60, 60, 0.6)';
                     ctx.fillRect(tx, ty, cs, cs);
                 }
-                this.overlay_cells.add(target);
             }
             ctx.globalAlpha = 1;
         }

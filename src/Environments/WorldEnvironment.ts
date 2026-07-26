@@ -270,6 +270,12 @@ class WorldEnvironment extends Environment{
     glow_scratch_ctx: CanvasRenderingContext2D;
     deco_canvas: HTMLCanvasElement | null;
     deco_ctx: CanvasRenderingContext2D | null;
+    /* The cursor/brush layer. Owned here like the other two overlays -- the
+       env sizes them and knows the camera -- but painted by the controller,
+       which is the only thing that knows what the armed tool looks like.
+       See cursorLayer() for why it needs none of the scheduling the others do. */
+    cursor_canvas: HTMLCanvasElement | null;
+    cursor_ctx: CanvasRenderingContext2D | null;
     controller: EnvironmentController;
     num_rows: number;
     num_cols: number;
@@ -362,7 +368,7 @@ class WorldEnvironment extends Environment{
        empty index as fresh. An object is skipped wholesale. */
     pheromone_index: { tick: number; bucket: number; map: Map<number, Organism[]> };
 
-    constructor(cell_size: number, canvas: HTMLCanvasElement | null, container: HTMLElement | null, glow_canvas: HTMLCanvasElement | null = null, deco_canvas: HTMLCanvasElement | null = null) {
+    constructor(cell_size: number, canvas: HTMLCanvasElement | null, container: HTMLElement | null, glow_canvas: HTMLCanvasElement | null = null, deco_canvas: HTMLCanvasElement | null = null, cursor_canvas: HTMLCanvasElement | null = null) {
         super();
         this.container = container;
         this.renderer = new Renderer(canvas, container, cell_size);
@@ -382,6 +388,11 @@ class WorldEnvironment extends Environment{
         // canvas would clip and smear them.
         this.deco_canvas = deco_canvas;
         this.deco_ctx = deco_canvas ? deco_canvas.getContext('2d') : null;
+        // The cursor overlay is the player's own pointer, not part of the
+        // world: it gets its own layer so the brush footprint never paints
+        // into the cells the life forms are drawn on.
+        this.cursor_canvas = cursor_canvas;
+        this.cursor_ctx = cursor_canvas ? cursor_canvas.getContext('2d') : null;
         this.last_deco_repaint = 0;
         this.last_glow_repaint = 0;
         this.frame_render_start = 0;
@@ -588,6 +599,13 @@ class WorldEnvironment extends Environment{
             this.deco_canvas.style.transformOrigin = '0 0';
             this.deco_dirty = true;
         }
+        if (this.cursor_canvas) {
+            // No transformOrigin, and nothing to mark dirty: the cursor layer
+            // is repainted from scratch on the next frame either way, and
+            // never carries a CSS bridge transform to re-anchor.
+            this.cursor_canvas.width = vw;
+            this.cursor_canvas.height = vh;
+        }
         if (!this.glow_canvas) return;
         this.glow_canvas.width = vw;
         this.glow_canvas.height = vh;
@@ -604,7 +622,7 @@ class WorldEnvironment extends Environment{
     // (nothing else watches window resizes); checked before each repaint.
     overlaySizesStale(): boolean {
         const cont = this.container;
-        const c = this.deco_canvas || this.glow_canvas;
+        const c = this.deco_canvas || this.glow_canvas || this.cursor_canvas;
         if (!cont || !c) return false;
         const vw = cont.clientWidth || window.innerWidth;
         const vh = cont.clientHeight || window.innerHeight;
@@ -666,6 +684,33 @@ class WorldEnvironment extends Environment{
     applyOverlayCss(el: HTMLCanvasElement, rendered: OverlayCamera, cur: OverlayCamera): void {
         const k = cur.s / rendered.s;
         el.style.transform = `translate(${cur.ox - rendered.ox * k}px, ${cur.oy - rendered.oy * k}px) scale(${k})`;
+    }
+
+    /* Hands the controller its layer, cleared and already in world
+       coordinates, or null when there is nothing to draw on.
+
+       Unlike the glow and decoration passes this one is immediate mode: the
+       controller repaints it from scratch every frame, so it carries no dirty
+       flag, no repaint schedule and no CSS bridge -- it is only ever painted
+       at the live camera, which is exactly what a pointer overlay needs. The
+       clear is the whole un-draw; when the brush shared the world canvas it
+       had to remember every cell it had painted over and re-render each one
+       the following frame just to avoid smearing a trail. */
+    cursorLayer(): CanvasRenderingContext2D | null {
+        const canvas = this.cursor_canvas;
+        const ctx = this.cursor_ctx;
+        if (!canvas || !ctx || WorldConfig.headless) return null;
+        if (this.overlaySizesStale()) this.syncOverlaySizes();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const cam = this.overlayCamera();
+        if (!cam) return null;
+        ctx.setTransform(cam.s, 0, 0, cam.s, cam.ox, cam.oy);
+        // Same reason as the decoration pass: the layer inherits the
+        // container's pixelated image-rendering, and the camera scale must
+        // not start smoothing what CSS scaling did not.
+        ctx.imageSmoothingEnabled = false;
+        return ctx;
     }
 
     renderDecorations(): void {
