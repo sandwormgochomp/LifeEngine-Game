@@ -7,12 +7,14 @@ import Species from '../Stats/Species';
 import { NO_OP_PERF } from '../Stats/Perf';
 import { makeDefaultHyperparams } from '../Hyperparameters';
 import drawOrganismDecorations from '../Rendering/DecorationRenderer';
-import { stepExplosions, stepProjectiles } from './EnvironmentEffects';
+import { stepBlasts, stepExplosions, stepProjectiles } from './EnvironmentEffects';
+import { drawBlasts } from '../Rendering/ExplosionFx';
 import type { OrganismEnv, OrganismProjectile } from '../Organism/Organism';
 import type { CellState, LivingCellName, RenderCellOwnerLike } from '../Organism/Cell/CellStates';
 import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
 import type Anatomy from '../Organism/Anatomy';
 import type { Direction } from '../Organism/Directions';
+import type { Blast } from '../Rendering/ExplosionFx';
 import type { HyperparamsData } from '../Hyperparameters';
 import type { PerfLike } from '../Stats/Perf';
 import type { Fossilizer } from '../Stats/Species';
@@ -70,6 +72,7 @@ class PreviewEnvironment extends Environment {
     grid_map: PreviewGridMap;
     organisms: Organism[];
     active_projectiles: OrganismProjectile[];
+    active_blasts: Blast[];
     active_explosions: { col: number; row: number; ticks: number }[];
     radiation_map: Set<string>;
     is_night: boolean;
@@ -98,6 +101,7 @@ class PreviewEnvironment extends Environment {
         this.renderer.env = this;
         this.organisms = [];
         this.active_projectiles = [];
+        this.active_blasts = [];
         this.active_explosions = [];
         this.radiation_map = new Set();
         this.is_night = false;
@@ -150,6 +154,7 @@ class PreviewEnvironment extends Environment {
         for (const org of this.organisms) org.living = false;
         this.organisms = [];
         this.active_projectiles = [];
+        this.active_blasts = [];
         this.active_explosions = [];
         this.grid_map.fillGrid(CellStates.empty);
         this.total_ticks = 0;
@@ -190,6 +195,7 @@ class PreviewEnvironment extends Environment {
             if (!org.living || !org.update()) dead.push(i);
         }
         for (let k = dead.length - 1; k >= 0; k--) this.organisms.splice(dead[k], 1);
+        stepBlasts(this);
         stepExplosions(this);
         stepProjectiles(this);
         this.total_ticks++;
@@ -204,6 +210,10 @@ class PreviewEnvironment extends Environment {
         // OrganismEditor uses.
         this.renderer.renderFullGrid();
         drawOrganismDecorations(ctx, this as unknown as Parameters<typeof drawOrganismDecorations>[1], false, true);
+        /* Blasts on top of the cells, exactly as the world draws them -- with
+           no bounds to mark, because the repaint above already cleared last
+           frame's fire. */
+        drawBlasts(ctx, this.active_blasts, this.cell_size);
         // The full-grid repaint above wipes the projectile squares the stepper
         // drew during the tick, so redraw the live ones on top.
         const cs = this.cell_size;

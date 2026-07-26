@@ -1,6 +1,7 @@
 import Environment from './Environment';
 import Renderer from '../Rendering/Renderer';
-import { stepExplosions, stepProjectiles } from './EnvironmentEffects';
+import { stepBlasts, stepExplosions, stepProjectiles } from './EnvironmentEffects';
+import { drawBlasts } from '../Rendering/ExplosionFx';
 import drawOrganismDecorations from '../Rendering/DecorationRenderer';
 import { GLOW_DOWNSCALE, glowMargin, glowSpread, compositeGlow } from '../Rendering/Glow';
 import GridMap from '../Grid/GridMap';
@@ -23,6 +24,7 @@ import type { CellState, RenderCellOwnerLike } from '../Organism/Cell/CellStates
 import type BodyCell from '../Organism/Cell/BodyCells/BodyCell';
 import type { OrganismEnv, OrganismProjectile, SerializedOrganism } from '../Organism/Organism';
 import type { PredatorSpecies } from '../Organism/Predators';
+import type { Blast } from '../Rendering/ExplosionFx';
 import type { SerializedGridMap } from '../Grid/GridMap';
 import type { SerializedFossilRecord } from '../Stats/FossilRecord';
 import type { HyperparamsData, HyperparamsSingleton } from '../Hyperparameters';
@@ -294,6 +296,11 @@ class WorldEnvironment extends Environment{
     reset_count: number;
     total_ticks: number;
     data_update_rate: number;
+    /* Charges armed by a dying organism, burning down to a detonation
+       FUSE_TICKS later and then drawing their fireball for a few more (see
+       ExplosionFx). Runtime-only, like the arrays either side: serialize()
+       skips arrays, so a save taken mid-fuse loses that blast. */
+    active_blasts: Blast[];
     active_explosions: { col: number; row: number; ticks: number }[];
     active_projectiles: OrganismProjectile[];
     /* In-flight meteor strikes: launched by meteorStrike(), landed and drawn
@@ -425,6 +432,7 @@ class WorldEnvironment extends Environment{
         this.reset_count = 0;
         this.total_ticks = 0;
         this.data_update_rate = 100;
+        this.active_blasts = [];
         this.active_explosions = [];
         this.active_projectiles = [];
         this.active_meteors = [];
@@ -497,8 +505,9 @@ class WorldEnvironment extends Environment{
         }
 
         t = Perf.begin();
-        // Explosions and projectiles step through the same logic the preview
-        // environment reuses; see EnvironmentEffects.
+        // Blasts, explosions and projectiles step through the same logic the
+        // preview environment reuses; see EnvironmentEffects.
+        stepBlasts(this);
         stepExplosions(this);
         stepProjectiles(this);
         Perf.end('fx', t);
@@ -562,6 +571,7 @@ class WorldEnvironment extends Environment{
         this.renderer.renderHighlights();
         this.controller.renderCursorOverlay();
         this.renderMeteorFx(now);
+        this.renderBlastFx();
         /* Both overlay passes early-out on their dirty flags and the
            overlayMayRepaint() schedule, so their avg stays near zero; the max
            column is what shows the repaint spike. */
@@ -1620,6 +1630,22 @@ class WorldEnvironment extends Environment{
         ctx.restore();
     }
 
+    /* Immediate-mode blast pass, on the same terms as the meteor one above: it
+       paints over the world canvas and hands its bounds to markFxBounds, so
+       every cell it touched repaints at the start of the next fx pass and the
+       animation can never smear. Drawn after the meteor so a strike's fireball
+       stays the biggest thing on screen when the two overlap.
+
+       The picture advances with the blast's tick counters, not with the clock,
+       so this is a no-op-cheap redraw of the same frame while the sim is paused
+       -- and a bare early-out on the usual case, an empty list. */
+    renderBlastFx(): void {
+        const ctx = this.renderer.ctx;
+        if (!ctx || this.active_blasts.length === 0) return;
+        drawBlasts(ctx, this.active_blasts, this.renderer.cell_size,
+            (x0, y0, x1, y1) => this.markFxBounds(x0, y0, x1, y1));
+    }
+
     drawMeteorFall(ctx: CanvasRenderingContext2D, fx: MeteorFx, p: number): void {
         const cs = this.renderer.cell_size;
         const ix = (fx.col + 0.5) * cs;
@@ -1744,6 +1770,14 @@ class WorldEnvironment extends Environment{
         this.renderer.renderFullGrid();
         this.total_mutability = 0;
         this.total_ticks = 0;
+        /* Same rule as the meteors below, for the same reason: a charge still
+           burning its fuse was armed by a world that no longer exists and would
+           land its damage on the fresh one, so it goes; one that has already
+           gone off keeps its fireball. That matters here more than for a
+           meteor -- a blast big enough to leave the world empty trips
+           auto_reset on the very next tick, and dropping its fire at that exact
+           moment is what would hide the cause of the reset. */
+        this.active_blasts = this.active_blasts.filter(b => b.fuse === 0);
         this.active_explosions = [];
         this.active_projectiles = [];
         /* A strike still falling was aimed at a world that no longer exists;

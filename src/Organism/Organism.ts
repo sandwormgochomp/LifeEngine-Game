@@ -18,6 +18,7 @@ import type BodyCell from "./Cell/BodyCells/BodyCell";
 import type ExplosiveCell from "./Cell/BodyCells/ExplosiveCell";
 import type Species from "../Stats/Species";
 import type { OrganismSpriteSet } from "../Rendering/DecorationRenderer";
+import type { Blast } from "../Rendering/ExplosionFx";
 
 /* The grid as Organism and the body cells reach through it. Structural rather
    than a real GridMap import, for the same reason BodyCell.ts describes its
@@ -85,6 +86,9 @@ export interface OrganismEnv {
     /* Not touched by Organism itself -- declared because the body cells reach
        through this same env object (see BodyCellOrganism in BodyCell.ts). */
     active_explosions: { col: number; row: number; ticks: number }[];
+    /* Charges armed by die(), burning down to a detonation a few ticks later;
+       stepped by EnvironmentEffects.stepBlasts and drawn by ExplosionFx. */
+    active_blasts: Blast[];
     is_night: boolean;
     /* Unimplemented feature marker: no environment in the codebase defines this
        method, so the `typeof === 'function'` guard in die() is always false and
@@ -523,8 +527,20 @@ class Organism {
                 explosive_cells.push(cell as ExplosiveCell);
             }
         }
-        for (var exp_cell of explosive_cells) {
-            exp_cell.explode();
+        /* Charges are armed, not fired: each one detonates a few ticks later
+           (EnvironmentEffects.stepBlasts), which is the fuse the telegraph
+           blinks over. The footprint is captured once here and shared by every
+           charge in this body -- a predator bomber carries three -- so a death
+           allocates one array however many it holds, and none at all for the
+           overwhelming majority of organisms, which carry no explosive at all. */
+        if (explosive_cells.length > 0) {
+            var body: number[] = [];
+            for (var cell of this.anatomy.cells) {
+                body.push(this.c + cell.rotatedCol(this.rotation), this.r + cell.rotatedRow(this.rotation));
+            }
+            for (var exp_cell of explosive_cells) {
+                exp_cell.arm(body);
+            }
         }
         for (var cell of this.anatomy.cells) {
             var real_c = this.c + cell.rotatedCol(this.rotation);

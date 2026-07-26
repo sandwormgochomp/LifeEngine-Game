@@ -137,14 +137,35 @@ export const PREVIEW_SCENARIOS: Record<LivingCellName, PreviewScenario> = {
         },
     },
 
-    // Explodes on death: a killer pops the explosive cell, whose real explosion
-    // scatters explosion cells and harms the ring of bodies around it.
+    /* Explodes on death: a killer gnaws at a bomber until it dies, the charge
+       telegraphs, and the real blast scatters explosion cells and harms the
+       ring of bodies around it.
+
+       The bomber is a five-cell body, not a lone explosive cell, and that is
+       load-bearing rather than decorative. A single cell adjacent to a killer
+       dies on the very first tick, which is what used to make this preview open
+       already exploding: the loop spent one frame on the organism and the
+       remaining twenty-odd on the aftermath. Health is cell count
+       (Organism.maxHealth), and the killer reaches exactly one of these cells
+       for one point of damage a tick, so the body buys five ticks of being
+       visibly alive and under attack before it dies -- and only then does the
+       charge light its fuse (ExplosionFx.FUSE_TICKS) and go off. */
     explosive: {
+        // Five ticks of the killer chewing, five of fuse, eight of fireball,
+        // then a beat of quiet before the scene replays.
         loopTicks: 24,
         setup(env) {
-            env.spawn([{ name: 'explosive', dc: 0, dr: 0 }], CX, CY);
+            env.spawn([
+                { name: 'explosive', dc: 0, dr: 0 },
+                { name: 'common', dc: 0, dr: -1 },
+                { name: 'common', dc: 0, dr: 1 },
+                { name: 'common', dc: 1, dr: 0 },
+                { name: 'common', dc: 1, dr: 1 },
+            ], CX, CY);
             env.spawn([{ name: 'killer', dc: 0, dr: 0 }], CX - 1, CY);
-            for (const [dc, dr] of [[1, 0], [2, 0], [0, 2], [0, -2], [2, 1], [1, 2]]) {
+            // Inside radius 2 these die with the bomber; the outer three stand,
+            // so the blast has a visible edge.
+            for (const [dc, dr] of [[2, 0], [0, -2], [0, 2], [2, 2], [3, 0], [-2, 2]]) {
                 env.spawn([{ name: 'common', dc: 0, dr: 0 }], CX + dc, CY + dr);
             }
         },
