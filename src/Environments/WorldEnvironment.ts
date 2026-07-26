@@ -895,33 +895,51 @@ class WorldEnvironment extends Environment{
     buildPetriDish(): void {
         var cx = (this.grid_map.cols - 1) / 2;
         var cy = (this.grid_map.rows - 1) / 2;
-        // Inset radius by 4 cells so the full 3-tier glass rim and shadow fit comfortably
-        // inside the canvas grid without being cut off on top, bottom, left or right.
-        var radius = Math.min(this.grid_map.cols, this.grid_map.rows) / 2 - 4;
+        // Inset radius by 6 cells so the full 3D glass rim fits comfortably.
+        var radius = Math.min(this.grid_map.cols, this.grid_map.rows) / 2 - 6;
+
         for (var c = 0; c < this.grid_map.cols; c++) {
             for (var r = 0; r < this.grid_map.rows; r++) {
                 var dx = c - cx;
                 var dy = r - cy;
                 var dist = Math.hypot(dx, dy);
+
+                var angle = Math.atan2(dy, dx);
+                // Angle light factor: 1.0 at top-right (-45 deg), -1.0 at bottom-left (135 deg)
+                var light = -Math.cos(angle - Math.PI * 0.75);
+
                 if (dist < radius - 0.5) {
-                    // Tier 0 is what "not glass" means; see GridMap.setDish.
+                    // Floor region (Tier 0).
+                    // Cast a soft inner shadow on the top-right side (light > 0.1)
+                    // Cast an opposing wall glow/caustic on the bottom-left side (light < -0.1)
+                    if (dist > radius - 3.5) {
+                        if (light > 0.1) {
+                            // Negative light signals shadow rendering in Empty.render
+                            var intensity = -0.5 * (1.0 - (radius - 0.5 - dist) / 3.0) * light;
+                            this.grid_map.setDish(c, r, 0, intensity);
+                            continue;
+                        } else if (light < -0.1) {
+                            // Positive light (> 0) on the bottom-left signals glow/caustics
+                            var intensity = 0.3 * (1.0 - (radius - 0.5 - dist) / 3.0) * Math.abs(light);
+                            this.grid_map.setDish(c, r, 0, intensity);
+                            continue;
+                        }
+                    }
                     this.grid_map.setDish(c, r, 0, 0);
                     continue;
                 }
-                var angle = Math.atan2(dy, dx);
-                // Angle light factor: 1.0 at top-left (-135 deg), -1.0 at bottom-right (45 deg)
-                var light = -Math.cos(angle - Math.PI * 0.75);
 
                 var tier;
-                if (dist < radius + 0.5) {
+                if (dist < radius + 1.2) {
                     tier = 1; // Inner Lip
-                } else if (dist < radius + 1.8) {
-                    tier = 2; // Main Rim
-                } else if (dist < radius + 2.8) {
-                    tier = 3; // Outer Shadow Rim
+                } else if (dist < radius + 3.2) {
+                    tier = 2; // Main Rim Bezel
+                } else if (dist < radius + 4.8) {
+                    tier = 3; // Outer Bezel Frame
                 } else {
                     tier = 4; // Void
                 }
+                
                 this.grid_map.setDish(c, r, tier, light);
 
                 var owner = this.grid_map.ownerAt(c, r);

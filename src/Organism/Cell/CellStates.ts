@@ -46,6 +46,7 @@ export interface RenderCellLike {
     dish_glass?: boolean;
     dish_tier?: number;
     dish_light?: number;
+    dish_active?: boolean;
 }
 
 /* The neighbour probe computeOrgCellPatch needs, and nothing else. Scalar
@@ -220,6 +221,34 @@ class Empty extends CellState<'empty'> {
         super('empty');
         this.color = '#05050A';
     }
+    render(ctx: CanvasRenderingContext2D, cell: RenderCellLike, size: number): void {
+        if (cell.dish_active) {
+            var light = cell.dish_light || 0;
+            var dither = ((cell.col || 0) + (cell.row || 0)) % 2 === 0;
+            if (light < 0) {
+                // Deep navy shadow dithered into glass floor
+                if (light < -0.3) {
+                    ctx.fillStyle = dither ? '#020509' : '#040810';
+                } else {
+                    ctx.fillStyle = dither ? '#040810' : '#08121d';
+                }
+            } else if (light > 0.05) {
+                // Opposing wall glow / caustics dithered into glass floor
+                if (light > 0.15) {
+                    ctx.fillStyle = dither ? '#0b242b' : '#091c24';
+                } else {
+                    ctx.fillStyle = dither ? '#091c24' : '#0a141d';
+                }
+            } else {
+                // Translucent glass-floor dark blue
+                ctx.fillStyle = '#0a141d';
+            }
+        } else {
+            // Default canvas background color for rectangular worlds
+            ctx.fillStyle = this.color;
+        }
+        ctx.fillRect(cell.x, cell.y, size, size);
+    }
 }
 class Food extends CellState<'food'> {
     constructor() {
@@ -290,45 +319,51 @@ class InvincibleWall extends CellState<'invincible_wall'> {
     }
     render(ctx: CanvasRenderingContext2D, cell: RenderCellLike, size: number): void {
         // Petri-dish glass (flagged by WorldEnvironment.buildPetriDish):
-        // 16-bit retro pixel-art glass dish -- cool ice-blue shading with
-        // dithered band transitions and specular light on BOTH edges (glass
-        // catches light on the shadow side too, which is what sells it).
+        // 16-bit retro pixel-art glass dish -- clean 3D slate-blue beveled bezel outer ring
+        // with glowing ice-cyan inner lip, specular highlights, and shadow shading.
         if (cell.dish_glass) {
             var tier = cell.dish_tier || 0;
-            // Checker dither nudges each cell's light up or down so the shade
-            // bands around the ring break up into chunky 16-bit dithering
-            // instead of hard color seams.
+            var light = cell.dish_light || 0;
             var dither = ((cell.col || 0) + (cell.row || 0)) % 2 === 0;
-            var light = (cell.dish_light || 0) + (dither ? 0.07 : -0.07);
 
             if (tier === 1) {
-                // Inner Glass Lip -- pale refracted edge where glass meets the dish floor
-                ctx.fillStyle = light > 0.35 ? '#8FD0DA' : (light > -0.35 ? '#33616E' : '#16303A');
+                // Inner Glass Lip -- glowing ice-cyan edge meeting the dish floor.
+                if (light > 0.7) {
+                    ctx.fillStyle = dither ? '#FFFFFF' : '#B2F7FF'; // spec highlight
+                } else if (light > 0.3) {
+                    ctx.fillStyle = dither ? '#B2F7FF' : '#1f959c'; // bright reflection
+                } else if (light < -0.3) {
+                    ctx.fillStyle = dither ? '#0e4a4e' : '#0c242b'; // dark refraction shadow
+                } else {
+                    ctx.fillStyle = dither ? '#1f959c' : '#0e4a4e'; // mid tone
+                }
             } else if (tier === 2) {
-                // Main Glass Rim -- the glass body, near-white where the light hits
-                ctx.fillStyle = light > 0.35 ? '#D9F6FA' : (light > -0.35 ? '#57A0B0' : '#204955');
+                // Main Bezel Rim -- glowing bright cyan/light-blue
+                if (light > 0.7) {
+                    ctx.fillStyle = dither ? '#FFFFFF' : '#D9F6FA'; // highlight
+                } else if (light > 0.3) {
+                    ctx.fillStyle = dither ? '#D9F6FA' : '#8FD0DA'; // light cyan
+                } else if (light < -0.3) {
+                    ctx.fillStyle = dither ? '#33616E' : '#2d5663'; // shadow
+                } else {
+                    ctx.fillStyle = dither ? '#8FD0DA' : '#33616E'; // mid tone cyan
+                }
             } else if (tier === 3) {
-                // Outer Shadow Rim
-                ctx.fillStyle = light > 0.35 ? '#2E5560' : (light > -0.35 ? '#11282F' : '#070F13');
+                // Outer Bezel Frame -- dark steel outer frame sloping into the void
+                if (light > 0.7) {
+                    ctx.fillStyle = dither ? '#A9C5DE' : '#4E7092'; // steel highlight
+                } else if (light > 0.3) {
+                    ctx.fillStyle = dither ? '#4E7092' : '#23374A'; // mid steel
+                } else if (light < -0.3) {
+                    ctx.fillStyle = dither ? '#14202B' : '#1c2d3d'; // deep steel shadow
+                } else {
+                    ctx.fillStyle = dither ? '#23374A' : '#14202B'; // steel shadow
+                }
             } else {
                 // Outer Void
                 ctx.fillStyle = '#05050A';
             }
             ctx.fillRect(cell.x, cell.y, size, size);
-
-            if (tier === 2 && size >= 4) {
-                // Pixel specular highlight corner on the lit (top-left) side of the rim
-                if (light > 0.6) {
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-                    ctx.fillRect(cell.x, cell.y, Math.max(1, Math.floor(size * 0.35)), Math.max(1, Math.floor(size * 0.35)));
-                }
-                // Faint rim-light on the shadow (bottom-right) side
-                if (light < -0.7) {
-                    var rl = Math.max(1, Math.floor(size * 0.3));
-                    ctx.fillStyle = 'rgba(190, 230, 240, 0.35)';
-                    ctx.fillRect(cell.x + size - rl, cell.y + size - rl, rl, rl);
-                }
-            }
             return;
         }
 

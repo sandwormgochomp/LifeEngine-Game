@@ -102,9 +102,8 @@ function rotate(loc_col: number, loc_row: number, rotation: number): [number, nu
 function stampPetriDish(cols: number, rows: number, cells: string[]): void {
   const cx = (cols - 1) / 2;
   const cy = (rows - 1) / 2;
-  const radius = Math.min(cols, rows) / 2 - 4;
-  // buildPetriDish's own tier bounds: inner lip, main rim, outer shadow, void
-  const RIM_OUTER = radius + 2.8;
+  const radius = Math.min(cols, rows) / 2 - 6;
+  const RIM_OUTER = radius + 4.8;
 
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {

@@ -70,6 +70,7 @@ class Cell {
     get dish_glass(): boolean { return this.map.dishTierOf(this.idx) !== 0; }
     get dish_tier(): number { return this.map.dishTierOf(this.idx); }
     get dish_light(): number { return this.map.dishLightOf(this.idx); }
+    get dish_active(): boolean { return this.map.dish_tier !== null; }
 }
 
 export default Cell;
