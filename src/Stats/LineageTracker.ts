@@ -21,7 +21,9 @@ import type { NotificationCell } from "../Utils/Notifier";
 export interface TrackableOrganism {
     living: boolean;
     lifetime: number;
-    species?: { name: string } | null;
+    /* `id` is optional only for the synthetic organisms the test suite feeds
+       in; every real Species carries one. */
+    species?: { name: string; id?: number } | null;
     anatomy?: { cells: NotificationCell[] } | null;
 }
 
@@ -57,6 +59,11 @@ class LineageTracker {
     // Founder identity, snapshotted at follow time for the card and toasts.
     name = '';
     founder_cells: NotificationCell[] = [];
+    /* The founder's species id, snapshotted so the card can ask Phylogeny where
+       this line came from even after the founder dies and `root` is nulled. 0
+       means "no species-level identity" -- a synthetic organism, or one whose
+       species predates the record. */
+    founder_species_id = 0;
     start_tick = 0;
     end_tick = 0;
     extinct = false;
@@ -87,6 +94,7 @@ class LineageTracker {
         this.following = true;
         this.root = org;
         this.name = org.species?.name ?? 'Unknown lifeform';
+        this.founder_species_id = org.species?.id ?? 0;
         this.founder_cells = previewOf(org);
         this.start_tick = tick;
         this.tracked.add(org);
@@ -104,6 +112,7 @@ class LineageTracker {
         this.following = false;
         this.root = null;
         this.name = '';
+        this.founder_species_id = 0;
         this.founder_cells = [];
         this.start_tick = 0;
         this.end_tick = 0;

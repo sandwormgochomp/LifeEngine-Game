@@ -3,6 +3,7 @@ import styles from './styles/LineageCard.module.css';
 import useEngineValue from './useEngineValue';
 import type Engine from '../Engine';
 import OrganismThumb from './OrganismThumb';
+import LineageAncestry from './LineageAncestry';
 
 interface LineageCardProps {
   engine: Engine | null;
@@ -26,6 +27,9 @@ const LineageCard: React.FC<LineageCardProps> = ({ engine }) => {
   const born = useEngineValue(engine, e => e.env.lineage.born, 0);
   const died = useEngineValue(engine, e => e.env.lineage.died, 0);
   const gens = useEngineValue(engine, e => e.env.lineage.max_generation, 0);
+  // Snapshotted at follow time, so it survives the founder's death (which nulls
+  // lineage.root). Feeds the species-level ancestry strip below.
+  const speciesId = useEngineValue(engine, e => e.env.lineage.founder_species_id, 0);
   // Ticks since the follow began; frozen at the extinction tick once the line
   // ends. Derived per emit, same pattern as the ice-age countdown.
   const age = useEngineValue(engine, e => {
@@ -76,6 +80,7 @@ const LineageCard: React.FC<LineageCardProps> = ({ engine }) => {
         <span className={styles.lineageCardLabel}>AGE</span>
         <span className={styles.lineageCardValue}>{age.toLocaleString()}</span>
       </div>
+      <LineageAncestry engine={engine} speciesId={speciesId} />
     </div>
   );
 };

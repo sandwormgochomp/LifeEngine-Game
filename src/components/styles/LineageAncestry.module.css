@@ -1,0 +1,77 @@
+/* Ancestry strip inside the follow-a-lineage card. Owned by
+   LineageAncestry.tsx.
+
+   Dimmer than the card's own readouts on purpose: this is provenance, not a
+   live number, and it must not compete with the ALIVE/BORN grid above it. Same
+   cyan family as the card so the two read as one panel. No kit primitives are
+   composed here -- the strip has no chrome of its own, it sits inside the
+   card's. */
+.ancestry {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 217, 255, 0.18);
+}
+
+.ancestryLabel {
+  display: block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: rgba(0, 217, 255, 0.55);
+  margin-bottom: 4px;
+}
+
+/* Wraps rather than scrolls: the card has a fixed 190px width and a chain of
+   five thumbs plus badges overflows it at the narrow end. */
+.ancestryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.ancestryThumb {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 217, 255, 0.06);
+  outline: 1px solid rgba(0, 217, 255, 0.22);
+}
+
+/* A retained ancestor with no body plan to draw: either the record dropped its
+   snapshot (not notable enough) or it was minted without an anatomy. */
+.ancestryUnknown {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(0, 217, 255, 0.4);
+}
+
+.ancestryArrow {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(0, 217, 255, 0.4);
+}
+
+/* "+37 species passed through this edge." The whole reason the strip is honest
+   rather than a pretty lie about direct descent. */
+.ancestryGap {
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 1px;
+  color: rgba(0, 217, 255, 0.75);
+}
+
+/* Where the followed species sits. The card already shows its body plan, so
+   this is a marker, not another thumb. */
+.ancestryHere {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  line-height: 1;
+  color: #bdf1ff;
+  text-shadow: 0 0 4px rgba(0, 217, 255, 0.5);
+}

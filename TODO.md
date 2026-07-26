@@ -143,6 +143,31 @@ Notifier / FossilRecord / Floaties infrastructure.
       `tests/visual.spec.js` already fail on this branch before these changes
       (font-rendering drift against the committed goldens), so they are not a
       regression gate for this work.
+- [ ] **The tree of life panel.** The record it needs now exists:
+      `src/Stats/Phylogeny.ts` (module singleton beside `FossilRecord`, sharing
+      its `clear_record` lifecycle, exposed as `window.phylogeny`). Species
+      carry a monotonic `id`, and `FossilRecord.addSpecies` delegates its map
+      insert to `addSpeciesObj` so there is exactly one registration hook.
+      Nodes hold ids, never `Species` — a `Species` holds a live `Anatomy`,
+      which is why `fossilize()` nulls `ancestor` and why the tree could never
+      be drawn from the object graph.
+      Bounded three ways, because speciation tracks the birth rate: coalescent
+      retention (extant, or ancestral to something extant), path compression
+      (an extinct pass-through is spliced out and counted in the survivor's
+      `collapsed`), and a 200-strong highest-peak-population reserve so a clade
+      that ruled for 50,000 ticks doesn't vanish when its last member dies.
+      Measured at 531 extant species → 603 retained nodes; overhead is below
+      the drift between two 2,000-tick windows of the same world.
+      What's left is the panel itself. Two things it must not do: pretend
+      compressed edges are direct descent (`collapsed` is there to be drawn),
+      and re-walk the tree per frame — `revision` is the number to compare.
+      `tests/lineage_tree.spec.js` has the synthetic harness to build shapes
+      against, including the 10,000-speciation bounded-growth test that caught
+      the one real leak (a demoted notable that was never pruned).
+      Also deferred: the tree is **not serialized**. `loadRaw` mints saved
+      species as roots and `serialize()` deletes the id, which is unique only
+      within its own session — saving ancestry needs a stable on-disk species
+      id, a format change.
 - [ ] **Close trust papercuts** (see also the interface-review section below):
       GEN→TICKS, collapse duplicated LIFEFORMS/Species labels, fix the
       magnifier that resets zoom, add +/− zoom controls.

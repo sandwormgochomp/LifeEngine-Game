@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/App.module.css';
 import Engine from '../Engine';
 import FossilRecord, { type FossilRecordType } from '../Stats/FossilRecord';
+import Phylogeny from '../Stats/Phylogeny';
 import Narrator from '../Stats/Narrator';
 import Perf from '../Stats/Perf';
 import { generateOrganismName } from '../Utils/NameGenerator';
@@ -54,6 +55,9 @@ declare global {
     // The species registry is a module singleton; exposing it alongside the
     // engine lets the Playwright suite (and debugging) reach the fossil record.
     fossilRecord?: FossilRecordType;
+    // The species-level ancestry record, likewise a module singleton. The
+    // lineage-tree suite drives it directly with synthetic speciations.
+    phylogeny?: typeof Phylogeny;
     // Pure body-plan -> name function, exposed for the naming test suite.
     generateOrganismName?: (cell_counts: CellCountMap) => string;
     // Timing instrumentation singleton, for the perf test suite and for
@@ -117,6 +121,7 @@ const App: React.FC = () => {
     });
     window.engine = newEngine;
     window.fossilRecord = FossilRecord;
+    window.phylogeny = Phylogeny;
     window.generateOrganismName = generateOrganismName;
     window.perf = Perf;
     window.hyperparams = Hyperparams;
