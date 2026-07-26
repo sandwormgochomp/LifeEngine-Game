@@ -121,6 +121,22 @@ Notifier / FossilRecord / Floaties infrastructure.
       wall-clock timings 10x to fit the 15s test budget; the tick budget is
       bought with `setSpeedIndex` instead). The outlives-its-anchor test was
       checked against a deliberately broken re-anchor and fails on it.
+- [x] ~~**Only one of the two wall types could be reacted to.**~~ — fixed. The
+      terrain palette paints Wall and Glass, `EyeCell.look` reports whichever
+      the ray lands on, and `Brain.decide` looks the weight up by state name —
+      so the simulation could always tell them apart. `BrainModal`'s
+      `OBSERVABLE` list was the only thing that could not, which left the Glass
+      tool painting something no creature could be taught to avoid. One entry,
+      plus an `OBSERVABLE_LABEL` map so the row reads "glass" (what the tool
+      that paints it is called) while the slider id and `data-cell` stay the
+      state name, which is the key into the decision map. `CellStates` is now on
+      `window` alongside the other singletons, so a test can paint terrain with
+      the real state object instead of hunting the grid for one.
+      `tests/wall_reactions.spec.js` drives a real eye and a real decision: the
+      two walls take independent weights, a negative weight on glass turns the
+      organism away from it, and a `wall` weight says nothing about glass. The
+      three simulation tests pass with or without the fix — correctly, since the
+      engine never had the bug — and the two editor tests fail without it.
 - [x] ~~**Brain cell: the first cell whose effect is a quantity.**~~ — done.
       `src/Organism/Cell/BodyCells/BrainCell.ts` has no `performFunction` at
       all; it is counted, not run. Ten in one body (`WALL_BRAIN_CELLS`) is what
