@@ -136,6 +136,31 @@ test.describe('Organism Lab panning', () => {
     expect(await pan(page), 'but the view stayed put').toEqual({ c: 3, r: 0 });
   });
 
+  /* Rotate and flip are a new edit, so they record -- but they are still the
+     same organism, so like undo they turn it where it sits. The body must also
+     really be re-seated at the panned origin, not just left with the pan
+     number intact. */
+  for (const [label, button] of [['rotate', '#rotate-btn'], ['flip', '#flip-btn']]) {
+    test(`${label} keeps the pan`, async ({ page }) => {
+      await page.locator('.cell-type#armor').click();
+      await clickEditorCell(page, 1, 0);
+      await panBy(page, 3, -2);
+
+      await page.locator(button).click();
+      expect(await pan(page), 'the view stayed put').toEqual({ c: 3, r: -2 });
+      expect(await page.evaluate(() => {
+        const o = window.engine.organism_editor.organism;
+        return [o.c, o.r];
+      }), 'and the body is still on the origin').toEqual(await originOnGrid(page));
+
+      // The transform itself still happened: rotate sends (1,0) to (0,1),
+      // flip to (-1,0).
+      const moved = label === 'rotate' ? [0, 1] : [-1, 0];
+      expect(await localCellState(page, moved[0], moved[1])).toBe('armor');
+      expect(await localCellState(page, 1, 0)).toBe(null);
+    });
+  }
+
   test('panning does not enter the undo history', async ({ page }) => {
     // A pan that opened a stroke would leave an edit that changed nothing,
     // and the next ctrl+z would spend itself undoing the pan.

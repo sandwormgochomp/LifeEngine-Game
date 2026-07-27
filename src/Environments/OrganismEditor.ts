@@ -549,22 +549,23 @@ class OrganismEditor extends Environment{
 
     // ---- Whole-organism operations ----
 
-    // Load a serialized organism into the editor, centered and upright.
-    // record=false is used by undo/redo restores.
+    // Load a serialized organism into the editor, upright and (unless the
+    // caller says otherwise) centered. record=false is used by undo/redo
+    // restores.
     /* `raw` stays `unknown` and is asserted, not runtime-checked, at the two
        places it is read: the JS did no validation either, and adding a guard
        would change behavior on malformed saves. Same seam, and same treatment,
        as Organism.loadRaw(). */
-    loadRawOrg(raw: unknown, record = true): void {
-        /* A genuine load is a different organism and starts centred; the
-           history replay (record=false) is the *same* organism mid-edit, and
-           recentring on every undo would yank the view out from under whoever
-           is working on a panned body. The existing flag already draws that
-           line. */
-        if (record) {
-            this.beginStroke();
-            this.resetPan();
-        }
+    /* `recentre` is what the view does, `record` what the history does, and the
+       two only usually agree. A genuine load is a different organism and starts
+       centred; the history replay (record=false) is the same organism mid-edit,
+       and recentring on every undo would yank the view out from under whoever
+       is working on a panned body -- so it defaults to following `record`.
+       Rotate and flip are the case that splits them: a new edit to record, but
+       still the same organism, so they keep the pan. */
+    loadRawOrg(raw: unknown, record = true, recentre = record): void {
+        if (record) this.beginStroke();
+        if (recentre) this.resetPan();
         this.clear();
         this.organism.loadRaw(raw);
         var center = this.originOnGrid();
@@ -583,7 +584,9 @@ class OrganismEditor extends Environment{
         var raw = this.organism.serialize();
         for (var cell of raw.anatomy.cells as TransformableCell[])
             transform_cell(cell);
-        this.loadRawOrg(raw);
+        // The body you are working on, seen differently -- so it turns where it
+        // sits rather than jumping back to the middle. See loadRawOrg().
+        this.loadRawOrg(raw, true, false);
     }
 
     rotateOrganism(): void {
