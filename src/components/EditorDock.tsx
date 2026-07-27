@@ -57,6 +57,18 @@ const MouseRightIcon: React.FC = () => (
   </svg>
 );
 
+// The dock draws its own copies of these rather than importing HudBottomBar's,
+// the same way HudBottomBar draws its own -- they are three literal SVGs, and
+// a shared module for them would be the only thing either file imported from
+// the other.
+const MouseMiddleIcon: React.FC = () => (
+  <svg width="11" height="14" viewBox="0 0 12 16" fill="none" style={{ verticalAlign: '-2px', marginRight: '2px' }}>
+    <rect x="1" y="1" width="10" height="14" rx="5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1.2" />
+    <rect x="4.5" y="3" width="3" height="4.5" rx="1.5" fill="#00FF41" />
+    <line x1="1" y1="7.5" x2="11" y2="7.5" stroke="rgba(0, 255, 65, 0.7)" strokeWidth="1" />
+  </svg>
+);
+
 const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets, onOpenBrain }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -405,7 +417,7 @@ const EditorDock: React.FC<EditorDockProps> = ({ engine, onClose, onOpenPresets,
 
         <div className={styles.dockCanvasBar}>
           <span className={styles.dockHint}>
-            <MouseLeftIcon /> apply · <MouseRightIcon /> put tool away · ctrl+z undo · ctrl+y redo
+            <MouseLeftIcon /> apply · <MouseMiddleIcon /> pan · <MouseRightIcon /> put tool away · ctrl+z undo · ctrl+y redo
           </span>
         </div>
       </div>

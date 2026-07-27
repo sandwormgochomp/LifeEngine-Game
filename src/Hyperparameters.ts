@@ -107,17 +107,53 @@ export function makeDefaultHyperparams(): HyperparamsData {
     return h;
 }
 
+/* What each field is *supposed* to hold, read off the defaults rather than
+   restated as a second list: a field's default is already the one declaration
+   of its runtime type, and one that cannot drift from applyDefaults.
+
+   Indexed by plain string, not by keyof, because the whole job here is
+   deciding whether an arbitrary incoming key names a field at all. */
+const FIELD_SHAPE = makeDefaultHyperparams() as unknown as Record<string, unknown>;
+
 const Hyperparams = {
     setDefaults: function(this: HyperparamsSingleton): void {
         applyDefaults(this);
     },
 
+    /* Saved worlds are untyped at the boundary, and the corpus on disk is not
+       clean. Sixteen of the twenty-two bundled worlds store numbers as strings
+       -- "50", ".7", a 75-digit lifespan -- left over from a settings UI that
+       wrote input.value straight through. Assigning those on verbatim put a
+       string where every reader expects a number: ExplosiveCell has parsed
+       defensively for exactly this reason, and the evolution dials crashed
+       outright on `value.toFixed is not a function` the moment you opened the
+       window after loading one. Coercing here means no reader downstream has
+       to know the difference.
+
+       Keys the singleton does not declare are dropped. Four bundled worlds
+       nest an entire save under `controls`, so this is also what keeps `grid`,
+       `organisms` and `fossil_record` off the parameter object. */
     loadJsonObj(this: HyperparamsSingleton, obj: Record<string, unknown>): void {
-        for (let key in obj) {
-            /* Saved worlds are untyped at the boundary: the value is only known
-               to belong to whichever field the key names, which no type can
-               express per-iteration. */
-            this[key as keyof HyperparamsData] = obj[key] as never;
+        for (const key of Object.keys(obj)) {
+            const shape = FIELD_SHAPE[key];
+            if (shape === undefined) continue;
+            const raw = obj[key];
+            const field = key as keyof HyperparamsData;
+
+            if (typeof shape === 'number') {
+                /* Only a number or a string can mean a number. Booleans and
+                   null are rejected rather than coerced -- Number(null) is 0,
+                   which would read as a deliberate zero. */
+                if (typeof raw !== 'number' && typeof raw !== 'string') continue;
+                const value = typeof raw === 'string' ? Number(raw.trim()) : raw;
+                if (typeof raw === 'string' && raw.trim() === '') continue;
+                if (Number.isFinite(value)) this[field] = value as never;
+            } else if (typeof shape === 'boolean') {
+                if (typeof raw === 'boolean') this[field] = raw as never;
+                else if (raw === 'true' || raw === 'false') this[field] = (raw === 'true') as never;
+            } else if (Array.isArray(shape)) {
+                if (Array.isArray(raw)) this[field] = raw as never;
+            }
         }
     }
 } as HyperparamsSingleton;

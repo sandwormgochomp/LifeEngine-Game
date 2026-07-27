@@ -67,14 +67,19 @@ async function pauseEngine(page) {
   await page.evaluate(() => window.engine.stop());
 }
 
-// Canvas-relative position of the editor grid cell at the given offset from
-// the organism's center cell (the canvas is sized exactly to the grid).
+/* Canvas-relative position of the editor grid cell at the given offset from
+   the organism's center cell (the canvas is sized exactly to the grid).
+
+   originOnGrid(), not getCenter(): those were the same thing until the editor
+   could pan, and this helper's contract is "offset from the organism", not
+   "offset from the middle of the canvas". With no pan it is the same number,
+   so every existing caller is unaffected. */
 async function editorCellPosition(page, dc, dr) {
   return await page.evaluate(([dc, dr]) => {
     const editor = window.engine.organism_editor;
-    const [cc, cr] = editor.grid_map.getCenter();
+    const [oc, or_] = editor.originOnGrid();
     const cs = editor.grid_map.cell_size;
-    return { x: (cc + dc) * cs + cs / 2, y: (cr + dr) * cs + cs / 2 };
+    return { x: (oc + dc) * cs + cs / 2, y: (or_ + dr) * cs + cs / 2 };
   }, [dc, dr]);
 }
 
