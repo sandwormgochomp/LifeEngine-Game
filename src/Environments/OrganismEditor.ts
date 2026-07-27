@@ -48,6 +48,23 @@ class OrganismEditor extends Environment{
     is_active: boolean;
     zoom_index: number;
     cell_size: number;
+    /* Where the organism's local (0,0) sits, as an offset in cells from the
+       grid centre. 0,0 means centred, which is what it always was.
+
+       The editor has no camera: the grid is sized to fit the canvas at the
+       current cell size, so it *is* the viewport, and zooming in makes it
+       fewer cells across rather than making the same cells bigger. That is
+       fine until an organism is larger than the grid, at which point its outer
+       cells simply fall outside and there was no way to reach them -- you
+       could zoom in on a big body but never look at the far side of it.
+       Panning moves where the body sits in the viewport instead.
+
+       Nine places used to convert between grid and organism-local coordinates
+       with `grid_map.getCenter()`, which was correct only because the organism
+       was always centred. They all go through originOnGrid() now, so this
+       offset is the one thing that knows otherwise. */
+    pan_c: number;
+    pan_r: number;
     renderer: Renderer;
     controller: EditorController;
     grid_map: GridMap;
@@ -86,6 +103,8 @@ class OrganismEditor extends Environment{
         this.is_active = true;
         this.zoom_index = DEFAULT_ZOOM;
         this.cell_size = ZOOM_LEVELS[this.zoom_index];
+        this.pan_c = 0;
+        this.pan_r = 0;
         // The editor canvas lives in a React panel that mounts on demand;
         // renderer and controller run canvas-less until bindCanvas is called.
         this.renderer = new Renderer(null, null, this.cell_size);
@@ -177,6 +196,60 @@ class OrganismEditor extends Environment{
 
     // Resize the grid to fit the container, then size the canvas to exactly the
     // grid so CSS can center it.
+    /* Where the organism's local (0,0) sits on the grid. The single place that
+       knows the body is not necessarily centred -- every grid <-> local
+       conversion in this file and in EditorController goes through it. */
+    originOnGrid(): [number, number] {
+        /* getCenter(), not originOnGrid() -- this is the one place the true
+           grid centre is what is wanted, since the pan is measured from it. */
+        var center = this.grid_map.getCenter();
+        return [center[0] + this.pan_c, center[1] + this.pan_r];
+    }
+
+    /* Keep the origin cell somewhere on the grid. Without this a determined
+       drag parks the body outside the viewport entirely, and since the grid is
+       the viewport there is then nothing on screen to drag back. */
+    clampPan(): void {
+        // Bounds are relative to the true centre the offset is measured from.
+        var center = this.grid_map.getCenter();
+        var max_c = this.grid_map.cols - 1 - center[0];
+        var max_r = this.grid_map.rows - 1 - center[1];
+        this.pan_c = Math.max(-center[0], Math.min(max_c, this.pan_c));
+        this.pan_r = Math.max(-center[1], Math.min(max_r, this.pan_r));
+    }
+
+    panBy(dc: number, dr: number): void {
+        if (!dc && !dr) return;
+        var before_c = this.pan_c, before_r = this.pan_r;
+        this.pan_c += dc;
+        this.pan_r += dr;
+        this.clampPan();
+        // Already against a stop: nothing moved, so nothing needs repainting.
+        if (this.pan_c === before_c && this.pan_r === before_r) return;
+        this.relayoutOrganism();
+        this.engine?.emitChange(true);
+    }
+
+    resetPan(): void {
+        this.pan_c = 0;
+        this.pan_r = 0;
+    }
+
+    /* Re-seat the body at the current origin and repaint. Split out of
+       rebuildGrid because a pan changes only where the organism sits, not how
+       big the grid is -- resizing on every drag step would rebuild the canvas
+       for nothing. */
+    relayoutOrganism(): void {
+        this.grid_map.fillGrid(CellStates.empty);
+        var origin = this.originOnGrid();
+        if (this.organism) {
+            this.organism.c = origin[0];
+            this.organism.r = origin[1];
+            this.organism.updateGrid();
+        }
+        this.renderFull();
+    }
+
     rebuildGrid(): void {
         var dims = this.gridDims();
         var cols = dims[0];
@@ -184,14 +257,9 @@ class OrganismEditor extends Environment{
         this.grid_map.resize(cols, rows, this.cell_size);
         if (this.renderer.canvas)
             this.renderer.fillShape(rows * this.cell_size, cols * this.cell_size);
-        this.grid_map.fillGrid(CellStates.empty);
-        var center = this.grid_map.getCenter();
-        if (this.organism) {
-            this.organism.c = center[0];
-            this.organism.r = center[1];
-            this.organism.updateGrid();
-        }
-        this.renderFull();
+        // The grid just changed size, so a pan that was in range may not be.
+        this.clampPan();
+        this.relayoutOrganism();
     }
 
     setZoom(index: number): void {
@@ -208,6 +276,9 @@ class OrganismEditor extends Environment{
 
     // Largest zoom at which the whole organism (plus a small margin) is visible
     zoomToFit(): void {
+        // "Fit" means show me the whole thing, so it undoes a pan as well as
+        // picking the zoom -- it is the way back when you have wandered off.
+        this.resetPan();
         var ext = 1;
         for (var cell of this.organism.anatomy.cells)
             ext = Math.max(ext, Math.abs(cell.loc_col), Math.abs(cell.loc_row));
@@ -340,7 +411,7 @@ class OrganismEditor extends Environment{
             ctx.lineTo(w, y);
         }
         ctx.stroke();
-        var center = this.grid_map.getCenter();
+        var center = this.originOnGrid();
         ctx.strokeStyle = 'rgba(0, 255, 65, 0.35)';
         ctx.strokeRect(center[0] * cs + 0.5, center[1] * cs + 0.5, cs - 1, cs - 1);
     }
@@ -423,7 +494,7 @@ class OrganismEditor extends Environment{
        CellState the controller declares because method parameters are
        bivariant. */
     addCellToOrg(c: number, r: number, state: CellState<LivingCellName>): void {
-        var center = this.grid_map.getCenter();
+        var center = this.originOnGrid();
         var loc_c = c - center[0];
         var loc_r = r - center[1];
         var prev_cell = this.organism.anatomy.getLocalCell(loc_c, loc_r);
@@ -446,7 +517,7 @@ class OrganismEditor extends Environment{
     }
 
     paintCell(c: number, r: number, color: string): void {
-        var center = this.grid_map.getCenter();
+        var center = this.originOnGrid();
         var loc_c = c - center[0];
         var loc_r = r - center[1];
         var cell = this.organism.anatomy.getLocalCell(loc_c, loc_r);
@@ -459,7 +530,7 @@ class OrganismEditor extends Environment{
     }
 
     removeCellFromOrg(c: number, r: number): void {
-        var center = this.grid_map.getCenter();
+        var center = this.originOnGrid();
         var loc_c = c - center[0];
         var loc_r = r - center[1];
         if (loc_c == 0 && loc_r == 0){
@@ -485,10 +556,18 @@ class OrganismEditor extends Environment{
        would change behavior on malformed saves. Same seam, and same treatment,
        as Organism.loadRaw(). */
     loadRawOrg(raw: unknown, record = true): void {
-        if (record) this.beginStroke();
+        /* A genuine load is a different organism and starts centred; the
+           history replay (record=false) is the *same* organism mid-edit, and
+           recentring on every undo would yank the view out from under whoever
+           is working on a panned body. The existing flag already draws that
+           line. */
+        if (record) {
+            this.beginStroke();
+            this.resetPan();
+        }
         this.clear();
         this.organism.loadRaw(raw);
-        var center = this.grid_map.getCenter();
+        var center = this.originOnGrid();
         this.organism.c = center[0];
         this.organism.r = center[1];
         this.organism.rotation = Directions.up;
@@ -540,8 +619,10 @@ class OrganismEditor extends Environment{
 
     setOrganismToCopyOf(orig_org: Organism): void {
         if (this.organism) this.beginStroke();
+        // A different organism arrives centred, whatever the last one's pan.
+        this.resetPan();
         this.grid_map.fillGrid(CellStates.empty);
-        var center = this.grid_map.getCenter();
+        var center = this.originOnGrid();
         /* The editor is a *partial* environment: of everything Organism reaches
            through it implements only grid_map and changeCell, because the
            organism it holds is never ticked -- nothing here calls update(),
@@ -572,7 +653,8 @@ class OrganismEditor extends Environment{
 
     setDefaultOrg(): void {
         this.clear();
-        var center = this.grid_map.getCenter();
+        this.resetPan();
+        var center = this.originOnGrid();
         // partial-environment cast: see setOrganismToCopyOf()
         this.organism = new Organism(center[0], center[1], this as unknown as OrganismEnv, null);
         this.organism.anatomy.addDefaultCell(CellStates.mouth, 0, 0);
@@ -582,6 +664,12 @@ class OrganismEditor extends Environment{
     }
 
     createRandom(): void {
+        /* Before the generator runs, which seats the new body at the grid's
+           true centre: it is a different organism, so it arrives centred like
+           any other, and leaving the pan would put the origin somewhere the
+           body is not -- every click would then edit a cell offset by the pan
+           from the one under the cursor. */
+        this.resetPan();
         this.grid_map.fillGrid(CellStates.empty);
 
         // partial-environment cast: see setOrganismToCopyOf()

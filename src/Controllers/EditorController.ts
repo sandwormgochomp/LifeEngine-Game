@@ -48,6 +48,10 @@ interface EditorEnvLike {
     organism: EditorOrganismLike;
     cell_size: number;
     renderFull(): void;
+    /* Where the organism's local (0,0) sits on the grid -- the centre plus the
+       pan offset. Every grid <-> local conversion goes through it. */
+    originOnGrid(): [number, number];
+    panBy(dc: number, dr: number): void;
     beginStroke(): void;
     commitStroke(): void;
     addCellToOrg(c: number, r: number, state: CellState): void;
@@ -105,15 +109,44 @@ class EditorController extends CanvasController{
             this.cancelTool();
             return;
         }
+        /* Middle-drag pans, the same gesture and the same button as the world
+           canvas -- and it must not open a stroke, or a pan would land in the
+           undo history as an edit that changed nothing. */
+        if (this.middle_click) {
+            this.drag_anchor_x = this.client_x;
+            this.drag_anchor_y = this.client_y;
+            this.applyCursor();
+            return;
+        }
         this.env.beginStroke();
         this.editOrganism(true);
     }
 
     mouseMove(): void {
-        if (this.left_click)
+        if (this.middle_click)
+            this.dragPan();
+        else if (this.left_click)
             this.editOrganism(false);
         else
             this.renderGhost();
+    }
+
+    /* Drag the body under the pointer, a whole cell at a time.
+
+       The remainder is kept rather than the anchor being reset to the current
+       position: at 8px cells a slow drag would otherwise never accumulate a
+       cell and the view would not move at all. Client coordinates, not
+       offsetX/offsetY, because the canvas contents shift underneath the cursor
+       -- the base class says as much where it captures them. */
+    dragPan(): void {
+        var cs = this.env.cell_size;
+        if (!cs) return;
+        var dc = Math.trunc((this.client_x - this.drag_anchor_x) / cs);
+        var dr = Math.trunc((this.client_y - this.drag_anchor_y) / cs);
+        if (!dc && !dr) return;
+        this.drag_anchor_x += dc * cs;
+        this.drag_anchor_y += dr * cs;
+        this.env.panBy(dc, dr);
     }
 
     mouseUp(): void {}
@@ -128,12 +161,15 @@ class EditorController extends CanvasController{
 
     applyCursor(): void {
         if (!this.canvas) return;
-        if (this.canvas.style.cursor !== 'crosshair')
-            this.canvas.style.cursor = 'crosshair';
+        // Grabbing while panning, so the gesture reads as moving the view
+        // rather than as a tool that has stopped responding.
+        var want = this.middle_click ? 'grabbing' : 'crosshair';
+        if (this.canvas.style.cursor !== want)
+            this.canvas.style.cursor = want;
     }
 
     getCurLocalCell(): EditorBodyCellLike | null {
-        var center = this.env.grid_map.getCenter();
+        var center = this.env.originOnGrid();
         return this.env.organism.anatomy.getLocalCell(this.mouse_c - center[0], this.mouse_r - center[1]);
     }
 
